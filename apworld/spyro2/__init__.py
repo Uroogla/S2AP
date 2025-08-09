@@ -521,6 +521,47 @@ class Spyro2World(World):
                 "Aquaria Towers",
                 lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
             )
+        set_rule(
+            self.multiworld.get_location("Aquaria Towers: Talisman", self.player),
+            lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+        )
+        set_rule(
+            self.multiworld.get_location("Aquaria Towers: Seahorse Rescue", self.player),
+            lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+        )
+        set_rule(
+            self.multiworld.get_location("Aquaria Towers: Manta ride I", self.player),
+            lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+        )
+        set_rule(
+            self.multiworld.get_location("Aquaria Towers: Manta ride II", self.player),
+            lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+        )
+        if Spyro2LocationCategory.SKILLPOINT in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Aquaria Towers: All Seaweed (Skill Point)", self.player),
+                lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+            )
+        if Spyro2LocationCategory.SKILLPOINT_GOAL in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Aquaria Towers: All Seaweed (Goal)", self.player),
+                lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+            )
+        if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Aquaria Towers: 50% Gems", self.player),
+                lambda state: get_gems_accessible_in_level(self, "Aquaria Towers", state) >= 300
+            )
+        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Aquaria Towers: 75% Gems", self.player),
+                lambda state: get_gems_accessible_in_level(self, "Aquaria Towers", state) >= 300
+            )
+        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Aquaria Towers: All Gems", self.player),
+                lambda state: get_gems_accessible_in_level(self, "Aquaria Towers", state) >= 400
+            )
 
         # Sunny Beach rules
         set_indirect_rule(self, "Sunny Beach", lambda state: state.has("Moneybags Unlock - Swim", self.player))
