@@ -254,7 +254,9 @@ public partial class App : Application
                     UnlockMoneybags(Addresses.CrystalBridgeUnlock);
                 }
                 break;
+            // v0.1.0 had a typo, so support both for backwards compatibility.
             case "Moneybags Unlock - Aquaria Tower Submarine":
+            case "Moneybags Unlock - Aquaria Towers Submarine":
                 if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                 {
                     UnlockMoneybags(Addresses.AquariaSubUnlock);
@@ -420,6 +422,8 @@ public partial class App : Application
             Dictionary<string, uint> moneybagsAddresses = new Dictionary<string, uint>()
             {
                 { "Crystal Glacier Bridge", Addresses.CrystalBridgeUnlock },
+                // v0.1.0 had a typo, so support both spellings.
+                { "Aquaria Tower Submarine", Addresses.AquariaSubUnlock },
                 { "Aquaria Towers Submarine", Addresses.AquariaSubUnlock },
                 { "Magma Cone Elevator", Addresses.MagmaElevatorUnlock },
                 { "Swim", Addresses.SwimUnlock },

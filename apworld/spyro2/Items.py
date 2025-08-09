@@ -68,7 +68,7 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Permanent Fireball Ability", 1021, Spyro2ItemCategory.ABILITY),
 
     ("Moneybags Unlock - Crystal Glacier Bridge", 3000, Spyro2ItemCategory.MONEYBAGS),
-    ("Moneybags Unlock - Aquaria Tower Submarine", 3001, Spyro2ItemCategory.MONEYBAGS),
+    ("Moneybags Unlock - Aquaria Towers Submarine", 3001, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Magma Cone Elevator", 3002, Spyro2ItemCategory.MONEYBAGS),
     # The following leads to too restrictive a start or is unnecessary with double jump.
     #("Moneybags Unlock - Glimmer Bridge", 3003, Spyro2ItemCategory.MONEYBAGS),
@@ -107,7 +107,7 @@ def BuildItemPool(multiworld, count, options):
 
     if options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
         item_pool.append(item_dictionary["Moneybags Unlock - Crystal Glacier Bridge"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Aquaria Tower Submarine"])
+        item_pool.append(item_dictionary["Moneybags Unlock - Aquaria Towers Submarine"])
         item_pool.append(item_dictionary["Moneybags Unlock - Magma Cone Elevator"])
         # item_pool.append(item_dictionary["Moneybags Unlock - Glimmer Bridge"])
         item_pool.append(item_dictionary["Moneybags Unlock - Swim"])

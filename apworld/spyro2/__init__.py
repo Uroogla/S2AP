@@ -696,7 +696,7 @@ class Spyro2World(World):
         # Shady Oasis rules
         set_indirect_rule(
             self,
-            "Scorch",
+            "Shady Oasis",
             lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
         )
         set_rule(
@@ -712,7 +712,7 @@ class Spyro2World(World):
         # Magma Cone rules
         set_indirect_rule(
             self,
-            "Scorch",
+            "Magma Cone",
             lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
         )
         set_rule(

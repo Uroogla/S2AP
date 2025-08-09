@@ -144,7 +144,7 @@ location_tables = {
         Spyro2LocationData("Aquaria Towers: 50% Gems", "Filler", Spyro2LocationCategory.GEM_50),
         Spyro2LocationData("Aquaria Towers: 75% Gems", "Filler", Spyro2LocationCategory.GEM_75),
         Spyro2LocationData("Aquaria Towers: All Gems", "Filler", Spyro2LocationCategory.GEM_100),
-        Spyro2LocationData("Aquaria Towers: Moneybags Unlock: Aquaria Tower Submarine", "Moneybags Unlock - Aquaria Tower Submarine", Spyro2LocationCategory.MONEYBAGS),
+        Spyro2LocationData("Aquaria Towers: Moneybags Unlock: Aquaria Towers Submarine", "Moneybags Unlock - Aquaria Towers Submarine", Spyro2LocationCategory.MONEYBAGS),
         Spyro2LocationData("Aquaria Towers: All Seaweed (Skill Point)", "Filler", Spyro2LocationCategory.SKILLPOINT),
         Spyro2LocationData("Aquaria Towers: All Seaweed (Goal)", "Skill Point", Spyro2LocationCategory.SKILLPOINT_GOAL),
     ],
