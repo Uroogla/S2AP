@@ -1,0 +1,281 @@
+﻿using Archipelago.Core.Models;
+using Archipelago.Core.Util;
+using Avalonia.Logging;
+using S2AP.Models;
+using Serilog;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using static S2AP.Models.Enums;
+using Location = Archipelago.Core.Models.Location;
+namespace S2AP
+{
+    public class Helpers
+    {
+        private static GameStatus lastNonZeroStatus = GameStatus.Spawning;
+        public static string OpenEmbeddedResource(string resourceName)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                string jsonFile = reader.ReadToEnd();
+                return jsonFile;
+            }
+        }
+        public static bool IsInDemoMode()
+        {
+            return Memory.ReadByte(Addresses.IsInDemoMode) == 1;
+        }
+        public static bool IsInGame()
+        {
+            var status = GetGameStatus();
+            return !IsInDemoMode() &&
+                status != GameStatus.TitleScreen &&
+                status != GameStatus.Loading && // Handle loading into and out of demo mode.
+                Memory.ReadInt(Addresses.ResetCheckAddress) != 0; // Handle status being 0 on console reset.
+        }
+        public static GameStatus GetGameStatus()
+        {
+            var status = Memory.ReadByte(Addresses.GameStatus);
+            var result = (GameStatus)status;
+            if (result != GameStatus.InGame)
+            {
+                lastNonZeroStatus = result;
+            }
+            return result;
+        }
+        public static List<ILocation> BuildLocationList()
+        {
+            int baseId = 1230000;
+            int levelOffset = 1000;
+            int processedSkillPoints = 0;
+            List<ILocation> locations = new List<ILocation>();
+            var currentTalismanAddress = Addresses.TalismanStartAddress;
+            var currentOrbAddress = Addresses.OrbStartAddress;
+            var currentGemAddress = Addresses.LevelGemsAddress;
+            List<LevelData> levels = GetLevelData();
+            foreach (var level in levels)
+            {
+                int locationOffset = 0;
+                if (level.HasTalisman)
+                {
+                    Location location = new Location()
+                    {
+                        Name = $"{level.Name} Talisman",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        AddressBit = 0,
+                        CheckType = LocationCheckType.Bit,
+                        Address = currentTalismanAddress,
+                        Category = "Talisman"
+                    };
+                    locations.Add(location);
+                    locationOffset++;
+                }
+                for (int i = 0; i < level.OrbCount; i++)
+                {
+                    Location location = new Location()
+                    {
+                        Name = $"{level.Name} Orb {i + 1}",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        AddressBit = i,
+                        CheckType = LocationCheckType.Bit,
+                        Address = currentOrbAddress,
+                        Category = "Orb"
+                    };
+                    locations.Add(location);
+                    locationOffset++;
+                }
+                if (level.IsBoss)
+                {
+                    string bossName = level.Name.Split("'")[0];
+                    Location location = new Location()
+                    {
+                        Name = $"{bossName} Defeated",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        AddressBit = 0,
+                        CheckType = LocationCheckType.Bit,
+                        Address = currentTalismanAddress,
+                        Category = "Boss"
+                    };
+                    locations.Add(location);
+                    locationOffset++;
+                }
+                if (!level.IsBoss)
+                {
+                    Location gem25Location = new Location()
+                    {
+                        Name = $"{level.Name}: 25% Gems",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "99",
+                        Category = "Gem25"
+                    };
+                    locations.Add(gem25Location);
+                    locationOffset++;
+
+                    Location gem50Location = new Location()
+                    {
+                        Name = $"{level.Name}: 50% Gems",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "199",
+                        Category = "Gem50"
+                    };
+                    locations.Add(gem50Location);
+                    locationOffset++;
+
+                    Location gem75Location = new Location()
+                    {
+                        Name = $"{level.Name}: 75% Gems",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "299",
+                        Category = "Gem75"
+                    };
+                    locations.Add(gem75Location);
+                    locationOffset++;
+
+                    Location gem100Location = new Location()
+                    {
+                        Name = $"{level.Name}: All Gems",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "399",
+                        Category = "Gem100"
+                    };
+                    locations.Add(gem100Location);
+                    locationOffset++;
+                }
+                for (int i = 0; i < level.MoneybagsAddresses.Length; i++)
+                {
+                    Location moneybagsLocation = new Location()
+                    {
+                        Name = $"{level.Name}: Moneybags Payment {i}",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = level.MoneybagsAddresses[i] + 2,  // First 2 bytes are price.
+                        CheckType = LocationCheckType.Byte,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "0",
+                        Category = "Moneybags"
+                    };
+                    locations.Add(moneybagsLocation);
+                    locationOffset++;
+                }
+                for (int i = 0; i < level.SkillPointAddresses.Length; i++)
+                {
+                    Location skillLocation = new Location()
+                    {
+                        Name = $"{level.Name}: Skill Point {i} (Check)",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = level.SkillPointAddresses[i],
+                        CheckType = LocationCheckType.Byte,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "0",
+                        Category = "Skill Point"
+                    };
+                    locations.Add(skillLocation);
+                    locationOffset++;
+
+                    Location skillGoalLocation = new Location()
+                    {
+                        Name = $"{level.Name}: Skill Point {i} (Goal)",
+                        Id = baseId + levelOffset * level.LevelId + locationOffset,
+                        Address = level.SkillPointAddresses[i],
+                        CheckType = LocationCheckType.Byte,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "0",
+                        Category = "Skill Point"
+                    };
+                    locations.Add(skillGoalLocation);
+                    locationOffset++;
+                }
+                if (level.Name == "Dragon Shores")
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        Location tokenLocation = new Location()
+                        {
+                            Name = $"Dragon Shores Token {i}",
+                            Id = baseId + levelOffset * level.LevelId + i,
+                            Address = Addresses.TokenAddress + (uint)(4 * i),
+                            CheckType = LocationCheckType.Byte,
+                            CompareType = LocationCheckCompareType.GreaterThan,
+                            CheckValue = "0",
+                            Category = "Token"
+                        };
+                        locations.Add(tokenLocation);
+                        locationOffset++;
+                    }
+                }
+                currentTalismanAddress++;
+                currentOrbAddress++;
+                currentGemAddress += 4;
+            }
+            baseId = 1259000;
+            for (int i = 0; i < 20; i++)
+            {
+                Location totalGemLocation = new Location()
+                {
+                    Name = $"{500 * (i + 1)} Total Gems",
+                    Id = baseId + i,
+                    CheckType = LocationCheckType.Int,
+                    Address = Addresses.TotalGemAddress,
+                    CompareType = LocationCheckCompareType.GreaterThan,
+                    CheckValue = $"{500 * (i + 1) - 1}",
+                    Category = "Total Gems"
+                };
+                locations.Add(totalGemLocation);
+            }
+            return locations;
+        }
+
+        private static List<LevelData> GetLevelData()
+        {
+            List<LevelData> levels = new List<LevelData>()
+            {
+                new LevelData("Summer Forest", (int)LevelInGameIDs.SummerForest, 4, false, false, [Addresses.SwimUnlock, Addresses.WallToAquariaUnlock], []),
+                // Removed Moneybags as a location in Glimmer because it leads to an overly restrictive start.
+                new LevelData("Glimmer", (int)LevelInGameIDs.Glimmer, 3, true, false, [], []),
+                new LevelData("Idol Springs", (int)LevelInGameIDs.IdolSprings, 2, true, false, [], [Addresses.IdolTikiSkillPoint]),
+                new LevelData("Colossus", (int)LevelInGameIDs.Colossus, 3, true, false, [], [Addresses.ColossusHockeySkillPoint]),
+                new LevelData("Hurricos", (int)LevelInGameIDs.Hurricos, 3, true, false, [], [Addresses.HurricosWindmillSkillPoint]),
+                new LevelData("Aquaria Towers", (int)LevelInGameIDs.AquariaTowers, 3, true, false, [Addresses.AquariaSubUnlock], [Addresses.AquariaSeaweedSkillPoint]),
+                new LevelData("Sunny Beach", (int)LevelInGameIDs.SunnyBeach, 3, true, false, [], []),
+                new LevelData("Ocean Speedway", (int)LevelInGameIDs.OceanSpeedway, 1, false, false, [], [Addresses.OceanTimeAttackSkillPoint]),
+                new LevelData("Crush's Dungeon", (int)LevelInGameIDs.CrushsDungeon, 0, false, true, [], [Addresses.CrushPerfectSkillPoint]),
+                new LevelData("Autumn Plains", (int)LevelInGameIDs.AutumnPlains, 2, false, false, [Addresses.ZephyrPortalUnlock, Addresses.ClimbUnlock, Addresses.ShadyPortalUnlock, Addresses.IcyPortalUnlock], []),
+                new LevelData("Skelos Badlands", (int)LevelInGameIDs.SkelosBadlands, 3, true, false, [], [Addresses.SkelosCactiSkillPoint, Addresses.SkelosCatbatSkillPoint]),
+                new LevelData("Crystal Glacier", (int)LevelInGameIDs.CrystalGlacier, 2, true, false, [Addresses.CrystalBridgeUnlock], []),
+                new LevelData("Breeze Harbor", (int)LevelInGameIDs.BreezeHarbor, 2, true, false, [], []),
+                new LevelData("Zephyr", (int)LevelInGameIDs.Zephyr, 4, true, false, [], []),
+                new LevelData("Metro Speedway", (int)LevelInGameIDs.MetroSpeedway, 1, false, false, [], [Addresses.MetroTimeAttackSkillPoint]),
+                new LevelData("Scorch", (int)LevelInGameIDs.Scorch, 2, true, false, [], [Addresses.ScorchTreesSkillPoint]),
+                new LevelData("Shady Oasis", (int)LevelInGameIDs.ShadyOasis, 2, true, false, [], []),
+                new LevelData("Magma Cone", (int)LevelInGameIDs.MagmaCone, 3, true, false, [Addresses.MagmaElevatorUnlock], []),
+                new LevelData("Fracture Hills", (int)LevelInGameIDs.FractureHills, 3, true, false, [], [Addresses.FractureSuperchargeSkillPoint]),
+                new LevelData("Icy Speedway", (int)LevelInGameIDs.IcySpeedway, 1, false, false, [], [Addresses.IcyTimeAttackSkillPoint]),
+                new LevelData("Gulp's Overlook", (int)LevelInGameIDs.GulpsOverlook, 0, false, true, [], [Addresses.GulpPerfectSkillPoint, Addresses.GulpRiptoSkillPoint]),
+                new LevelData("Winter Tundra", (int)LevelInGameIDs.WinterTundra, 3, false, false, [Addresses.CanyonPortalUnlock, Addresses.HeadbashUnlock], []),
+                new LevelData("Mystic Marsh", (int)LevelInGameIDs.MysticMarsh, 3, false, false, [], []),
+                new LevelData("Cloud Temples", (int)LevelInGameIDs.CloudTemples, 3, false, false, [], []),
+                new LevelData("Canyon Speedway", (int)LevelInGameIDs.CanyonSpeedway, 1, false, false, [], [Addresses.CanyonTimeAttackSkillPoint]),
+                new LevelData("Robotica Farms", (int)LevelInGameIDs.RoboticaFarms, 3, false, false, [], []),
+                new LevelData("Metropolis", (int)LevelInGameIDs.Metropolis, 4, false, false, [], []),
+                new LevelData("Dragon Shores", (int)LevelInGameIDs.DragonShores, 0, false, false, [], []),
+                new LevelData("Ripto's Arena", (int)LevelInGameIDs.RiptosArena, 0, false, true, [], [Addresses.RiptoPerfectSkillPoint]),
+            };
+            return levels;
+        }
+    }
+}
