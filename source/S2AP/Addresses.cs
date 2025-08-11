@@ -63,5 +63,37 @@
         public const uint ShadyPortalUnlock = 0x0006469c;
         public const uint IcyPortalUnlock = 0x000646a0;
         public const uint CanyonPortalUnlock = 0x000646b8;
+
+        public const uint GlimmerStartNPCAddress = 0x17442c;
+        public const uint GlimmerIndoorLampNPCAddress = 0x1744dc;
+        public const uint GlimmerOutdoorLampNPCAddress = 0x174484;
+        public const uint GlimmerTaliNPCAddress = 0x170fec;
+        public const uint GlimmerMoneybagsAddress = 0x170a14;
+        public const uint GlimmerOutdoorPowerupAddress = 0x170c24;
+        public const uint GlimmerIndoorPowerupAddress = 0x170ee4;
+        public static readonly uint[] GlimmerNPCAddresses = [
+            GlimmerStartNPCAddress,
+            GlimmerIndoorLampNPCAddress,
+            GlimmerOutdoorLampNPCAddress,
+            GlimmerTaliNPCAddress,
+            GlimmerMoneybagsAddress
+        ];
+
+        public const uint SFSwimMoneybagsAddress = 0x179130;
+        public const uint SFAquariaMoneybagsAddress = 0x1780b0;
+        public const uint SFOceanEloraAddress = 0x17a368;
+        public const uint SFClimbEloraAddress = 0x17a3c0;
+        public const uint SFSwimOrbAddress = 0x1773a0;
+        public const uint SFDoorOrbAddress = 0x177450;
+        public const uint SFClimbOrbAddress = 0x1773f8;
+        public static readonly uint[] SFNPCAddresses = [
+            SFSwimMoneybagsAddress,
+            SFAquariaMoneybagsAddress,
+            SFOceanEloraAddress,
+            SFClimbEloraAddress,
+            SFSwimOrbAddress,
+            SFDoorOrbAddress,
+            SFClimbOrbAddress
+        ];
     }
 }

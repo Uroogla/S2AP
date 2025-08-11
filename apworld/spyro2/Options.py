@@ -34,6 +34,12 @@ class LogicTrickOptions():
     ON_WITH_DOUBLE_JUMP = 1
     ALWAYS_ON = 2
 
+class GameShuffleOptions():
+    OFF = 0
+    NORMAL = 1
+    HARD = 2
+    VERY_HARD = 3
+
 
 class GoalOption(Choice):
     """Lets the user choose the completion goal
@@ -170,12 +176,37 @@ class ProgressiveSparxHealthLogic(Toggle):
     Note: This does nothing unless Enable Progressive Sparx Health Upgrades is set to blue, green, or Sparxless,"""
     display_name = "Enable Progressive Sparx Health Logic"
 
+class EnableGameShuffle(Choice):
+    """Randomizes the game by moving around things like NPCs and orbs.
+    You may need to find NPCs for completed tasks in order to receive your reward.
+    Warps (such as being teleported to an NPC after finishing a task) may not work or may only drop you near the NPC.
+    NOTE: This is an experimental feature.  While changes have been tested, we cannot promise that there will be
+    no side effects.  Please report any issues you encounter.
+    Off: No moving of objects.
+    Normal: Objects may move, but no extra tricks are required to complete all tasks.
+    Hard: Double jump, permanent fireball, and swim in air may be logically required to complete tasks.
+        All orbs and NPCs are in bounds, but you may need to go out of bounds to skip walls/Moneybags.
+        Examples include swim in air in Summer Forest, or getting to the second half of Summer Forest without swim.
+        Cannot require double jump tricks if you turn it off.
+    Very Hard: As hard, but locations may be more difficult to access and require additional speedrunning tricks.
+        Not recommended unless you are confident in your trick knowledge.
+        Objects may be in "reasonable" out of bounds spots, and you should be ready to handle softlocks.
+        Examples include entering the Autumn Plains castle without climb or completing Aquaria Towers backwards.
+        Cannot require double jump tricks if you turn it off.
+        """
+    display_name = "Enable Game Shuffling"
+    default = GameShuffleOptions.OFF
+    option_off = GameShuffleOptions.OFF
+    option_normal = GameShuffleOptions.NORMAL
+    option_hard = GameShuffleOptions.HARD
+    option_very_hard = GameShuffleOptions.VERY_HARD
+
 class DoubleJumpAbility(Choice):
     """By default, Spyro 2 supports a double jump ability, where jumping then pressing square without letting go of jump
     gains extra height.  This allows many sequence breaks within the game.
     Note that most skips possible with double jump can be done in other, harder ways.
     This option affects how the game plays, but does not directly impact logic.
-    The logic impact of the tricks below may be impacted by whether you can double jump.
+    Instead, other options may be impacted by whether you have double jump.
     NOTE: Duckstation must be run in Interpreter mode for this to have any effect.
     Vanilla - Double Jump behaves normally.
     In Pool - Adds Double Jump to the item pool.  The ability is disabled until you acquire the item.
@@ -190,7 +221,8 @@ class FireballAbility(Choice):
     """Spyro 2 has a permanent fireball powerup in Dragon Shores, which makes gameplay much easier.
     With glitches, it is possible to get here without 100% completion.
     Exiting a 100% save file and entering a new game without resetting Duckstation also carries it over to the new save.
-    This option affects how the game plays, not game logic.
+    This option affects how the game play, but does not directly impact game logic.
+    Instead, other options may be impacted by whether you have fireball.
     Vanilla - The fireball powerup in Dragon Shores behaves normally.
     In Pool - Adds Permanent Fireball to the item pool.  The Dragon Shores powerup does not work.
     Off - Permanent Fireball is disabled. The Dragon Shores powerup does not work."""
@@ -260,6 +292,7 @@ class Spyro2Option(PerGameCommonOptions):
     enable_trap_invisibility: EnableTrapInvisible
     enable_progressive_sparx_health: EnableProgressiveSparxHealth
     enable_progressive_sparx_logic: ProgressiveSparxHealthLogic
+    enable_game_shuffle: EnableGameShuffle
     double_jump_ability: DoubleJumpAbility
     permanent_fireball_ability: FireballAbility
     logic_crush_early: LogicCrushEarly

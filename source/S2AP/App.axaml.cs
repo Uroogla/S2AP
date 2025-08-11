@@ -13,6 +13,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.OpenGL;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ReactiveUI;
 using Serilog;
 using System;
@@ -20,9 +21,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using static S2AP.Models.Enums;
+using static S2AP.Models.SpyroConstants;
 
 namespace S2AP;
 
@@ -40,6 +43,9 @@ public partial class App : Application
     private static Timer _loadGameTimer { get; set; }
     private static Timer _abilitiesTimer { get; set; }
     private static Timer _cosmeticsTimer { get; set; }
+    private static string _seed { get; set; }
+    private static LevelInGameIDs _previousLevel { get; set; }
+    private static Timer _seedTimer { get; set; }
     private static MoneybagsOptions _moneybagsOption { get; set; }
     public override void Initialize()
     {
@@ -78,6 +84,8 @@ public partial class App : Application
         };
         Context.ConnectButtonEnabled = true;
         _sparxUpgrades = 0;
+        // Choose a level we don't randomize.
+        _previousLevel = LevelInGameIDs.DragonShores;
         _hasSubmittedGoal = false;
         _useQuietHints = true;
         Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
@@ -409,6 +417,53 @@ public partial class App : Application
             }
         }
     }
+    private static async void HandleSeedRandomization(object source, ElapsedEventArgs e)
+    {
+        if (!Helpers.IsInGame())
+        {
+            return;
+        }
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        if (currentLevel == _previousLevel)
+        {
+            return;
+        }
+        if (currentLevel == LevelInGameIDs.Glimmer)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                int npcSetting = int.Parse(_seed.Substring(i, 1), System.Globalization.NumberStyles.HexNumber);
+                uint npcAddress = Addresses.GlimmerNPCAddresses[i];
+                Memory.Write(npcAddress + XOffset, GlimmerLocations[npcSetting][0]);
+                Memory.Write(npcAddress + YOffset, GlimmerLocations[npcSetting][1]);
+                Memory.Write(npcAddress + ZOffset, GlimmerLocations[npcSetting][2]);
+                Memory.WriteByte(npcAddress + RotationOne, (byte)GlimmerLocations[npcSetting][3]);
+                Memory.WriteByte(npcAddress + RotationTwo, (byte)GlimmerLocations[npcSetting][4]);
+                Memory.WriteByte(npcAddress + RotationThree, (byte)GlimmerLocations[npcSetting][5]);
+            }
+            
+            int powerups = int.Parse(_seed.Substring(5, 1));
+            if (powerups == 0)
+            {
+                Memory.Write(Addresses.GlimmerOutdoorPowerupAddress + ZOffset, 110240);
+                Memory.Write(Addresses.GlimmerIndoorPowerupAddress + ZOffset, 110240);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.SummerForest)
+        {
+            for (int i = 6; i < 13; i++)
+            {
+                int npcSetting = int.Parse(_seed.Substring(i, 1), System.Globalization.NumberStyles.HexNumber);
+                uint npcAddress = Addresses.SFNPCAddresses[i - 6];
+                Memory.Write(npcAddress + XOffset, SFLocations[npcSetting][0]);
+                Memory.Write(npcAddress + YOffset, SFLocations[npcSetting][1]);
+                Memory.Write(npcAddress + ZOffset, SFLocations[npcSetting][2] + (i > 9 ? 300 : 0));
+                Memory.WriteByte(npcAddress + RotationOne, (byte)SFLocations[npcSetting][3]);
+                Memory.WriteByte(npcAddress + RotationTwo, (byte)SFLocations[npcSetting][4]);
+                Memory.WriteByte(npcAddress + RotationThree, (byte)SFLocations[npcSetting][5]);
+            }
+        }
+    }
     private static void StartSpyroGame(object source, ElapsedEventArgs e)
     {
         if (!Helpers.IsInGame())
@@ -667,6 +722,23 @@ public partial class App : Application
     {
         return Client.GameState?.ReceivedItems.Where(x => x.Name == "Dragon Shores Token").Count() ?? 0;
     }
+    private static async Task GetSeed()
+    {
+        int slot = Client.CurrentSession.ConnectionInfo.Slot;
+        Dictionary<string, object> obj = await Client.CurrentSession.DataStorage.GetSlotDataAsync(slot);
+        if (obj.TryGetValue("shuffle_seed", out var value))
+        {
+            _seed = (string)value;
+        }
+        Log.Logger.Debug(_seed);
+        if (_seed != "")
+        {
+            _seedTimer = new Timer();
+            _seedTimer.Elapsed += new ElapsedEventHandler(HandleSeedRandomization);
+            _seedTimer.Interval = 100;
+            _seedTimer.Enabled = true;
+        }
+    }
     private static void OnConnected(object sender, EventArgs args)
     {
         Log.Logger.Information("Connected to Archipelago");
@@ -710,6 +782,7 @@ public partial class App : Application
         }
 
         _moneybagsOption = (MoneybagsOptions)int.Parse(Client.Options?.GetValueOrDefault("moneybags_settings", "0").ToString());
+        GetSeed();
 
         // Repopulate hint list.  There is likely a better way to do this using the Get network protocol
         // with keys=[$"hints_{team}_{slot}"].
@@ -721,6 +794,7 @@ public partial class App : Application
         Log.Logger.Information("Disconnected from Archipelago");
         // Avoid ongoing timers affecting a new game.
         _sparxUpgrades = 0;
+        _seed = "";
         _hasSubmittedGoal = false;
         _useQuietHints = true;
         Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
@@ -746,6 +820,11 @@ public partial class App : Application
         {
             _sparxTimer.Enabled = false;
             _sparxTimer = null;
+        }
+        if (_seedTimer != null)
+        {
+            _seedTimer.Enabled = false;
+            _seedTimer = null;
         }
     }
 }

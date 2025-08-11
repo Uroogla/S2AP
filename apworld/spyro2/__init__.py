@@ -8,7 +8,8 @@ from worlds.generic.Rules import set_rule, add_rule, add_item_rule, forbid_item
 
 from .Items import Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_names, item_descriptions, BuildItemPool
 from .Locations import Spyro2Location, Spyro2LocationCategory, location_tables, location_dictionary
-from .Options import Spyro2Option, GoalOptions, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, LogicTrickOptions, spyro_options_groups
+from .Options import Spyro2Option, GoalOptions, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, LogicTrickOptions, GameShuffleOptions, spyro_options_groups
+from .Constants import *
 
 
 class Spyro2Web(WebWorld):
@@ -46,6 +47,7 @@ class Spyro2World(World):
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
     item_descriptions = item_descriptions
+    shuffle_seed = ""
 
     all_levels = [
         "Summer Forest","Glimmer","Idol Springs","Colossus","Hurricos","Aquaria Towers","Sunny Beach","Ocean Speedway","Crush's Dungeon",
@@ -59,6 +61,277 @@ class Spyro2World(World):
         self.locked_locations = []
         self.main_path_locations = []
         self.enabled_location_categories = set()
+
+    def get_shuffle_seed(self):
+        difficulty = self.options.enable_game_shuffle.value
+        if difficulty == GameShuffleOptions.OFF:
+            return ""
+
+        # Shuffle Glimmer
+        start_mouse_location = GLIMMER_START_NPC_LOCATION
+        indoor_lamps_location = GLIMMER_START_NPC_LOCATION
+        outdoor_lamps_location = GLIMMER_START_NPC_LOCATION
+        end_mouse_location = GLIMMER_START_NPC_LOCATION
+        moneybags_location = GLIMMER_START_NPC_LOCATION
+        powerups_accessible = POWERUP_DISABLED
+        seed = self.random.randrange(0, 2)
+        if seed == 0:
+            if difficulty == GameShuffleOptions.NORMAL or \
+                    self.options.double_jump_ability.value != AbilityOptions.VANILLA:
+                # Shuffle mouse NPCs in place.  The player needs to get to the Glimmer portal, and both sets of lamps
+                # teleport Spyro to the NPC if close enough, so there are no logic implications.
+                npc_order = self.random.sample(
+                    [
+                        GLIMMER_START_NPC_LOCATION,
+                        GLIMMER_INDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_TALI_NPC_LOCATION
+                    ],
+                    k=4
+                )
+                start_mouse_location = npc_order.index(0)
+                indoor_lamps_location = npc_order.index(1)
+                outdoor_lamps_location = npc_order.index(2)
+                end_mouse_location = npc_order.index(3)
+                # Move Moneybags to a location accessible without double jump.
+                moneybags_location = GLIMMER_MONEYBAGS_LOCATION
+                # Powerups must be accessible on this difficulty.
+                powerups_accessible = POWERUP_ENABLED
+            elif difficulty == GameShuffleOptions.HARD:
+                # Shuffle all NPCs in place.  May require double jump based on Moneybags.
+                npc_order = self.random.sample(
+                    [
+                        GLIMMER_START_NPC_LOCATION,
+                        GLIMMER_INDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_TALI_NPC_LOCATION,
+                        GLIMMER_MONEYBAGS_LOCATION
+                    ],
+                    k=5
+                )
+                start_mouse_location = npc_order.index(0)
+                indoor_lamps_location = npc_order.index(1)
+                outdoor_lamps_location = npc_order.index(2)
+                end_mouse_location = npc_order.index(3)
+                moneybags_location = npc_order.index(4)
+                powerups_accessible = POWERUP_ENABLED
+            else:
+                # Shuffle all NPCs in place.  May require double jump based on Moneybags.
+                npc_order = self.random.sample(
+                    [
+                        GLIMMER_START_NPC_LOCATION,
+                        GLIMMER_INDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_TALI_NPC_LOCATION,
+                        GLIMMER_MONEYBAGS_LOCATION
+                    ],
+                    k=5
+                )
+                start_mouse_location = npc_order.index(0)
+                indoor_lamps_location = npc_order.index(1)
+                outdoor_lamps_location = npc_order.index(2)
+                end_mouse_location = npc_order.index(3)
+                moneybags_location = npc_order.index(4)
+                powerups_accessible = self.random.randrange(0, 2)
+        else:
+            start_mouse_location = GLIMMER_START_NPC_LOCATION
+            if difficulty == GameShuffleOptions.NORMAL or \
+                    self.options.double_jump_ability.value != AbilityOptions.VANILLA:
+                # Place Moneybags first
+                moneybags_location = GLIMMER_MONEYBAGS_LOCATION
+                other_location_list = [
+                    GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                    GLIMMER_TALI_NPC_LOCATION,
+                    GLIMMER_STAIRS_BY_START_LOCATION,
+                    GLIMMER_OUTDOORS_IN_FLIGHT_NOOK_LOCATION,
+                    GLIMMER_OUTDOORS_ON_LAMP_LOCATION,
+                    GLIMMER_NOOK_BY_TALI_LOCATION,
+                    GLIMMER_LIZARD_CAVE_LOCATION,
+                    GLIMMER_ACROSS_BRIDGE_LOCATION
+                ]
+                other_locations = self.random.sample(other_location_list, k=3)
+                end_mouse_location = other_locations[0]
+                indoor_lamps_location = other_locations[1]
+                outdoor_lamps_location = other_locations[2]
+                # Powerups must be accessible on this difficulty.
+                powerups_accessible = POWERUP_ENABLED
+            elif difficulty == GameShuffleOptions.HARD:
+                moneybags_location = self.random.sample(
+                    [
+                        GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_MONEYBAGS_LOCATION,
+                        GLIMMER_ACROSS_BRIDGE_LOCATION
+                    ],
+                    k=1
+                )[0]
+                other_location_list = [
+                    GLIMMER_INDOOR_LAMPS_NPC_LOCATION,
+                    GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                    GLIMMER_TALI_NPC_LOCATION,
+                    GLIMMER_MONEYBAGS_LOCATION,
+                    GLIMMER_STAIRS_BY_START_LOCATION,
+                    GLIMMER_OUTDOORS_IN_FLIGHT_NOOK_LOCATION,
+                    GLIMMER_OUTDOORS_ON_LAMP_LOCATION,
+                    GLIMMER_NOOK_BY_TALI_LOCATION,
+                    GLIMMER_LIZARD_CAVE_LOCATION,
+                    GLIMMER_ACROSS_BRIDGE_LOCATION,
+                    GLIMMER_BY_LIZARD_FIVE_LOCATION,
+                    GLIMMER_BY_GEM_AT_START_LOCATION
+                ]
+                other_location_list.remove(moneybags_location)
+                other_locations = self.random.sample(other_location_list, k=3)
+                end_mouse_location = other_locations[0]
+                indoor_lamps_location = other_locations[1]
+                outdoor_lamps_location = other_locations[2]
+                powerups_accessible = POWERUP_ENABLED
+            elif difficulty == GameShuffleOptions.VERY_HARD:
+                moneybags_location = self.random.sample(
+                    [
+                        GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                        GLIMMER_MONEYBAGS_LOCATION,
+                        GLIMMER_ACROSS_BRIDGE_LOCATION
+                    ],
+                    k=1
+                )[0]
+                other_location_list = [
+                    GLIMMER_INDOOR_LAMPS_NPC_LOCATION,
+                    GLIMMER_OUTDOOR_LAMPS_NPC_LOCATION,
+                    GLIMMER_TALI_NPC_LOCATION,
+                    GLIMMER_MONEYBAGS_LOCATION,
+                    GLIMMER_STAIRS_BY_START_LOCATION,
+                    GLIMMER_OUTDOORS_IN_FLIGHT_NOOK_LOCATION,
+                    GLIMMER_OUTDOORS_ON_LAMP_LOCATION,
+                    GLIMMER_NOOK_BY_TALI_LOCATION,
+                    GLIMMER_LIZARD_CAVE_LOCATION,
+                    GLIMMER_ACROSS_BRIDGE_LOCATION,
+                    GLIMMER_BY_LIZARD_FIVE_LOCATION,
+                    GLIMMER_BY_GEM_AT_START_LOCATION
+                ]
+                other_location_list.remove(moneybags_location)
+                other_locations = self.random.sample(other_location_list, k=3)
+                end_mouse_location = other_locations[0]
+                indoor_lamps_location = other_locations[1]
+                outdoor_lamps_location = other_locations[2]
+                powerups_accessible = self.random.randrange(0, 2)
+        return_string = ""
+        for value in [start_mouse_location, indoor_lamps_location, outdoor_lamps_location, end_mouse_location, moneybags_location, powerups_accessible]:
+            return_string += hex(value)[2:]
+
+        # Summer Forest Shuffle
+        # DJ no longer creates an overly restrictive sphere 1.
+        swim_moneybags = SF_SWIM_MONEYBAGS_LOCATION
+        aquaria_moneybags = SF_SWIM_MONEYBAGS_LOCATION
+        ocean_elora = SF_SWIM_MONEYBAGS_LOCATION
+        climb_elora = SF_SWIM_MONEYBAGS_LOCATION
+        swim_orb = SF_SWIM_ORB_LOCATION
+        behind_wall_orb = SF_SWIM_ORB_LOCATION
+        climb_orb = SF_SWIM_ORB_LOCATION
+        if difficulty == GameShuffleOptions.NORMAL:
+            valid_locations = [
+                SF_SWIM_MONEYBAGS_LOCATION,
+                SF_AQUARIA_MONEYBAGS_LOCATION,
+                SF_ELORA_BY_OCEAN_LOCATION,
+                SF_ELORA_BY_LADDER_LOCATION,
+                SF_STAIRS_BY_START_LOCATION
+            ]
+            swim_moneybags = self.random.sample(valid_locations, k=1)[0]
+            valid_locations.remove(swim_moneybags)
+            valid_locations += [
+                SF_BY_SWIM_ORB_LOCATION,
+                SF_AFTER_POND_LOCATION,
+                SF_BEHIND_WALL_ORB_LOCATION,
+                SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION
+            ]
+            location_choices = self.random.sample(valid_locations, k=3)
+            aquaria_moneybags = location_choices[0]
+            ocean_elora = location_choices[1]
+            climb_elora = location_choices[2]
+            valid_locations.remove(aquaria_moneybags)
+            valid_locations.remove(ocean_elora)
+            valid_locations.remove(climb_elora)
+            valid_locations += [
+                SF_SWIM_ORB_LOCATION,
+                SF_CLIMB_ORB_LOCATION,
+                SF_TOP_OF_COLOSSUS_LOCATION,
+                SF_TOP_OF_IDOL_LOCATION
+            ]
+            location_choices = self.random.sample(valid_locations, k=3)
+            swim_orb = location_choices[0]
+            behind_wall_orb = location_choices[1]
+            climb_orb = location_choices[2]
+        elif difficulty == GameShuffleOptions.HARD:
+            valid_locations = [
+                SF_SWIM_MONEYBAGS_LOCATION,
+                SF_AQUARIA_MONEYBAGS_LOCATION,
+                SF_ELORA_BY_OCEAN_LOCATION,
+                SF_ELORA_BY_LADDER_LOCATION,
+                SF_STAIRS_BY_START_LOCATION,
+                SF_BY_SWIM_ORB_LOCATION,
+                SF_AFTER_POND_LOCATION,
+                SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION,
+                SF_BEHIND_WALL_ORB_LOCATION,
+                SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION
+            ]
+            location_choices = self.random.sample(valid_locations, k=4)
+            swim_moneybags = location_choices[0]
+            aquaria_moneybags = location_choices[1]
+            ocean_elora = location_choices[2]
+            climb_elora = location_choices[3]
+            valid_locations.remove(swim_moneybags)
+            valid_locations.remove(aquaria_moneybags)
+            valid_locations.remove(ocean_elora)
+            valid_locations.remove(climb_elora)
+            valid_locations += [
+                SF_SWIM_ORB_LOCATION,
+                SF_CLIMB_ORB_LOCATION,
+                SF_TOP_OF_COLOSSUS_LOCATION,
+                SF_TOP_OF_SUNNY_LOCATION,
+                SF_TOP_OF_IDOL_LOCATION
+            ]
+            location_choices = self.random.sample(valid_locations, k=3)
+            swim_orb = location_choices[0]
+            behind_wall_orb = location_choices[1]
+            climb_orb = location_choices[2]
+        else:
+            valid_locations = [
+                SF_SWIM_MONEYBAGS_LOCATION,
+                SF_AQUARIA_MONEYBAGS_LOCATION,
+                SF_ELORA_BY_OCEAN_LOCATION,
+                SF_ELORA_BY_LADDER_LOCATION,
+                SF_STAIRS_BY_START_LOCATION,
+                SF_BY_SWIM_ORB_LOCATION,
+                SF_AFTER_POND_LOCATION,
+                SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION,
+                SF_BEHIND_WALL_ORB_LOCATION,
+                SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION
+            ]
+            location_choices = self.random.sample(valid_locations, k=1)
+            swim_moneybags = location_choices[0]
+            valid_locations.remove(swim_moneybags)
+            location_choices = self.random.sample(valid_locations, k=3)
+            aquaria_moneybags = location_choices[0]
+            ocean_elora = location_choices[1]
+            climb_elora = location_choices[2]
+            valid_locations.remove(aquaria_moneybags)
+            valid_locations.remove(ocean_elora)
+            valid_locations.remove(climb_elora)
+            valid_locations += [
+                SF_SWIM_ORB_LOCATION,
+                SF_CLIMB_ORB_LOCATION,
+                SF_TOP_OF_COLOSSUS_LOCATION,
+                SF_TOP_OF_IDOL_LOCATION,
+                SF_TOP_OF_SUNNY_LOCATION,
+                SF_TOP_OF_TREE_LOCATION
+            ]
+            location_choices = self.random.sample(valid_locations, k=3)
+            swim_orb = location_choices[0]
+            behind_wall_orb = location_choices[1]
+            climb_orb = location_choices[2]
+
+        for value in [swim_moneybags, aquaria_moneybags, ocean_elora, climb_elora, swim_orb, behind_wall_orb, climb_orb]:
+            return_string += hex(value)[2:]
+
+        return return_string
 
     def generate_early(self):
         self.enabled_location_categories.add(Spyro2LocationCategory.TALISMAN)
@@ -83,6 +356,7 @@ class Spyro2World(World):
         # Use the Moneybags unlocks for logic if they are in place.  The checks themselves will not be randomized.
         if self.options.moneybags_settings.value != MoneybagsOptions.MONEYBAGSSANITY:
             self.enabled_location_categories.add(Spyro2LocationCategory.MONEYBAGS)
+        self.shuffle_seed = self.get_shuffle_seed()
 
     def create_regions(self):
         # Create Regions
@@ -202,11 +476,30 @@ class Spyro2World(World):
 
         if name in key_item_names or \
                 item_dictionary[name].category in [Spyro2ItemCategory.TALISMAN, Spyro2ItemCategory.ORB, Spyro2ItemCategory.EVENT, Spyro2ItemCategory.MONEYBAGS, Spyro2ItemCategory.SKILLPOINT_GOAL, Spyro2ItemCategory.TOKEN] or \
-                self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade':
+                self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade' or \
+                (
+                        name == "Double Jump Ability" and (
+                                self.options.logic_crush_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP or
+                                self.options.logic_gulp_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP or
+                                self.options.logic_ripto_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP or
+                                self.options.enable_game_shuffle.value in [GameShuffleOptions.HARD, GameShuffleOptions.VERY_HARD]
+                        )
+                ) or \
+                name == "Permanent Fireball Ability" and (
+                        self.options.enable_game_shuffle.value in [GameShuffleOptions.HARD, GameShuffleOptions.VERY_HARD]
+                ):
             item_classification = ItemClassification.progression
         elif item_dictionary[name].category in useful_categories or \
                 not self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade' or \
-                name in ["Double Jump Ability", "Permanent Fireball Ability"]:
+                name == "Double Jump Ability" and not (
+                        self.options.logic_crush_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP or
+                        self.options.logic_gulp_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP or
+                        self.options.logic_ripto_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP or
+                        self.options.enable_game_shuffle.value in [GameShuffleOptions.HARD, GameShuffleOptions.VERY_HARD]
+                ) or \
+                name == "Permanent Fireball Ability" and not (
+                        self.options.enable_game_shuffle.value in [GameShuffleOptions.HARD, GameShuffleOptions.VERY_HARD]
+                ):
             item_classification = ItemClassification.useful
         elif item_dictionary[name].category == Spyro2ItemCategory.TRAP:
             item_classification = ItemClassification.trap
@@ -413,7 +706,14 @@ class Spyro2World(World):
                 max_health = 1
             max_health += state.count("Progressive Sparx Health Upgrade", self.player)
             return max_health >= health
-            
+
+        def can_double_jump(self, state):
+            return self.options.double_jump_ability.value == AbilityOptions.VANILLA or \
+                state.has("Double Jump Ability", self.player)
+
+        def has_permanent_fireball(self, state):
+            return state.has("Permanent Fireball Ability", self.player)
+
         def set_indirect_rule(self, regionName, rule):
             region = self.multiworld.get_region(regionName, self.player)
             entrance = self.multiworld.get_entrance(regionName, self.player)
@@ -442,19 +742,127 @@ class Spyro2World(World):
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Skill Point", self.player, 16)
 
         # Summer Forest Rules
-        # TODO: Change logic based on tricks.
-        set_rule(
-            self.multiworld.get_location("Summer Forest: On a secret ledge", self.player),
-            lambda state: state.has("Moneybags Unlock - Swim", self.player)
-        )
-        set_rule(
-            self.multiworld.get_location("Summer Forest: Atop a ladder", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
-        )
-        set_rule(
-            self.multiworld.get_location("Summer Forest: Behind the door", self.player),
-            lambda state: state.has("Moneybags Unlock - Swim", self.player)
-        )
+        # TODO: FIX THIS LOGIC! swim or DJ doesn't work under certain settings
+        if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories and \
+                self.shuffle_seed != "":
+            if self.shuffle_seed[SF_SWIM_MONEYBAGS] in [
+                f"{SF_AQUARIA_MONEYBAGS_LOCATION}",
+                f"{SF_ELORA_BY_OCEAN_LOCATION}",
+                f"{SF_ELORA_BY_LADDER_LOCATION}",
+                f"{SF_SWIM_ORB_LOCATION}",
+                f"{SF_BEHIND_WALL_ORB_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION}",
+                f"{SF_BY_SWIM_ORB_LOCATION}",
+                f"{SF_AFTER_POND_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION}",
+            ]:
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: Moneybags Unlock: Swim", self.player),
+                    lambda state: can_double_jump(self, state)
+                )
+            elif self.shuffle_seed[SF_SWIM_MONEYBAGS] == f"{SF_CLIMB_ORB_LOCATION}":
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: Moneybags Unlock: Swim", self.player),
+                    lambda state: can_double_jump(self, state) and state.has("Moneybags Unlock - Climb", self.player)
+                )
+        if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories and self.shuffle_seed != "":
+            if self.shuffle_seed[SF_AQUARIA_MONEYBAGS] in [
+                f"{SF_AQUARIA_MONEYBAGS_LOCATION}",
+                f"{SF_ELORA_BY_OCEAN_LOCATION}",
+                f"{SF_ELORA_BY_LADDER_LOCATION}",
+                f"{SF_SWIM_ORB_LOCATION}",
+                f"{SF_BEHIND_WALL_ORB_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION}",
+                f"{SF_BY_SWIM_ORB_LOCATION}",
+                f"{SF_AFTER_POND_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION}",
+            ]:
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", self.player),
+                    lambda state: state.has("Moneybags Unlock - Swim") or can_double_jump(self, state)
+                )
+            elif self.shuffle_seed[SF_AQUARIA_MONEYBAGS] == f"{SF_CLIMB_ORB_LOCATION}":
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", self.player),
+                    lambda state: (state.has("Moneybags Unlock - Swim") or can_double_jump(self, state)) and state.has("Moneybags Unlock - Climb", self.player)
+                )
+        elif Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories and self.shuffle_seed == "":
+            set_rule(
+                self.multiworld.get_location("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", self.player),
+                lambda state: state.has("Moneybags Unlock - Swim")
+            )
+        if self.shuffle_seed != "":
+            if self.shuffle_seed[SF_SWIM_ORB] in [
+                f"{SF_AQUARIA_MONEYBAGS_LOCATION}",
+                f"{SF_ELORA_BY_OCEAN_LOCATION}",
+                f"{SF_ELORA_BY_LADDER_LOCATION}",
+                f"{SF_SWIM_ORB_LOCATION}",
+                f"{SF_BEHIND_WALL_ORB_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION}",
+                f"{SF_BY_SWIM_ORB_LOCATION}",
+                f"{SF_TOP_OF_SUNNY_LOCATION}",
+                f"{SF_TOP_OF_TREE_LOCATION}",
+                f"{SF_AFTER_POND_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION}",
+                f"{SF_CLIMB_ORB_LOCATION}"
+            ]:
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: On a secret ledge", self.player),
+                    lambda state: state.has("Moneybags Unlock - Swim", self.player) or can_double_jump(self, state)
+                )
+        else:
+            set_rule(
+                self.multiworld.get_location("Summer Forest: On a secret ledge", self.player),
+                lambda state: state.has("Moneybags Unlock - Swim", self.player)
+            )
+        if self.shuffle_seed != "":
+            if self.shuffle_seed[SF_CLIMB_ORB] in [
+                f"{SF_AQUARIA_MONEYBAGS_LOCATION}",
+                f"{SF_ELORA_BY_OCEAN_LOCATION}",
+                f"{SF_ELORA_BY_LADDER_LOCATION}",
+                f"{SF_SWIM_ORB_LOCATION}",
+                f"{SF_BEHIND_WALL_ORB_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION}",
+                f"{SF_BY_SWIM_ORB_LOCATION}",
+                f"{SF_TOP_OF_SUNNY_LOCATION}",
+                f"{SF_TOP_OF_TREE_LOCATION}",
+                f"{SF_AFTER_POND_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION}",
+                f"{SF_CLIMB_ORB_LOCATION}"
+            ]:
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: Atop a ladder", self.player),
+                    lambda state: state.has("Moneybags Unlock - Swim", self.player) or can_double_jump(self, state)
+                )
+        else:
+            set_rule(
+                self.multiworld.get_location("Summer Forest: Atop a ladder", self.player),
+                lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Climb", self.player)
+            )
+        if self.shuffle_seed != "":
+            if self.shuffle_seed[SF_WALL_ORB] in [
+                f"{SF_AQUARIA_MONEYBAGS_LOCATION}",
+                f"{SF_ELORA_BY_OCEAN_LOCATION}",
+                f"{SF_ELORA_BY_LADDER_LOCATION}",
+                f"{SF_SWIM_ORB_LOCATION}",
+                f"{SF_BEHIND_WALL_ORB_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_IDOL_LOCATION}",
+                f"{SF_BY_SWIM_ORB_LOCATION}",
+                f"{SF_TOP_OF_SUNNY_LOCATION}",
+                f"{SF_TOP_OF_TREE_LOCATION}",
+                f"{SF_AFTER_POND_LOCATION}",
+                f"{SF_TOP_OF_DOOR_NEAR_CRUSH_LOCATION}",
+                f"{SF_CLIMB_ORB_LOCATION}"
+            ]:
+                set_rule(
+                    self.multiworld.get_location("Summer Forest: Behind the door", self.player),
+                    lambda state: state.has("Moneybags Unlock - Swim", self.player) or can_double_jump(self, state)
+                )
+        else:
+            set_rule(
+                self.multiworld.get_location("Summer Forest: Behind the door", self.player),
+                lambda state: state.has("Moneybags Unlock - Swim", self.player)
+            )
         if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Summer Forest: 50% Gems", self.player),
@@ -470,17 +878,25 @@ class Spyro2World(World):
                 self.multiworld.get_location("Summer Forest: All Gems", self.player),
                 lambda state: get_gems_accessible_in_level(self, "Summer Forest", state) >= 400
             )
-        if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", self.player),
-                lambda state: state.has("Moneybags Unlock - Swim", self.player)
-            )
 
         # Glimmer Rules
-        set_rule(
-            self.multiworld.get_location("Glimmer: Gem Lamp Flight in cave", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
-        )
+        # Either Moneybags is accessible or double jump is on by default, so the DJ requirement
+        # is mostly implicit.
+        # If the powerup is turned off, require double jump or fireball for lamps.
+        if self.shuffle_seed != "" and self.shuffle_seed[GLIMMER_POWERUPS] == f"{POWERUP_DISABLED}":
+            set_rule(
+                self.multiworld.get_location("Glimmer: Gem Lamp Flight outdoors", self.player),
+                lambda state: has_permanent_fireball(self, state) or can_double_jump(self, state),
+            )
+            set_rule(
+                self.multiworld.get_location("Glimmer: Gem Lamp Flight in cave", self.player),
+                lambda state: state.has("Moneybags Unlock - Climb", self.player) and (has_permanent_fireball(self, state) or can_double_jump(self, state))
+            )
+        else:
+            set_rule(
+                self.multiworld.get_location("Glimmer: Gem Lamp Flight in cave", self.player),
+                lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            )
         if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Glimmer: All Gems", self.player),
@@ -580,6 +996,7 @@ class Spyro2World(World):
             )
 
         # Ocean Speedway rules
+        # Every Elora location is accessible with swim in air.
         set_indirect_rule(
             self,
             "Ocean Speedway",
@@ -1060,12 +1477,14 @@ class Spyro2World(World):
                 "enable_trap_invisibility": self.options.enable_trap_invisibility.value,
                 "enable_progressive_sparx_health": self.options.enable_progressive_sparx_health.value,
                 "enable_progressive_sparx_logic": self.options.enable_progressive_sparx_logic.value,
+                "enable_game_shuffle": self.options.enable_game_shuffle.value,
                 "double_jump_ability": self.options.double_jump_ability.value,
                 "permanent_fireball_ability": self.options.permanent_fireball_ability.value,
                 "logic_crush_early": self.options.logic_crush_early.value,
                 "logic_gulp_early": self.options.logic_gulp_early.value,
                 "logic_ripto_early": self.options.logic_ripto_early.value,
             },
+            "shuffle_seed": self.shuffle_seed,
             # "moneybags_prices": moneybags_prices,
             "seed": self.multiworld.seed_name,  # to verify the server's multiworld
             "slot": self.multiworld.player_name[self.player],  # to connect to server
