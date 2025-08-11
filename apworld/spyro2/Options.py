@@ -111,6 +111,11 @@ class EnableFillerExtraLives(DefaultOnToggle):
     """Allows filler items to include extra lives"""
     display_name = "Enable Extra Lives Filler"
 
+class EnableFillerDestructiveSpyro(Toggle):
+    """Allows filler items to include temporarily powering up Spyro so anything destructible he touches is destroyed.
+    Affects enemies, strong chests, breakable walls, etc."""
+    display_name = "Enable Temporary Destructive Spyro Filler"
+
 # Likely possible but check for side effects.
 #class EnableFillerInvincibility(Toggle):
 #    """Allows filler items to include temporary invincibility"""
@@ -251,6 +256,7 @@ class Spyro2Option(PerGameCommonOptions):
     enable_skillpoint_checks: EnableSkillpointChecksOption
     moneybags_settings: MoneybagsSettings
     enable_filler_extra_lives: EnableFillerExtraLives
+    enable_destructive_spyro_filler: EnableFillerDestructiveSpyro
     enable_filler_color_change: EnableFillerColorChange
     enable_filler_big_head_mode: EnableFillerBigHeadMode
     enable_filler_heal_sparx: EnableFillerHealSparx

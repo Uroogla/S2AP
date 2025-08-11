@@ -1051,6 +1051,7 @@ class Spyro2World(World):
                 "enable_skillpoint_checks": self.options.enable_skillpoint_checks.value,
                 "moneybags_settings": self.options.moneybags_settings.value,
                 "enable_filler_extra_lives": self.options.enable_filler_extra_lives.value,
+                "enable_destructive_spyro_filler": self.options.enable_destructive_spyro_filler.value,
                 "enable_filler_color_change": self.options.enable_filler_color_change.value,
                 "enable_filler_big_head_mode": self.options.enable_filler_big_head_mode.value,
                 "enable_filler_heal_sparx": self.options.enable_filler_heal_sparx.value,

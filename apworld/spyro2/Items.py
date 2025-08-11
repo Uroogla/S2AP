@@ -66,6 +66,7 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Dragon Shores Token", 1019, Spyro2ItemCategory.TOKEN),
     ("Double Jump Ability", 1020, Spyro2ItemCategory.ABILITY),
     ("Permanent Fireball Ability", 1021, Spyro2ItemCategory.ABILITY),
+    ("Destructive Spyro", 1022, Spyro2ItemCategory.MISC),
 
     ("Moneybags Unlock - Crystal Glacier Bridge", 3000, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Aquaria Towers Submarine", 3001, Spyro2ItemCategory.MONEYBAGS),
@@ -147,6 +148,9 @@ def BuildItemPool(multiworld, count, options):
 
     for item in _all_items:
         if item.name == 'Extra Life' and options.enable_filler_extra_lives:
+            for i in range(0, 6):
+                allowed_misc_items.append(item)
+        elif item.name == 'Destructive Spyro' and options.enable_destructive_spyro_filler:
             for i in range(0, 6):
                 allowed_misc_items.append(item)
         elif item.name.startswith('Turn Spyro ') and options.enable_filler_color_change:

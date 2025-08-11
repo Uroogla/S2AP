@@ -50,6 +50,7 @@
         public const uint DoubleJumpAddress2 = 0x00035bb8;
         public const uint InvisibleAddress1 = 0x0004c584;
         public const uint InvisibleAddress2 = 0x0004c586;
+        public const uint DestructiveSpyroAddress = 0x0006a12a;
 
         public const uint CrystalBridgeUnlock = 0x00064670;
         public const uint AquariaSubUnlock = 0x00064674;

@@ -41,6 +41,7 @@ public partial class App : Application
     private static Timer _abilitiesTimer { get; set; }
     private static Timer _cosmeticsTimer { get; set; }
     private static MoneybagsOptions _moneybagsOption { get; set; }
+    private static bool _destructiveMode { get; set; }
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -102,12 +103,6 @@ public partial class App : Application
             case "useVerboseHints":
                 Log.Logger.Information("Hints for found locations will be displayed.  Type 'useQuietHints' to show them.");
                 _useQuietHints = false;
-                break;
-            case "bigHeadMode":
-                ActivateBigHeadMode();
-                break;
-            case "flatSpyroMode":
-                ActivateFlatSpyroMode();
                 break;
         }
     }
@@ -254,6 +249,15 @@ public partial class App : Application
                     Memory.Write(Addresses.InvisibleAddress2, (short)0);
                 });
                 break;
+            case "Destructive Spyro":
+                await Task.Run(async () =>
+                {
+                    // If effects overlap, this doesn't quite work, but the effect is short enough not to matter.
+                    _destructiveMode = true;
+                    await Task.Delay(15000);
+                    _destructiveMode = false;
+                });
+                break;
             case "Moneybags Unlock - Crystal Glacier Bridge":
                 if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                 {
@@ -362,6 +366,11 @@ public partial class App : Application
         {
             Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)1);
         } // else vanilla behavior, controlled by game.
+
+        if (_destructiveMode)
+        {
+            Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
+        } // Turns off automatically on its own.
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
