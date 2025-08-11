@@ -103,6 +103,12 @@ public partial class App : Application
                 Log.Logger.Information("Hints for found locations will be displayed.  Type 'useQuietHints' to show them.");
                 _useQuietHints = false;
                 break;
+            case "bigHeadMode":
+                ActivateBigHeadMode();
+                break;
+            case "flatSpyroMode":
+                ActivateFlatSpyroMode();
+                break;
         }
     }
     private async void Context_ConnectClicked(object? sender, ConnectClickedEventArgs e)
@@ -350,11 +356,11 @@ public partial class App : Application
 
         if (fireballOption == AbilityOptions.AlwaysOff || fireballOption == AbilityOptions.InPool && hasFireballItem == 0)
         {
-            Memory.Write(Addresses.PermanentFireballAddress, 0);
+            Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)0);
         }
         else if (fireballOption == AbilityOptions.InPool && hasFireballItem == 1)
         {
-            Memory.Write(Addresses.PermanentFireballAddress, 1);
+            Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)1);
         } // else vanilla behavior, controlled by game.
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
@@ -532,16 +538,14 @@ public partial class App : Application
         Memory.WriteByte(Addresses.SpyroHeight, (byte)(32));
         Memory.WriteByte(Addresses.SpyroLength, (byte)(32));
         Memory.WriteByte(Addresses.SpyroWidth, (byte)(32));
-        Memory.WriteByte(Addresses.BigHeadMode, (byte)(1));
-        Memory.WriteByte(Addresses.FlatSpyroMode, (byte)0);
+        Memory.Write(Addresses.BigHeadMode, (short)(1));
     }
     private static async void ActivateFlatSpyroMode()
     {
         Memory.WriteByte(Addresses.SpyroHeight, (byte)(16));
         Memory.WriteByte(Addresses.SpyroLength, (byte)(16));
         Memory.WriteByte(Addresses.SpyroWidth, (byte)(2));
-        Memory.WriteByte(Addresses.FlatSpyroMode, (byte)(1));
-        Memory.WriteByte(Addresses.BigHeadMode, (byte)0);
+        Memory.Write(Addresses.BigHeadMode, (short)0x100);
     }
     private static async void TurnSpyroColor(SpyroColor colorEnum)
     {
