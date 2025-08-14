@@ -122,5 +122,12 @@ namespace S2AP
         public const uint CloudGemMask = 0x0006af6e;
         public const uint RoboticaGemMask = 0x0006afac;
         public const uint MetropolisGemMask = 0x0006afca;
+
+        public const uint localGemIncrementAddress = 0x000396C0;
+        public const uint globalGemIncrementAddress = 0x000396d4;
+        public const uint globalGemRespawnFixAddress = 0x0001d36c;
+        public const uint localGemRespawnFixAddress = 0x0001d380;
+        public const uint localGemLoadFixAddress = 0x00076B98;
+        public const uint globalGemLoadFixAddress = 0x00076BA0;
     }
 }

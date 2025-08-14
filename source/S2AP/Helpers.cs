@@ -47,7 +47,7 @@ namespace S2AP
             }
             return result;
         }
-        public static List<ILocation> BuildLocationList()
+        public static List<ILocation> BuildLocationList(bool includeGemsanity=false)
         {
             int baseId = 1230000;
             int levelOffset = 1000;
@@ -101,60 +101,6 @@ namespace S2AP
                         Category = "Boss"
                     };
                     locations.Add(location);
-                    locationOffset++;
-                }
-                if (!level.IsBoss)
-                {
-                    Location gem25Location = new Location()
-                    {
-                        Name = $"{level.Name}: 25% Gems",
-                        Id = baseId + levelOffset * level.LevelId + locationOffset,
-                        Address = currentGemAddress,
-                        CheckType = LocationCheckType.Int,
-                        CompareType = LocationCheckCompareType.GreaterThan,
-                        CheckValue = "99",
-                        Category = "Gem25"
-                    };
-                    locations.Add(gem25Location);
-                    locationOffset++;
-
-                    Location gem50Location = new Location()
-                    {
-                        Name = $"{level.Name}: 50% Gems",
-                        Id = baseId + levelOffset * level.LevelId + locationOffset,
-                        Address = currentGemAddress,
-                        CheckType = LocationCheckType.Int,
-                        CompareType = LocationCheckCompareType.GreaterThan,
-                        CheckValue = "199",
-                        Category = "Gem50"
-                    };
-                    locations.Add(gem50Location);
-                    locationOffset++;
-
-                    Location gem75Location = new Location()
-                    {
-                        Name = $"{level.Name}: 75% Gems",
-                        Id = baseId + levelOffset * level.LevelId + locationOffset,
-                        Address = currentGemAddress,
-                        CheckType = LocationCheckType.Int,
-                        CompareType = LocationCheckCompareType.GreaterThan,
-                        CheckValue = "299",
-                        Category = "Gem75"
-                    };
-                    locations.Add(gem75Location);
-                    locationOffset++;
-
-                    Location gem100Location = new Location()
-                    {
-                        Name = $"{level.Name}: All Gems",
-                        Id = baseId + levelOffset * level.LevelId + locationOffset,
-                        Address = currentGemAddress,
-                        CheckType = LocationCheckType.Int,
-                        CompareType = LocationCheckCompareType.GreaterThan,
-                        CheckValue = "399",
-                        Category = "Gem100"
-                    };
-                    locations.Add(gem100Location);
                     locationOffset++;
                 }
                 for (int i = 0; i < level.MoneybagsAddresses.Length; i++)
@@ -228,7 +174,10 @@ namespace S2AP
                             CheckType = LocationCheckType.Bit,
                             Category = "Gemsanity"
                         };
-                        locations.Add(gemsLocation);
+                        if (includeGemsanity)
+                        {
+                            locations.Add(gemsLocation);
+                        }
                         locationOffset++;
                         gemIndex++;
                     }
@@ -270,6 +219,64 @@ namespace S2AP
                 };
                 locations.Add(totalGemLocation);
             }
+            int offset = 20;
+            foreach (var level in levels)
+            {
+                if (!level.IsBoss)
+                {
+                    Location gem25Location = new Location()
+                    {
+                        Name = $"{level.Name}: 25% Gems",
+                        Id = baseId + offset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "99",
+                        Category = "Gem25"
+                    };
+                    locations.Add(gem25Location);
+                    offset++;
+
+                    Location gem50Location = new Location()
+                    {
+                        Name = $"{level.Name}: 50% Gems",
+                        Id = baseId + offset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "199",
+                        Category = "Gem50"
+                    };
+                    locations.Add(gem50Location);
+                    offset++;
+
+                    Location gem75Location = new Location()
+                    {
+                        Name = $"{level.Name}: 75% Gems",
+                        Id = baseId + offset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "299",
+                        Category = "Gem75"
+                    };
+                    locations.Add(gem75Location);
+                    offset++;
+
+                    Location gem100Location = new Location()
+                    {
+                        Name = $"{level.Name}: All Gems",
+                        Id = baseId + offset,
+                        Address = currentGemAddress,
+                        CheckType = LocationCheckType.Int,
+                        CompareType = LocationCheckCompareType.GreaterThan,
+                        CheckValue = "399",
+                        Category = "Gem100"
+                    };
+                    locations.Add(gem100Location);
+                    offset++;
+                }
+            }
             return locations;
         }
 
@@ -280,7 +287,7 @@ namespace S2AP
                 new LevelData("Summer Forest", (int)LevelInGameIDs.SummerForest, 4, false, false, [Addresses.SwimUnlock, Addresses.WallToAquariaUnlock], [], [Addresses.SummerLifeBottle1Address, Addresses.SummerLifeBottle2Address, Addresses.SummerLifeBottle3Address], Addresses.SummerGemMask, 138, [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 97, 98, 99, 100, 108, 126, 127, 128]),
                 // Removed Moneybags as a location in Glimmer because it leads to an overly restrictive start.
                 new LevelData("Glimmer", (int)LevelInGameIDs.Glimmer, 3, true, false, [], [], [], Addresses.GlimmerGemMask, 133, [1, 2, 3, 4, 5, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 152]),
-                new LevelData("Idol Springs", (int)LevelInGameIDs.IdolSprings, 2, true, false, [], [Addresses.IdolTikiSkillPoint], [Addresses.IdolLifeBottleAddress], Addresses.IdolGemMask, 149, [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 140, 141, 142, 143, 144]),
+                new LevelData("Idol Springs", (int)LevelInGameIDs.IdolSprings, 2, true, false, [], [Addresses.IdolTikiSkillPoint], [Addresses.IdolLifeBottleAddress], Addresses.IdolGemMask, 149, [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]),
                 new LevelData("Colossus", (int)LevelInGameIDs.Colossus, 3, true, false, [], [Addresses.ColossusHockeySkillPoint], [Addresses.ColossusLifeBottleAddress], Addresses.ColossusGemMask, 137, [1, 2, 3, 4, 5, 6, 7, 25, 32, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 71, 117, 118, 119, 127, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178]),
                 new LevelData("Hurricos", (int)LevelInGameIDs.Hurricos, 3, true, false, [], [Addresses.HurricosWindmillSkillPoint], [Addresses.HurricosLifeBottleAddress], Addresses.HurricosGemMask, 114, [42, 43, 44, 45, 46, 83, 85, 86, 87, 94, 116, 123, 126, 127, 128, 129, 130, 131]),
                 new LevelData("Aquaria Towers", (int)LevelInGameIDs.AquariaTowers, 3, true, false, [Addresses.AquariaSubUnlock], [Addresses.AquariaSeaweedSkillPoint], [Addresses.AquariaLifeBottleAddress], Addresses.AquariaGemMask, 137, [85, 86, 87, 88, 89, 90, 91, 92, 94, 95, 96, 97, 98, 99, 100, 109, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 167]),
@@ -299,7 +306,7 @@ namespace S2AP
                 new LevelData("Fracture Hills", (int)LevelInGameIDs.FractureHills, 3, true, false, [], [Addresses.FractureSuperchargeSkillPoint], [Addresses.FractureLifeBottleAddress], Addresses.FractureGemMask, 115, [1, 2, 3, 20, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 141]),
                 new LevelData("Icy Speedway", (int)LevelInGameIDs.IcySpeedway, 1, false, false, [], [Addresses.IcyTimeAttackSkillPoint], []),
                 new LevelData("Gulp's Overlook", (int)LevelInGameIDs.GulpsOverlook, 0, false, true, [], [Addresses.GulpPerfectSkillPoint, Addresses.GulpRiptoSkillPoint], []),
-                new LevelData("Winter Tundra", (int)LevelInGameIDs.WinterTundra, 3, false, false, [Addresses.CanyonPortalUnlock, Addresses.HeadbashUnlock], [], [], Addresses.WinterGemMask, 101, [1, 2, 3, 4, 5, 6, 7, 13, 14, 73, 74, 75, 76, 77, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]),
+                new LevelData("Winter Tundra", (int)LevelInGameIDs.WinterTundra, 3, false, false, [Addresses.CanyonPortalUnlock, Addresses.HeadbashUnlock], [], [], Addresses.WinterGemMask, 101, [1, 2, 3, 4, 5, 6, 7, 13, 14, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]),
                 new LevelData("Mystic Marsh", (int)LevelInGameIDs.MysticMarsh, 3, false, false, [], [], [Addresses.MysticLifeBottle1Address, Addresses.MysticLifeBottle2Address], Addresses.MysticGemMask, 139, [1, 112, 113, 114, 115, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157]),
                 new LevelData("Cloud Temples", (int)LevelInGameIDs.CloudTemples, 3, false, false, [], [], [Addresses.CloudLifeBottleAddress], Addresses.CloudGemMask, 111, [1, 34, 54, 55, 101, 102, 103]),
                 new LevelData("Canyon Speedway", (int)LevelInGameIDs.CanyonSpeedway, 1, false, false, [], [Addresses.CanyonTimeAttackSkillPoint], []),

@@ -149,7 +149,6 @@ public partial class App : Application
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
             return;
         }
-        GameLocations = Helpers.BuildLocationList();
         _cosmeticEffects = new Queue<string>();
         Client.LocationCompleted += Client_LocationCompleted;
         Client.CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
@@ -159,8 +158,43 @@ public partial class App : Application
         await Client.Login(e.Slot, !string.IsNullOrWhiteSpace(e.Password) ? e.Password : null);
         if (Client.Options?.Count > 0)
         {
+            GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+            GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off);
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
+            CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
+            string goalText = "";
+            switch (goal)
+            {
+                case CompletionGoal.Ripto:
+                    goalText = "Defeat Ripto";
+                    break;
+                case CompletionGoal.FourteenTali:
+                    goalText = "Defeat Ripto and collect 14 talismans";
+                    break;
+                case CompletionGoal.FortyOrb:
+                    goalText = "Defeat Ripto and collect 40 orbs";
+                    break;
+                case CompletionGoal.SixtyFourOrb:
+                    goalText = "Defeat Ripto and collect 64 orbs";
+                    break;
+                case CompletionGoal.HundredPercent:
+                    goalText = "Defeat Ripto and collect 14 talismans, 40 orbs, and 10000 gems";
+                    break;
+                case CompletionGoal.TenTokens:
+                    goalText = "Collect all 10 tokens in Dragon Shores";
+                    break;
+                case CompletionGoal.AllSkillpoints:
+                    goalText = "Collect all 16 skill points";
+                    break;
+                case CompletionGoal.Epilogue:
+                    goalText = "Defeat Ripto and collect all 16 skill points";
+                    break;
+                default:
+                    goalText = "Defeat Ripto and collect 40 orbs";
+                    break;
+            }
+            Log.Logger.Information($"Your goal is: {goalText}");
         }
         else
         {
@@ -181,14 +215,17 @@ public partial class App : Application
     {
         Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
         int currentHealth;
+        Dictionary<string, int> talismans;
         switch (args.Item.Name)
         {
             case "Summer Forest Talisman":
-                CalculateCurrentTalismans();
+                talismans = CalculateCurrentTalismans();
+                Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
                 CheckGoalCondition();
                 break;
             case "Autumn Plains Talisman":
-                CalculateCurrentTalismans();
+                talismans = CalculateCurrentTalismans();
+                Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
                 CheckGoalCondition();
                 break;
             case "Orb":
@@ -380,6 +417,18 @@ public partial class App : Application
         {
             Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
         } // Turns off automatically on its own.
+
+        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        if (gemsanityOption != GemsanityOptions.Off)
+        {
+            // Disable updating local and global gem counts on collecting a gem, loading into a level, and respawning.
+            Memory.Write(Addresses.localGemIncrementAddress, 0);
+            Memory.Write(Addresses.globalGemIncrementAddress, 0);
+            Memory.Write(Addresses.globalGemRespawnFixAddress, 0);
+            Memory.Write(Addresses.localGemRespawnFixAddress, 0);
+            Memory.Write(Addresses.localGemLoadFixAddress, 0);
+            Memory.Write(Addresses.globalGemLoadFixAddress, 0);
+        }
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
@@ -779,7 +828,7 @@ public partial class App : Application
 
         _abilitiesTimer = new Timer();
         _abilitiesTimer.Elapsed += new ElapsedEventHandler(HandleAbilities);
-        _abilitiesTimer.Interval = 250;
+        _abilitiesTimer.Interval = 500;
         _abilitiesTimer.Enabled = true;
 
         _cosmeticsTimer = new Timer();

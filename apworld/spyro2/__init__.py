@@ -380,7 +380,7 @@ class Spyro2World(World):
                 gems = 295
                 if state.has("Moneybags Unlock - Magma Cone Elevator", self.player):
                     gems += 105
-                return 400
+                return gems
             elif level == "Fracture Hills":
                 if not is_boss_defeated(self, "Crush", state) or not state.has("Moneybags Unlock - Climb", self.player):
                     return 0
@@ -400,7 +400,7 @@ class Spyro2World(World):
                     gems += 254
                     if state.has("Orb", self.player, 40):
                         gems += 7
-                return 400
+                return gems
             elif level == "Mystic Marsh":
                 if not is_boss_defeated(self, "Gulp", state):
                     return 0
@@ -581,7 +581,7 @@ class Spyro2World(World):
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
             swim_gems = [16, 17, 18, 19, 20, 21, 61, 64, 65, 66, 67, 76, 85, 86, 93, 94, 95, 96, 99, 100, 101, 102, 103, 104, 105, 106]
-            empty_bits = [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 140, 141, 142, 143, 144]
+            empty_bits = [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]
             for gem in swim_gems:
                 skipped_bits = 0
                 for bit in empty_bits:
