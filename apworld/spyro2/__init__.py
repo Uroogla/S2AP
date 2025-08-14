@@ -251,8 +251,6 @@ class Spyro2World(World):
             return state.has(boss + " Defeated", self.player)
 
         def get_gemsanity_gems(self, level, state):
-            if "Speedway" in level:
-                return 400
             count = 0
             count += state.count(f"{level} Red Gem", self.player)
             count += state.count(f"{level} Green Gem", self.player) * 2
@@ -263,7 +261,7 @@ class Spyro2World(World):
             return count
 
         def get_gems_accessible_in_level(self, level, state):
-            if self.options.enable_gemsanity.value != GemsanityOptions.OFF:
+            if self.options.enable_gemsanity.value != GemsanityOptions.OFF and "Speedway" not in level:
                 return get_gemsanity_gems(self, level, state)
 
             # Older versions of Python do not support switch statements, so use if/elif.
