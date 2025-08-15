@@ -47,8 +47,12 @@ namespace S2AP
             }
             return result;
         }
-        public static List<ILocation> BuildLocationList(bool includeGemsanity=false)
+        public static List<ILocation> BuildLocationList(bool includeGemsanity=false, List<int> gemsanityIDs = null)
         {
+            if (gemsanityIDs == null)
+            {
+                gemsanityIDs = new List<int>();
+            }
             int baseId = 1230000;
             int levelOffset = 1000;
             int processedSkillPoints = 0;
@@ -174,7 +178,7 @@ namespace S2AP
                             CheckType = LocationCheckType.Bit,
                             Category = "Gemsanity"
                         };
-                        if (includeGemsanity)
+                        if (includeGemsanity && gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset))
                         {
                             locations.Add(gemsLocation);
                         }
@@ -202,7 +206,6 @@ namespace S2AP
                 }
                 currentTalismanAddress++;
                 currentOrbAddress++;
-                currentGemAddress += 4;
             }
             baseId = 1259000;
             for (int i = 0; i < 20; i++)
@@ -276,6 +279,7 @@ namespace S2AP
                     locations.Add(gem100Location);
                     offset++;
                 }
+                currentGemAddress += 4;
             }
             return locations;
         }
@@ -284,7 +288,7 @@ namespace S2AP
         {
             List<LevelData> levels = new List<LevelData>()
             {
-                new LevelData("Summer Forest", (int)LevelInGameIDs.SummerForest, 4, false, false, [Addresses.SwimUnlock, Addresses.WallToAquariaUnlock], [], [Addresses.SummerLifeBottle1Address, Addresses.SummerLifeBottle2Address, Addresses.SummerLifeBottle3Address], Addresses.SummerGemMask, 138, [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 97, 98, 99, 100, 108, 126, 127, 128]),
+                new LevelData("Summer Forest", (int)LevelInGameIDs.SummerForest, 4, false, false, [Addresses.SwimUnlock, Addresses.WallToAquariaUnlock], [], [Addresses.SummerLifeBottle1Address, Addresses.SummerLifeBottle2Address, Addresses.SummerLifeBottle3Address], Addresses.SummerGemMask, 138, [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]),
                 // Removed Moneybags as a location in Glimmer because it leads to an overly restrictive start.
                 new LevelData("Glimmer", (int)LevelInGameIDs.Glimmer, 3, true, false, [], [], [], Addresses.GlimmerGemMask, 133, [1, 2, 3, 4, 5, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 152]),
                 new LevelData("Idol Springs", (int)LevelInGameIDs.IdolSprings, 2, true, false, [], [Addresses.IdolTikiSkillPoint], [Addresses.IdolLifeBottleAddress], Addresses.IdolGemMask, 149, [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]),

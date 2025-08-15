@@ -159,7 +159,18 @@ public partial class App : Application
         if (Client.Options?.Count > 0)
         {
             GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
-            GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off);
+            int slot = Client.CurrentSession.ConnectionInfo.Slot;
+            Dictionary<string, object> obj = await Client.CurrentSession.DataStorage.GetSlotDataAsync(slot);
+            List<int> gemsanityIDs = new List<int>();
+            if (obj.TryGetValue("gemsanity_ids", out var value))
+            {
+                if (value != null)
+                {
+                    gemsanityIDs = System.Text.Json.JsonSerializer.Deserialize<List<int>>(value.ToString());
+                }
+            }
+
+            GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
             CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
@@ -426,8 +437,8 @@ public partial class App : Application
             Memory.Write(Addresses.globalGemIncrementAddress, 0);
             Memory.Write(Addresses.globalGemRespawnFixAddress, 0);
             Memory.Write(Addresses.localGemRespawnFixAddress, 0);
-            Memory.Write(Addresses.localGemLoadFixAddress, 0);
-            Memory.Write(Addresses.globalGemLoadFixAddress, 0);
+            //Memory.Write(Addresses.localGemLoadFixAddress, 0);
+            //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
         }
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
@@ -741,9 +752,9 @@ public partial class App : Application
     }
     private static Dictionary<string, int> CalculateCurrentTalismans()
     {
-        var summerCount = Client.GameState?.ReceivedItems.Where(x => x.Name == "Summer Forest Talisman").Count() ?? 0;
+        var summerCount = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Summer Forest Talisman").Count() ?? 0;
         summerCount = Math.Min(summerCount, 6);
-        var autumnCount = Client.GameState?.ReceivedItems.Where(x => x.Name == "Autumn Plains Talisman").Count() ?? 0;
+        var autumnCount = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Autumn Plains Talisman").Count() ?? 0;
         autumnCount = Math.Min(autumnCount, 8);
         var currentLevel = Memory.ReadByte(Addresses.CurrentLevelAddress);
         // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
@@ -759,10 +770,6 @@ public partial class App : Application
             WriteStringToMemory(Addresses.AutumnEloraStartText, Addresses.AutumnEloraEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount }@0 Talismans.");
             WriteStringToMemory(Addresses.AutumnEloraWarpStartText, Addresses.AutumnEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount}@0 Talismans.");
         }
-        else
-        {
-            Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)(summerCount + autumnCount));
-        }
         return new Dictionary<string, int>() {
             { "Summer Forest", summerCount },
             { "Autumn Plains", autumnCount },
@@ -771,7 +778,7 @@ public partial class App : Application
     }
     private static int CalculateCurrentOrbs()
     {
-        var count = Client.GameState?.ReceivedItems.Where(x => x.Name == "Orb").Count() ?? 0;
+        var count = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Orb").Count() ?? 0;
         count = Math.Min(count, 64);
         Memory.WriteByte(Addresses.TotalOrbAddress, (byte)(count));
         return count;
@@ -786,12 +793,12 @@ public partial class App : Application
             if (!level.Name.Contains("Speedway"))
             {
                 string levelName = level.Name;
-                int levelGemCount = Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Red Gem").Count() ?? 0;
-                levelGemCount += 2 * (Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Green Gem").Count() ?? 0);
-                levelGemCount += 5 * (Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Blue Gem").Count() ?? 0);
-                levelGemCount += 10 * (Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Gold Gem").Count() ?? 0);
-                levelGemCount += 25 * (Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Pink Gem").Count() ?? 0);
-                levelGemCount += 50 * (Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} 50 Gems").Count() ?? 0);
+                int levelGemCount = Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Red Gem").Count() ?? 0;
+                levelGemCount += 2 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Green Gem").Count() ?? 0);
+                levelGemCount += 5 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Blue Gem").Count() ?? 0);
+                levelGemCount += 10 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Gold Gem").Count() ?? 0);
+                levelGemCount += 25 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Pink Gem").Count() ?? 0);
+                levelGemCount += 50 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} 50 Gems").Count() ?? 0);
                 Memory.Write(levelGemCountAddress, levelGemCount);
                 totalGems += levelGemCount;
             } else
@@ -806,11 +813,11 @@ public partial class App : Application
     }
     private static int CalculateCurrentSkillPoints()
     {
-        return Client.GameState?.ReceivedItems.Where(x => x.Name == "Skill Point").Count() ?? 0;
+        return Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Skill Point").Count() ?? 0;
     }
     private static int CalculateCurrentTokens()
     {
-        return Client.GameState?.ReceivedItems.Where(x => x.Name == "Dragon Shores Token").Count() ?? 0;
+        return Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Dragon Shores Token").Count() ?? 0;
     }
     private static void OnConnected(object sender, EventArgs args)
     {

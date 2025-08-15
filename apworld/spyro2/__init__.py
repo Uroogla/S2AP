@@ -511,7 +511,7 @@ class Spyro2World(World):
             swim_gems = [1, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 49, 50, 51, 52, 53, 54, 68, 69, 74, 77, 78, 79, 80, 87, 88, 89, 90, 91, 92, 93, 116, 117, 118, 119, 120, 121, 138, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158]
             climb_gems = [83, 84, 85, 86, 94, 102, 103, 104, 105, 106]
             aquaria_gems = [2, 3, 4, 5, 13, 21, 37, 43]
-            empty_bits = [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 97, 98, 99, 100, 108, 126, 127, 128]
+            empty_bits = [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]
             for gem in swim_gems:
                 skipped_bits = 0
                 for bit in empty_bits:
@@ -1267,6 +1267,12 @@ class Spyro2World(World):
                     locations_target.append(name_to_s2_code[location.item.name])
                 else:
                     locations_target.append(0)
+
+        gemsanity_locations = []
+        for loc in self.chosen_gem_locations:
+            loc_id = self.location_name_to_id[loc]
+            gemsanity_locations.append(loc_id)
+
         
 
         slot_data = {
@@ -1300,6 +1306,7 @@ class Spyro2World(World):
                 "logic_gulp_early": self.options.logic_gulp_early.value,
                 "logic_ripto_early": self.options.logic_ripto_early.value,
             },
+            "gemsanity_ids": gemsanity_locations,
             # "moneybags_prices": moneybags_prices,
             "seed": self.multiworld.seed_name,  # to verify the server's multiworld
             "slot": self.multiworld.player_name[self.player],  # to connect to server
