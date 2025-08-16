@@ -337,7 +337,7 @@ class Spyro2World(World):
                 gems = 295
                 if state.has("Moneybags Unlock - Magma Cone Elevator", self.player):
                     gems += 105
-                return 400
+                return gems
             elif level == "Fracture Hills":
                 if not is_boss_defeated(self, "Crush", state) or not state.has("Moneybags Unlock - Climb", self.player):
                     return 0
@@ -354,8 +354,10 @@ class Spyro2World(World):
                     return 0
                 gems = 139
                 if state.has("Moneybags Unlock - Headbash", self.player):
-                    gems += 261
-                return 400
+                    gems += 254
+                    if state.has("Orb", self.player, 40):
+                        gems += 7
+                return gems
             elif level == "Mystic Marsh":
                 if not is_boss_defeated(self, "Gulp", state):
                     return 0
@@ -449,7 +451,7 @@ class Spyro2World(World):
         )
         set_rule(
             self.multiworld.get_location("Summer Forest: Atop a ladder", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Climb", self.player)
         )
         set_rule(
             self.multiworld.get_location("Summer Forest: Behind the door", self.player),
