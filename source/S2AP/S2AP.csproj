@@ -11,6 +11,11 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
+	<!--https://github.com/Uroogla/Archipelago.Core-->
+  <ItemGroup>
+	<ProjectReference Include="..\..\..\Archipelago.Core\Archipelago.Core.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Archipelago.Core.AvaloniaGUI" Version="0.2.2" />
     <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
@@ -20,4 +25,5 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
   </ItemGroup>
+  
 </Project>

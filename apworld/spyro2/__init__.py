@@ -2,13 +2,15 @@
 from typing import Dict, Set, List
 
 from BaseClasses import MultiWorld, Region, Item, Entrance, Tutorial, ItemClassification
+from Options import OptionError
 
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import set_rule, add_rule, add_item_rule, forbid_item
 
 from .Items import Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_names, item_descriptions, BuildItemPool
 from .Locations import Spyro2Location, Spyro2LocationCategory, location_tables, location_dictionary
-from .Options import Spyro2Option, GoalOptions, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, LogicTrickOptions, spyro_options_groups
+from .Options import Spyro2Option, GoalOptions, GemsanityOptions, MoneybagsOptions, SparxUpgradeOptions, \
+    AbilityOptions, LogicTrickOptions, spyro_options_groups
 
 
 class Spyro2Web(WebWorld):
@@ -46,6 +48,7 @@ class Spyro2World(World):
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
     item_descriptions = item_descriptions
+    chosen_gem_locations = []
 
     all_levels = [
         "Summer Forest","Glimmer","Idol Springs","Colossus","Hurricos","Aquaria Towers","Sunny Beach","Ocean Speedway","Crush's Dungeon",
@@ -83,6 +86,20 @@ class Spyro2World(World):
         # Use the Moneybags unlocks for logic if they are in place.  The checks themselves will not be randomized.
         if self.options.moneybags_settings.value != MoneybagsOptions.MONEYBAGSSANITY:
             self.enabled_location_categories.add(Spyro2LocationCategory.MONEYBAGS)
+        if self.options.enable_life_bottle_checks.value:
+            self.enabled_location_categories.add(Spyro2LocationCategory.LIFE_BOTTLE)
+        if self.options.enable_gemsanity.value != GemsanityOptions.OFF:
+            self.enabled_location_categories.add(Spyro2LocationCategory.GEM)
+        if self.options.enable_gemsanity.value == GemsanityOptions.PARTIAL:
+            all_gem_locations = []
+            for location in location_dictionary:
+                if location_dictionary[location].category == Spyro2LocationCategory.GEM:
+                    all_gem_locations.append(location)
+            self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=200)
+        if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
+            for itemname, item in item_dictionary.items():
+                if item.category == Spyro2ItemCategory.GEM:
+                    self.options.local_items.value.add(item)
 
     def create_regions(self):
         # Create Regions
@@ -138,7 +155,19 @@ class Spyro2World(World):
         new_region = Region(region_name, self.player, self.multiworld)
         for location in location_table:
             if location.category in self.enabled_location_categories and \
-                    location.category not in [Spyro2LocationCategory.EVENT, Spyro2LocationCategory.TOTAL_GEM]:
+                    location.category not in [Spyro2LocationCategory.EVENT, Spyro2LocationCategory.TOTAL_GEM, Spyro2LocationCategory.GEM]:
+                new_location = Spyro2Location(
+                    self.player,
+                    location.name,
+                    location.category,
+                    location.default_item,
+                    self.location_name_to_id[location.name],
+                    new_region
+                )
+                new_region.locations.append(new_location)
+            elif location.category in self.enabled_location_categories and \
+                    location.category == Spyro2LocationCategory.GEM and \
+                    (len(self.chosen_gem_locations) == 0 or location.name in self.chosen_gem_locations):
                 new_location = Spyro2Location(
                     self.player,
                     location.name,
@@ -174,7 +203,6 @@ class Spyro2World(World):
                 event_item.code = None
                 new_location.place_locked_item(event_item)
                 new_region.locations.append(new_location)
-
         self.multiworld.regions.append(new_region)
         return new_region
 
@@ -201,7 +229,7 @@ class Spyro2World(World):
         useful_categories = {}
 
         if name in key_item_names or \
-                item_dictionary[name].category in [Spyro2ItemCategory.TALISMAN, Spyro2ItemCategory.ORB, Spyro2ItemCategory.EVENT, Spyro2ItemCategory.MONEYBAGS, Spyro2ItemCategory.SKILLPOINT_GOAL, Spyro2ItemCategory.TOKEN] or \
+                item_dictionary[name].category in [Spyro2ItemCategory.TALISMAN, Spyro2ItemCategory.ORB, Spyro2ItemCategory.EVENT, Spyro2ItemCategory.MONEYBAGS, Spyro2ItemCategory.SKILLPOINT_GOAL, Spyro2ItemCategory.TOKEN, Spyro2ItemCategory.GEM, Spyro2ItemCategory.GEMSANITY_PARTIAL] or \
                 self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade':
             item_classification = ItemClassification.progression
         elif item_dictionary[name].category in useful_categories or \
@@ -222,7 +250,20 @@ class Spyro2World(World):
         def is_boss_defeated(self, boss, state):
             return state.has(boss + " Defeated", self.player)
 
+        def get_gemsanity_gems(self, level, state):
+            count = 0
+            count += state.count(f"{level} Red Gem", self.player)
+            count += state.count(f"{level} Green Gem", self.player) * 2
+            count += state.count(f"{level} Blue Gem", self.player) * 5
+            count += state.count(f"{level} Gold Gem", self.player) * 10
+            count += state.count(f"{level} Pink Gem", self.player) * 25
+            count += state.count(f"{level} 50 Gems", self.player) * 50
+            return count
+
         def get_gems_accessible_in_level(self, level, state):
+            if self.options.enable_gemsanity.value != GemsanityOptions.OFF and "Speedway" not in level:
+                return get_gemsanity_gems(self, level, state)
+
             # Older versions of Python do not support switch statements, so use if/elif.
             if level == 'Glimmer':
                 gems = 353
@@ -396,13 +437,11 @@ class Spyro2World(World):
                 # Remove gems for possible Moneybags payments.  To avoid a player locking themselves out of progression,
                 # we have to assume every possible payment is made, including where the player can skip into the level
                 # out of logic and then pay Moneybags.
+                # Moneybags for Glimmer is free, as well as when gemsanity is on and moneybagssanity is not.
                 # TODO: Add Dragon Shores theater logic.
-                if self.options.moneybags_settings == MoneybagsOptions.VANILLA:
+                if self.options.moneybags_settings == MoneybagsOptions.VANILLA and self.options.enable_gemsanity.value == GemsanityOptions.OFF:
                     # Total gem checks probably don't make sense under these settings.
-                    accessible_gems -= 4100
-                elif self.options.moneybags_settings == MoneybagsOptions.MONEYBAGSSANITY:
-                    # Glimmer bridge is vanilla to avoid a 1 check sphere 0.
-                    accessible_gems -= 100
+                    accessible_gems -= 4000
             return accessible_gems >= max_gems
 
         def has_sparx_health(self, health, state):
@@ -457,53 +496,102 @@ class Spyro2World(World):
             self.multiworld.get_location("Summer Forest: Behind the door", self.player),
             lambda state: state.has("Moneybags Unlock - Swim", self.player)
         )
-        if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Summer Forest: 50% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Summer Forest", state) >= 200
-            )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Summer Forest: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Summer Forest", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Summer Forest: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Summer Forest", state) >= 400
-            )
         if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", self.player),
                 lambda state: state.has("Moneybags Unlock - Swim", self.player)
             )
+        if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Summer Forest: Life Bottle Near Sunny Beach", self.player),
+                lambda state: state.has("Moneybags Unlock - Swim", self.player)
+            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            swim_gems = [1, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 49, 50, 51, 52, 53, 54, 68, 69, 74, 77, 78, 79, 80, 87, 88, 89, 90, 91, 92, 93, 116, 117, 118, 119, 120, 121, 138, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158]
+            climb_gems = [83, 84, 85, 86, 94, 102, 103, 104, 105, 106]
+            aquaria_gems = [2, 3, 4, 5, 13, 21, 37, 43]
+            empty_bits = [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]
+            for gem in swim_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                    )
+            for gem in climb_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Climb", self.player)
+                    )
+            for gem in aquaria_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
+                    )
 
         # Glimmer Rules
         set_rule(
             self.multiworld.get_location("Glimmer: Gem Lamp Flight in cave", self.player),
             lambda state: state.has("Moneybags Unlock - Climb", self.player)
         )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Glimmer: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Glimmer", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            climb_gems = [14, 15, 16, 17, 18, 19, 21, 22, 23, 55]
+            empty_bits = [1, 2, 3, 4, 5, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 152]
+            for gem in climb_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Glimmer: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Glimmer: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                    )
 
         # Idol Springs Rules
         set_rule(
             self.multiworld.get_location("Idol Springs: Foreman Bud's puzzles", self.player),
             lambda state: state.has("Moneybags Unlock - Swim", self.player)
         )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Idol Springs: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Idol Springs", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Idol Springs: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Idol Springs", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            swim_gems = [16, 17, 18, 19, 20, 21, 61, 64, 65, 66, 67, 76, 85, 86, 93, 94, 95, 96, 99, 100, 101, 102, 103, 104, 105, 106]
+            empty_bits = [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]
+            for gem in swim_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Idol Springs: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Idol Springs: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                    )
 
         # Colossus Rules
 
@@ -549,21 +637,22 @@ class Spyro2World(World):
                 self.multiworld.get_location("Aquaria Towers: All Seaweed (Goal)", self.player),
                 lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
             )
-        if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Aquaria Towers: 50% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Aquaria Towers", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Aquaria Towers: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Aquaria Towers", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Aquaria Towers: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Aquaria Towers", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            sub_gems = [3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 29, 30, 31, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 93, 101, 102, 103, 104, 105, 106, 107, 108, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134]
+            empty_bits = [85, 86, 87, 88, 89, 90, 91, 92, 94, 95, 96, 97, 98, 99, 100, 109, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 167]
+            for gem in sub_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Aquaria Towers: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Aquaria Towers: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+                    )
 
         # Sunny Beach rules
         set_indirect_rule(self, "Sunny Beach", lambda state: state.has("Moneybags Unlock - Swim", self.player))
@@ -575,11 +664,22 @@ class Spyro2World(World):
             self.multiworld.get_location("Sunny Beach: Turtle soup II", self.player),
             lambda state: state.has("Moneybags Unlock - Climb", self.player)
         )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Sunny Beach: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Sunny Beach", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            climb_gems = [56, 57, 58, 83, 84, 85, 86, 87, 108]
+            empty_bits = [1, 2, 3, 4, 5, 6, 53, 91, 105, 106, 107, 109]
+            for gem in climb_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Sunny Beach: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Sunny Beach: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                    )
 
         # Ocean Speedway rules
         set_indirect_rule(
@@ -641,21 +741,6 @@ class Spyro2World(World):
             self.multiworld.get_location("Autumn Plains: Long glide!", self.player),
             lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
         )
-        if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Autumn Plains: 50% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Autumn Plains", state) >= 200
-            )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Autumn Plains: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Autumn Plains", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Autumn Plains: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Autumn Plains", state) >= 400
-            )
         if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Autumn Plains: Moneybags Unlock: Shady Oasis Portal", self.player),
@@ -666,6 +751,66 @@ class Spyro2World(World):
                 self.multiworld.get_location("Autumn Plains: Moneybags Unlock: Icy Speedway Portal", self.player),
                 lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
             )
+        if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Autumn Plains: Life Bottle", self.player),
+                lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            whirlwind_gems = [31, 32, 89, 90]
+            climb_gems = [17, 18, 19, 20, 21, 35, 36, 37, 46, 47, 93, 94]
+            door_gems = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 99, 100, 101, 122]
+            shady_gems = [75, 76, 77]
+            empty_bits = [1, 2, 3, 4, 5, 6, 102, 103, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133]
+            for gem in whirlwind_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Orb", self.player, 6)
+                    )
+            for gem in climb_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                    )
+            for gem in door_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                    )
+            for gem in shady_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
+                    )
 
         # Skelos Badlands rules
         if self.options.enable_progressive_sparx_logic.value:
@@ -688,16 +833,27 @@ class Spyro2World(World):
             self.multiworld.get_location("Crystal Glacier: George the snow leopard", self.player),
             lambda state: state.has("Moneybags Unlock - Crystal Glacier Bridge", self.player)
         )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
+        if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories:
             set_rule(
-                self.multiworld.get_location("Crystal Glacier: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Crystal Glacier", state) >= 300
+                self.multiworld.get_location("Crystal Glacier: Life Bottle", self.player),
+                lambda state: state.has("Moneybags Unlock - Crystal Glacier Bridge", self.player)
             )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Crystal Glacier: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Crystal Glacier", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            bridge_gems = [23, 24, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96]
+            empty_bits = [1, 2, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71]
+            for gem in bridge_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Crystal Glacier: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Crystal Glacier: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Crystal Glacier Bridge", self.player)
+                    )
 
         # Breeze Harbor rules
 
@@ -711,16 +867,22 @@ class Spyro2World(World):
             self.multiworld.get_location("Zephyr: Cowlek corral II", self.player),
             lambda state: state.has("Moneybags Unlock - Climb", self.player)
         )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Zephyr: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Zephyr", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Zephyr: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Zephyr", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            climb_gems = [90, 91, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180]
+            empty_bits = [1, 2, 8, 9, 10, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 105, 107, 117, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 149, 150, 151, 153, 167, 168]
+            for gem in climb_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Zephyr: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Zephyr: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                    )
 
         # Metro Speedway rules
         set_indirect_rule(
@@ -746,11 +908,22 @@ class Spyro2World(World):
             self.multiworld.get_location("Shady Oasis: Free Hippos", self.player),
             lambda state: state.has("Moneybags Unlock - Headbash", self.player)
         )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Shady Oasis: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Shady Oasis", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            headbash_gems = [144, 145, 146, 147]
+            empty_bits = [1, 2, 3, 4, 5, 6, 7, 28, 29, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 138, 140, 141, 142, 143, 148, 155, 168, 169]
+            for gem in headbash_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Shady Oasis: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Shady Oasis: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                    )
 
         # Magma Cone rules
         set_indirect_rule(
@@ -766,16 +939,22 @@ class Spyro2World(World):
             self.multiworld.get_location("Magma Cone: Party crashers", self.player),
             lambda state: state.has("Moneybags Unlock - Magma Cone Elevator", self.player)
         )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Magma Cone: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Magma Cone", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Magma Cone: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Magma Cone", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            elevator_gems = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 92, 93, 94, 95, 96, 97, 98, 99, 100, 114, 115, 116, 117, 118, 119, 120, 124, 125, 126]
+            empty_bits = [1, 2, 48, 78, 121, 122, 123]
+            for gem in elevator_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Magma Cone: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Magma Cone: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Magma Cone Elevator", self.player)
+                    )
 
         # Fracture Hills rules
         set_indirect_rule(
@@ -852,21 +1031,35 @@ class Spyro2World(World):
             self.multiworld.get_location("Winter Tundra: Smash the rock", self.player),
             lambda state: state.has("Moneybags Unlock - Headbash", self.player)
         )
-        if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Winter Tundra: 50% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Winter Tundra", state) >= 200
-            )
-        if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Winter Tundra: 75% Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Winter Tundra", state) >= 300
-            )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Winter Tundra: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Winter Tundra", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            headbash_gems = [8, 9, 10, 11, 12, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 68, 69, 70, 71, 72, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106]
+            door_gems = [73, 74, 75, 76, 77]
+            empty_bits = [1, 2, 3, 4, 5, 6, 7, 13, 14, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]
+            for gem in headbash_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Winter Tundra: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Winter Tundra: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                    )
+            for gem in door_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Winter Tundra: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Winter Tundra: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Orb", self.player, 40)
+                    )
 
         # Mystic Marsh rules
 
@@ -876,11 +1069,22 @@ class Spyro2World(World):
             "Cloud Temples",
             lambda state: state.has("Orb", self.player, 15)
         )
-        if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
-            set_rule(
-                self.multiworld.get_location("Cloud Temples: All Gems", self.player),
-                lambda state: get_gems_accessible_in_level(self, "Cloud Temples", state) >= 400
-            )
+        if Spyro2LocationCategory.GEM in self.enabled_location_categories:
+            # Bits of the gems, not accounting for empty bits
+            headbash_gems = [104, 105, 106, 107, 108]
+            empty_bits = [1, 34, 54, 55, 101, 102, 103]
+            for gem in headbash_gems:
+                skipped_bits = 0
+                for bit in empty_bits:
+                    if bit < gem:
+                        skipped_bits += 1
+                    else:
+                        break
+                if len(self.chosen_gem_locations) == 0 or f"Cloud Temples: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                    set_rule(
+                        self.multiworld.get_location(f"Cloud Temples: Gem {gem - skipped_bits}", self.player),
+                        lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                    )
 
         # Canyon Speedway rules
         set_indirect_rule(
@@ -997,6 +1201,31 @@ class Spyro2World(World):
                 lambda state: has_total_accessible_gems(self, state, 8000) and state.has("Orb", self.player, 55)
             )
 
+        # Level Gem Count rules
+        for level in self.all_levels:
+            if level in ["Crush's Dungeon", "Gulp's Overlook", "Dragon Shores", "Ripto's Arena"]:
+                continue
+            if Spyro2LocationCategory.GEM_25 in self.enabled_location_categories:
+                set_rule(
+                    self.multiworld.get_location(f"{level}: 25% Gems", self.player),
+                    lambda state, level=level: get_gems_accessible_in_level(self, level, state) >= 100
+                )
+            if Spyro2LocationCategory.GEM_50 in self.enabled_location_categories:
+                set_rule(
+                    self.multiworld.get_location(f"{level}: 50% Gems", self.player),
+                    lambda state, level=level: get_gems_accessible_in_level(self, level, state) >= 200
+                )
+            if Spyro2LocationCategory.GEM_75 in self.enabled_location_categories:
+                set_rule(
+                    self.multiworld.get_location(f"{level}: 75% Gems", self.player),
+                    lambda state, level=level: get_gems_accessible_in_level(self, level, state) >= 300
+                )
+            if Spyro2LocationCategory.GEM_100 in self.enabled_location_categories:
+                set_rule(
+                    self.multiworld.get_location(f"{level}: All Gems", self.player),
+                    lambda state, level=level: get_gems_accessible_in_level(self, level, state) >= 400
+                )
+
         # Inventory rules
         if Spyro2LocationCategory.TOTAL_GEM in self.enabled_location_categories:
             for i in range(20):
@@ -1038,6 +1267,12 @@ class Spyro2World(World):
                     locations_target.append(name_to_s2_code[location.item.name])
                 else:
                     locations_target.append(0)
+
+        gemsanity_locations = []
+        for loc in self.chosen_gem_locations:
+            loc_id = self.location_name_to_id[loc]
+            gemsanity_locations.append(loc_id)
+
         
 
         slot_data = {
@@ -1051,8 +1286,11 @@ class Spyro2World(World):
                 "enable_total_gem_checks": self.options.enable_total_gem_checks.value,
                 "max_total_gem_checks": self.options.max_total_gem_checks.value,
                 "enable_skillpoint_checks": self.options.enable_skillpoint_checks.value,
+                "enable_life_bottle_checks": self.options.enable_life_bottle_checks.value,
+                "enable_gemsanity": self.options.enable_gemsanity.value,
                 "moneybags_settings": self.options.moneybags_settings.value,
                 "enable_filler_extra_lives": self.options.enable_filler_extra_lives.value,
+                "enable_destructive_spyro_filler": self.options.enable_destructive_spyro_filler.value,
                 "enable_filler_color_change": self.options.enable_filler_color_change.value,
                 "enable_filler_big_head_mode": self.options.enable_filler_big_head_mode.value,
                 "enable_filler_heal_sparx": self.options.enable_filler_heal_sparx.value,
@@ -1068,6 +1306,7 @@ class Spyro2World(World):
                 "logic_gulp_early": self.options.logic_gulp_early.value,
                 "logic_ripto_early": self.options.logic_ripto_early.value,
             },
+            "gemsanity_ids": gemsanity_locations,
             # "moneybags_prices": moneybags_prices,
             "seed": self.multiworld.seed_name,  # to verify the server's multiworld
             "slot": self.multiworld.player_name[self.player],  # to connect to server

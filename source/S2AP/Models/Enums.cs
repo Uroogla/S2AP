@@ -44,6 +44,14 @@
             Moneybagssanity = 2
         }
 
+        public enum GemsanityOptions
+        {
+            Off = 0,
+            Partial = 1,
+            Full = 2,
+            FullGlobal = 3
+        }
+
         public enum ProgressiveSparxHealthOptions
         {
             Off = 0,

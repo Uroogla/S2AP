@@ -1,4 +1,6 @@
-﻿namespace S2AP
+﻿using System.Collections.Generic;
+
+namespace S2AP
 {
     public static class Addresses
     {
@@ -50,6 +52,7 @@
         public const uint DoubleJumpAddress2 = 0x00035bb8;
         public const uint InvisibleAddress1 = 0x0004c584;
         public const uint InvisibleAddress2 = 0x0004c586;
+        public const uint DestructiveSpyroAddress = 0x0006a12a;
 
         public const uint CrystalBridgeUnlock = 0x00064670;
         public const uint AquariaSubUnlock = 0x00064674;
@@ -63,5 +66,68 @@
         public const uint ShadyPortalUnlock = 0x0006469c;
         public const uint IcyPortalUnlock = 0x000646a0;
         public const uint CanyonPortalUnlock = 0x000646b8;
+
+        public const uint SummerEloraStartText = 0x001818cb;
+        public const uint SummerEloraEndText = 0x00181973;
+        public const uint SummerEloraWarpStartText = 0x00181a70;
+        public const uint SummerEloraWarpEndText = 0x00181abb;
+
+        public const uint AutumnEloraStartText = 0x00191813;
+        public const uint AutumnEloraEndText = 0x001918b8;
+        public const uint AutumnEloraWarpStartText = 0x00191a84;
+        public const uint AutumnEloraWarpEndText = 0x00191acf;
+
+        public static readonly List<uint> SummerLifeBottle1Address = [0x0006ac8f, 7];
+        public static readonly List<uint> SummerLifeBottle2Address = [0x0006ac90, 0];
+        public static readonly List<uint> SummerLifeBottle3Address = [0x0006ac8b, 6];
+        public static readonly List<uint> IdolLifeBottleAddress = [0x0006acd3, 1];
+        public static readonly List<uint> ColossusLifeBottleAddress = [0x0006acfc, 6];
+        public static readonly List<uint> HurricosLifeBottleAddress = [0x0006ad0f, 5];
+        public static readonly List<uint> AquariaLifeBottleAddress = [0x0006ad2f, 5];
+        public static readonly List<uint> AutumnLifeBottleAddress = [0x0006adb3, 6];
+        public static readonly List<uint> SkelosLifeBottleAddress = [0x0006ade0, 3];
+        public static readonly List<uint> CrystalLifeBottleAddress = [0x0006adff, 7];
+        public static readonly List<uint> BreezeLifeBottle1Address = [0x0006ae21, 7];
+        public static readonly List<uint> BreezeLifeBottle2Address = [0x0006ae22, 4];
+        public static readonly List<uint> ZephyrLifeBottleAddress = [0x0006ae3c, 5];
+        public static readonly List<uint> ScorchLifeBottleAddress = [0x0006ae78, 2];
+        public static readonly List<uint> ShadyLifeBottleAddress = [0x0006ae93, 5];
+        public static readonly List<uint> MagmaLifeBottle1Address = [0x0006aeb9, 0];
+        public static readonly List<uint> MagmaLifeBottle2Address = [0x0006aeba, 0];
+        public static readonly List<uint> MagmaLifeBottle3Address = [0x0006aeba, 1];
+        public static readonly List<uint> MagmaLifeBottle4Address = [0x0006aeba, 2];
+        public static readonly List<uint> FractureLifeBottleAddress = [0x0006aee1, 0];
+        public static readonly List<uint> MysticLifeBottle1Address = [0x0006af61, 4];
+        public static readonly List<uint> MysticLifeBottle2Address = [0x0006af61, 5];
+        public static readonly List<uint> CloudLifeBottleAddress = [0x0006af72, 1];
+
+        public const uint SummerGemMask = 0x0006ac84;
+        public const uint GlimmerGemMask = 0x0006acaa;
+        public const uint IdolGemMask = 0x0006acc4;
+        public const uint ColossusGemMask = 0x0006ace7;
+        public const uint HurricosGemMask = 0x0006ad04;
+        public const uint AquariaGemMask = 0x0006ad24;
+        public const uint SunnyGemMask = 0x0006ad4d;
+        public const uint AutumnGemMask = 0x0006ada7;
+        public const uint SkelosGemMask = 0x0006adcc;
+        public const uint CrystalGemMask = 0x0006adf1;
+        public const uint BreezeGemMask = 0x0006ae14;
+        public const uint ZephyrGemMask = 0x0006ae2b;
+        public const uint ScorchGemMask = 0x0006ae6c;
+        public const uint ShadyGemMask = 0x0006ae88;
+        public const uint MagmaGemMask = 0x0006aeaa;
+        public const uint FractureGemMask = 0x0006aecf;
+        public const uint WinterGemMask = 0x0006af25;
+        public const uint MysticGemMask = 0x0006af4d;
+        public const uint CloudGemMask = 0x0006af6e;
+        public const uint RoboticaGemMask = 0x0006afac;
+        public const uint MetropolisGemMask = 0x0006afca;
+
+        public const uint localGemIncrementAddress = 0x000396C0;
+        public const uint globalGemIncrementAddress = 0x000396d4;
+        public const uint globalGemRespawnFixAddress = 0x0001d36c;
+        public const uint localGemRespawnFixAddress = 0x0001d380;
+        public const uint localGemLoadFixAddress = 0x00076B98;
+        public const uint globalGemLoadFixAddress = 0x00076BA0;
     }
 }

@@ -17,6 +17,12 @@ class MoneybagsOptions():
     PRICE_SHUFFLE = 1
     MONEYBAGSSANITY = 2
 
+class GemsanityOptions():
+    OFF = 0
+    PARTIAL = 1
+    FULL = 2
+    FULL_GLOBAL = 3
+
 class SparxUpgradeOptions():
     OFF = 0
     BLUE = 1
@@ -36,7 +42,8 @@ class LogicTrickOptions():
 
 
 class GoalOption(Choice):
-    """Lets the user choose the completion goal
+    """Lets the user choose the completion goal.  Regardless of choice, the door to Ripto requires 40 orbs to open.
+    Unless you are using glitches to enter boss fights, the first three goals should be equivalent.
     Ripto - Beat Ripto. The goal triggers during the ensuing cutscene.
     14 Talisman - Collect 6 Summer Forest Talismans and 8 Autumn Plains Talismans and beat Ripto.
     40 Orb - Collect 40 orbs and beat Ripto.
@@ -94,6 +101,26 @@ class EnableSkillpointChecksOption(Toggle):
     """Adds checks for getting skill points"""
     display_name = "Enable Skillpoint Checks"
 
+class EnableLifeBottleChecksOption(Toggle):
+    """Adds checks for getting life bottles"""
+    display_name = "Enable Life Bottle Checks"
+
+class EnableGemsanityOption(Choice):
+    """Adds checks for each individual gem.
+    WARNING: To avoid logic issues, this setting is meant for Moneybagssanity only.  If Moneybagssanity is off,
+    all Moneybags prices will be set to 0 in game.
+    Off: Individual gems are not checks.
+    Partial: Every gem has a chance to be a check, but only 200 will be (chosen at random).  For every level with loose
+        gems (not speedways), 8 items giving 50 gems for that level will be added to the pool."""
+    display_name = "Enable Gemsanity"
+    default = GemsanityOptions.OFF
+    option_off = GemsanityOptions.OFF
+    option_partial = GemsanityOptions.PARTIAL
+    #option_full = GemsanityOptions.FULL
+    #option_full_global = GemsanityOptions.FULL_GLOBAL
+    #Full: All gems are checks.  Gem items will be shuffled only within your world.
+    #Full Global: All gems are checks.  Gem items can be anywhere.
+
 class MoneybagsSettings(Choice):
     """Determines settings for Moneybags unlocks.
     Vanilla - Pay Moneybags to progress as usual
@@ -110,6 +137,11 @@ class MoneybagsSettings(Choice):
 class EnableFillerExtraLives(DefaultOnToggle):
     """Allows filler items to include extra lives"""
     display_name = "Enable Extra Lives Filler"
+
+class EnableFillerDestructiveSpyro(Toggle):
+    """Allows filler items to include temporarily powering up Spyro so anything destructible he touches is destroyed.
+    Affects enemies, strong chests, breakable walls, etc."""
+    display_name = "Enable Temporary Destructive Spyro Filler"
 
 # Likely possible but check for side effects.
 #class EnableFillerInvincibility(Toggle):
@@ -249,8 +281,11 @@ class Spyro2Option(PerGameCommonOptions):
     enable_total_gem_checks: EnableTotalGemChecksOption
     max_total_gem_checks: MaxTotalGemCheckOption
     enable_skillpoint_checks: EnableSkillpointChecksOption
+    enable_life_bottle_checks: EnableLifeBottleChecksOption
+    enable_gemsanity: EnableGemsanityOption
     moneybags_settings: MoneybagsSettings
     enable_filler_extra_lives: EnableFillerExtraLives
+    enable_destructive_spyro_filler: EnableFillerDestructiveSpyro
     enable_filler_color_change: EnableFillerColorChange
     enable_filler_big_head_mode: EnableFillerBigHeadMode
     enable_filler_heal_sparx: EnableFillerHealSparx

@@ -14,6 +14,7 @@ using Avalonia.Media;
 using Avalonia.OpenGL;
 using Newtonsoft.Json;
 using ReactiveUI;
+using S2AP.Models;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -41,6 +42,7 @@ public partial class App : Application
     private static Timer _abilitiesTimer { get; set; }
     private static Timer _cosmeticsTimer { get; set; }
     private static MoneybagsOptions _moneybagsOption { get; set; }
+    private static bool _destructiveMode { get; set; }
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -147,7 +149,6 @@ public partial class App : Application
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
             return;
         }
-        GameLocations = Helpers.BuildLocationList();
         _cosmeticEffects = new Queue<string>();
         Client.LocationCompleted += Client_LocationCompleted;
         Client.CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
@@ -157,8 +158,54 @@ public partial class App : Application
         await Client.Login(e.Slot, !string.IsNullOrWhiteSpace(e.Password) ? e.Password : null);
         if (Client.Options?.Count > 0)
         {
+            GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+            int slot = Client.CurrentSession.ConnectionInfo.Slot;
+            Dictionary<string, object> obj = await Client.CurrentSession.DataStorage.GetSlotDataAsync(slot);
+            List<int> gemsanityIDs = new List<int>();
+            if (obj.TryGetValue("gemsanity_ids", out var value))
+            {
+                if (value != null)
+                {
+                    gemsanityIDs = System.Text.Json.JsonSerializer.Deserialize<List<int>>(value.ToString());
+                }
+            }
+
+            GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
+            CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
+            string goalText = "";
+            switch (goal)
+            {
+                case CompletionGoal.Ripto:
+                    goalText = "Defeat Ripto";
+                    break;
+                case CompletionGoal.FourteenTali:
+                    goalText = "Defeat Ripto and collect 14 talismans";
+                    break;
+                case CompletionGoal.FortyOrb:
+                    goalText = "Defeat Ripto and collect 40 orbs";
+                    break;
+                case CompletionGoal.SixtyFourOrb:
+                    goalText = "Defeat Ripto and collect 64 orbs";
+                    break;
+                case CompletionGoal.HundredPercent:
+                    goalText = "Defeat Ripto and collect 14 talismans, 40 orbs, and 10000 gems";
+                    break;
+                case CompletionGoal.TenTokens:
+                    goalText = "Collect all 10 tokens in Dragon Shores";
+                    break;
+                case CompletionGoal.AllSkillpoints:
+                    goalText = "Collect all 16 skill points";
+                    break;
+                case CompletionGoal.Epilogue:
+                    goalText = "Defeat Ripto and collect all 16 skill points";
+                    break;
+                default:
+                    goalText = "Defeat Ripto and collect 40 orbs";
+                    break;
+            }
+            Log.Logger.Information($"Your goal is: {goalText}");
         }
         else
         {
@@ -171,6 +218,7 @@ public partial class App : Application
         if (Client.GameState == null) return;
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
+        CalculateCurrentGems();
         CheckGoalCondition();
     }
 
@@ -178,14 +226,17 @@ public partial class App : Application
     {
         Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
         int currentHealth;
+        Dictionary<string, int> talismans;
         switch (args.Item.Name)
         {
             case "Summer Forest Talisman":
-                CalculateCurrentTalismans();
+                talismans = CalculateCurrentTalismans();
+                Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
                 CheckGoalCondition();
                 break;
             case "Autumn Plains Talisman":
-                CalculateCurrentTalismans();
+                talismans = CalculateCurrentTalismans();
+                Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
                 CheckGoalCondition();
                 break;
             case "Orb":
@@ -246,6 +297,15 @@ public partial class App : Application
                     await Task.Delay(15000);
                     Memory.Write(Addresses.InvisibleAddress1, (short)0);
                     Memory.Write(Addresses.InvisibleAddress2, (short)0);
+                });
+                break;
+            case "Destructive Spyro":
+                await Task.Run(async () =>
+                {
+                    // If effects overlap, this doesn't quite work, but the effect is short enough not to matter.
+                    _destructiveMode = true;
+                    await Task.Delay(15000);
+                    _destructiveMode = false;
                 });
                 break;
             case "Moneybags Unlock - Crystal Glacier Bridge":
@@ -323,6 +383,13 @@ public partial class App : Application
             case "Permanent Fireball Ability":
                 // Managed by HandleAbilities()
                 break;
+            default:
+                if (args.Item.Name.EndsWith(" Gem") || args.Item.Name.EndsWith(" Gems"))
+                {
+                    CalculateCurrentGems();
+                    CheckGoalCondition();
+                }
+                break;
         }
     }
     private static async void HandleAbilities(object source, ElapsedEventArgs e)
@@ -350,12 +417,29 @@ public partial class App : Application
 
         if (fireballOption == AbilityOptions.AlwaysOff || fireballOption == AbilityOptions.InPool && hasFireballItem == 0)
         {
-            Memory.Write(Addresses.PermanentFireballAddress, 0);
+            Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)0);
         }
         else if (fireballOption == AbilityOptions.InPool && hasFireballItem == 1)
         {
-            Memory.Write(Addresses.PermanentFireballAddress, 1);
+            Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)1);
         } // else vanilla behavior, controlled by game.
+
+        if (_destructiveMode)
+        {
+            Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
+        } // Turns off automatically on its own.
+
+        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        if (gemsanityOption != GemsanityOptions.Off)
+        {
+            // Disable updating local and global gem counts on collecting a gem, loading into a level, and respawning.
+            Memory.Write(Addresses.localGemIncrementAddress, 0);
+            Memory.Write(Addresses.globalGemIncrementAddress, 0);
+            Memory.Write(Addresses.globalGemRespawnFixAddress, 0);
+            Memory.Write(Addresses.localGemRespawnFixAddress, 0);
+            //Memory.Write(Addresses.localGemLoadFixAddress, 0);
+            //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
+        }
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
@@ -416,31 +500,50 @@ public partial class App : Application
             Log.Logger.Information("Player is not yet in game.");
             return;
         }
+        // Make Glimmer bridge free.  In normal settings, this cannot be an item or the start is too restrictive.
+        // It's not worth making this payment an item for Gemsanity alone.
+        Memory.Write(Addresses.GlimmerBridgeUnlock, 0);
         MoneybagsOptions moneybagsOption = (MoneybagsOptions)int.Parse(Client.Options?.GetValueOrDefault("moneybags_settings", "0").ToString());
+        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        Dictionary<string, uint> moneybagsAddresses = new Dictionary<string, uint>()
+        {
+            { "Crystal Glacier Bridge", Addresses.CrystalBridgeUnlock },
+            // v0.1.0 had a typo, so support both spellings.
+            { "Aquaria Tower Submarine", Addresses.AquariaSubUnlock },
+            { "Aquaria Towers Submarine", Addresses.AquariaSubUnlock },
+            { "Magma Cone Elevator", Addresses.MagmaElevatorUnlock },
+            { "Swim", Addresses.SwimUnlock },
+            { "Climb", Addresses.ClimbUnlock },
+            { "Headbash", Addresses.HeadbashUnlock },
+            { "Door to Aquaria Towers", Addresses.WallToAquariaUnlock },
+            { "Zephyr Portal", Addresses.ZephyrPortalUnlock },
+            { "Shady Oasis Portal", Addresses.ShadyPortalUnlock },
+            { "Icy Speedway Portal", Addresses.IcyPortalUnlock },
+            { "Canyon Speedway Portal", Addresses.CanyonPortalUnlock },
+        };
         if (moneybagsOption == MoneybagsOptions.Moneybagssanity)
         {
-            Dictionary<string, uint> moneybagsAddresses = new Dictionary<string, uint>()
-            {
-                { "Crystal Glacier Bridge", Addresses.CrystalBridgeUnlock },
-                // v0.1.0 had a typo, so support both spellings.
-                { "Aquaria Tower Submarine", Addresses.AquariaSubUnlock },
-                { "Aquaria Towers Submarine", Addresses.AquariaSubUnlock },
-                { "Magma Cone Elevator", Addresses.MagmaElevatorUnlock },
-                { "Swim", Addresses.SwimUnlock },
-                { "Climb", Addresses.ClimbUnlock },
-                { "Headbash", Addresses.HeadbashUnlock },
-                { "Door to Aquaria Towers", Addresses.WallToAquariaUnlock },
-                { "Zephyr Portal", Addresses.ZephyrPortalUnlock },
-                { "Shady Oasis Portal", Addresses.ShadyPortalUnlock },
-                { "Icy Speedway Portal", Addresses.IcyPortalUnlock },
-                { "Canyon Speedway Portal", Addresses.CanyonPortalUnlock },
-            };
             foreach (string unlock in moneybagsAddresses.Keys)
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
                 if ((Client.GameState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
                 {
                     Memory.Write(unlockAddress, 20001);
+                }
+                else
+                {
+                    Memory.Write(unlockAddress, 65536);
+                }
+            }
+        }
+        else if (moneybagsOption == MoneybagsOptions.Vanilla && gemsanityOption != GemsanityOptions.Off)
+        {
+            foreach (string unlock in moneybagsAddresses.Keys)
+            {
+                uint unlockAddress = moneybagsAddresses[unlock];
+                if ((Client.GameState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
+                {
+                    Memory.Write(unlockAddress, 0);
                 }
                 else
                 {
@@ -532,16 +635,14 @@ public partial class App : Application
         Memory.WriteByte(Addresses.SpyroHeight, (byte)(32));
         Memory.WriteByte(Addresses.SpyroLength, (byte)(32));
         Memory.WriteByte(Addresses.SpyroWidth, (byte)(32));
-        Memory.WriteByte(Addresses.BigHeadMode, (byte)(1));
-        Memory.WriteByte(Addresses.FlatSpyroMode, (byte)0);
+        Memory.Write(Addresses.BigHeadMode, (short)(1));
     }
     private static async void ActivateFlatSpyroMode()
     {
         Memory.WriteByte(Addresses.SpyroHeight, (byte)(16));
         Memory.WriteByte(Addresses.SpyroLength, (byte)(16));
         Memory.WriteByte(Addresses.SpyroWidth, (byte)(2));
-        Memory.WriteByte(Addresses.FlatSpyroMode, (byte)(1));
-        Memory.WriteByte(Addresses.BigHeadMode, (byte)0);
+        Memory.Write(Addresses.BigHeadMode, (short)0x100);
     }
     private static async void TurnSpyroColor(SpyroColor colorEnum)
     {
@@ -630,21 +731,44 @@ public partial class App : Application
         CalculateCurrentOrbs();
         CheckGoalCondition();
     }
+    /**
+     * Writes a block of text to memory. endAddress will generally be the null terminator and will not be written to.
+     */
+    private static void WriteStringToMemory(uint startAddress, uint endAddress, string stringToWrite)
+    {
+        uint address = startAddress;
+        int stringIndex = 0;
+        while (address < endAddress)
+        {
+            char charToWrite = ' ';
+            if (stringIndex < stringToWrite.Length)
+            {
+                charToWrite = stringToWrite[stringIndex];
+            }
+            Memory.WriteByte(address, (byte)charToWrite);
+            stringIndex++;
+            address++;
+        }
+    }
     private static Dictionary<string, int> CalculateCurrentTalismans()
     {
-        var summerCount = Client.GameState?.ReceivedItems.Where(x => x.Name == "Summer Forest Talisman").Count() ?? 0;
+        var summerCount = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Summer Forest Talisman").Count() ?? 0;
         summerCount = Math.Min(summerCount, 6);
-        var autumnCount = Client.GameState?.ReceivedItems.Where(x => x.Name == "Autumn Plains Talisman").Count() ?? 0;
+        var autumnCount = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Autumn Plains Talisman").Count() ?? 0;
         autumnCount = Math.Min(autumnCount, 8);
         var currentLevel = Memory.ReadByte(Addresses.CurrentLevelAddress);
         // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
         if (currentLevel == (byte)LevelInGameIDs.SummerForest)
         {
             Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)summerCount);
+            WriteStringToMemory(Addresses.SummerEloraStartText, Addresses.SummerEloraEndText, $"Hi, Spyro! You have @4{summerCount}@0 Summer Forest Talismans.");
+            WriteStringToMemory(Addresses.SummerEloraWarpStartText, Addresses.SummerEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount}@0 Summer Forest Talismans.");
         }
-        else
+        else if (currentLevel == (byte)LevelInGameIDs.AutumnPlains)
         {
             Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)(summerCount + autumnCount));
+            WriteStringToMemory(Addresses.AutumnEloraStartText, Addresses.AutumnEloraEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount }@0 Talismans.");
+            WriteStringToMemory(Addresses.AutumnEloraWarpStartText, Addresses.AutumnEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount}@0 Talismans.");
         }
         return new Dictionary<string, int>() {
             { "Summer Forest", summerCount },
@@ -654,18 +778,46 @@ public partial class App : Application
     }
     private static int CalculateCurrentOrbs()
     {
-        var count = Client.GameState?.ReceivedItems.Where(x => x.Name == "Orb").Count() ?? 0;
+        var count = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Orb").Count() ?? 0;
         count = Math.Min(count, 64);
         Memory.WriteByte(Addresses.TotalOrbAddress, (byte)(count));
         return count;
     }
+    private static int CalculateCurrentGems()
+    {
+        uint levelGemCountAddress = Addresses.LevelGemsAddress;
+        int totalGems = 0;
+        int i = 0;
+        foreach (LevelData level in Helpers.GetLevelData())
+        {
+            if (!level.Name.Contains("Speedway"))
+            {
+                string levelName = level.Name;
+                int levelGemCount = Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Red Gem").Count() ?? 0;
+                levelGemCount += 2 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Green Gem").Count() ?? 0);
+                levelGemCount += 5 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Blue Gem").Count() ?? 0);
+                levelGemCount += 10 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Gold Gem").Count() ?? 0);
+                levelGemCount += 25 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Pink Gem").Count() ?? 0);
+                levelGemCount += 50 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} 50 Gems").Count() ?? 0);
+                Memory.Write(levelGemCountAddress, levelGemCount);
+                totalGems += levelGemCount;
+            } else
+            {
+                totalGems += Memory.ReadInt(levelGemCountAddress);
+            }
+            i++;
+            levelGemCountAddress += 4;
+        }
+        Memory.Write(Addresses.TotalGemAddress, totalGems);
+        return totalGems;
+    }
     private static int CalculateCurrentSkillPoints()
     {
-        return Client.GameState?.ReceivedItems.Where(x => x.Name == "Skill Point").Count() ?? 0;
+        return Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Skill Point").Count() ?? 0;
     }
     private static int CalculateCurrentTokens()
     {
-        return Client.GameState?.ReceivedItems.Where(x => x.Name == "Dragon Shores Token").Count() ?? 0;
+        return Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Dragon Shores Token").Count() ?? 0;
     }
     private static void OnConnected(object sender, EventArgs args)
     {
@@ -683,7 +835,7 @@ public partial class App : Application
 
         _abilitiesTimer = new Timer();
         _abilitiesTimer.Elapsed += new ElapsedEventHandler(HandleAbilities);
-        _abilitiesTimer.Interval = 250;
+        _abilitiesTimer.Interval = 500;
         _abilitiesTimer.Enabled = true;
 
         _cosmeticsTimer = new Timer();

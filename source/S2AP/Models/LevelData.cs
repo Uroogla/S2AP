@@ -1,4 +1,6 @@
-﻿namespace S2AP.Models
+﻿using System.Collections.Generic;
+
+namespace S2AP.Models
 {
     public class LevelData
     {
@@ -9,7 +11,23 @@
         public bool IsBoss { get; set; }
         public uint[] MoneybagsAddresses { get; set; }
         public uint[] SkillPointAddresses { get; set; }
-        public LevelData(string name, int levelId, int orbCount, bool hasTalisman, bool isBoss, uint[] moneybagsAddresses, uint[] skillPointAddresses)
+        public List<uint>[] LifeBottleAddresses { get; set; }
+        public uint GemMaskAddress { get; set; }
+        public int TotalGemCount { get; set; }
+        public int[] GemSkipIndices { get; set; }
+        public LevelData(
+            string name,
+            int levelId,
+            int orbCount,
+            bool hasTalisman,
+            bool isBoss,
+            uint[] moneybagsAddresses,
+            uint[] skillPointAddresses,
+            List<uint>[] lifeBottleAddresses,
+            uint gemMaskAddress = 0x0,
+            int totalGemCount = 0,
+            int[] gemSkipIndices = null
+        )
         {
             Name = name;
             OrbCount = orbCount;
@@ -18,6 +36,14 @@
             IsBoss = isBoss;
             MoneybagsAddresses = moneybagsAddresses;
             SkillPointAddresses = skillPointAddresses;
+            LifeBottleAddresses = lifeBottleAddresses;
+            GemMaskAddress = gemMaskAddress;
+            TotalGemCount = totalGemCount;
+            if (gemSkipIndices == null)
+            {
+                gemSkipIndices = [];
+            }
+            GemSkipIndices = gemSkipIndices;
         }
     }
 }
