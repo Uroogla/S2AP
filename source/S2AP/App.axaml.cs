@@ -9,6 +9,7 @@ using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Packets;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Platform;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.OpenGL;
@@ -104,6 +105,9 @@ public partial class App : Application
             case "useVerboseHints":
                 Log.Logger.Information("Hints for found locations will be displayed.  Type 'useQuietHints' to show them.");
                 _useQuietHints = false;
+                break;
+            case "showUnlockedLevels":
+                showUnlockedLevels();
                 break;
         }
     }
@@ -314,8 +318,6 @@ public partial class App : Application
                     UnlockMoneybags(Addresses.CrystalBridgeUnlock);
                 }
                 break;
-            // v0.1.0 had a typo, so support both for backwards compatibility.
-            case "Moneybags Unlock - Aquaria Tower Submarine":
             case "Moneybags Unlock - Aquaria Towers Submarine":
                 if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                 {
@@ -389,7 +391,26 @@ public partial class App : Application
                     CalculateCurrentGems();
                     CheckGoalCondition();
                 }
+                else if (args.Item.Name.EndsWith(" Unlock"))
+                {
+                    // Unlock effects managed by HandleAbilities().
+                    showUnlockedLevels();
+                }
                 break;
+        }
+    }
+    private void showUnlockedLevels()
+    {
+        List<Item> unlockedLevels = (Client.GameState?.ReceivedItems.Where(x => x.Name.EndsWith(" Unlock")).ToList() ?? new List<Item>());
+        if (unlockedLevels.Count > 0)
+        {
+            string unlockedLevelsString = "You have unlocked: ";
+            foreach (Item unlockedLevel in unlockedLevels)
+            {
+                unlockedLevelsString += (unlockedLevel.Name.Split(" Unlock")[0] + "; ");
+            }
+            unlockedLevelsString = unlockedLevelsString.Substring(0, unlockedLevelsString.Length - 2);
+            Log.Logger.Information(unlockedLevelsString);
         }
     }
     private static async void HandleAbilities(object source, ElapsedEventArgs e)
@@ -439,6 +460,116 @@ public partial class App : Application
             Memory.Write(Addresses.localGemRespawnFixAddress, 0);
             //Memory.Write(Addresses.localGemLoadFixAddress, 0);
             //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
+        }
+        int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
+        if (openWorldOption != 0)
+        {
+            LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+
+            if (currentLevel == LevelInGameIDs.SummerForest)
+            {
+                bool isIdolUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
+                bool isColossusUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Colossus Unlock")).Count() ?? 0) > 0;
+                bool isHurricosUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Hurricos Unlock")).Count() ?? 0) > 0;
+                bool isAquariaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
+                bool isSunnyUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
+                bool isOceanUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
+                bool[] summerUnlocks = [
+                    isIdolUnlocked,
+                    isColossusUnlocked,
+                    isHurricosUnlocked,
+                    isAquariaUnlocked,
+                    isSunnyUnlocked,
+                    isOceanUnlocked
+                ];
+                // Glimmer is always unlocked.
+                uint portalAddress = Addresses.SummerPortalBlock + 8;
+                foreach (bool isUnlocked in summerUnlocks)
+                {
+                    if (isUnlocked)
+                    {
+                        Memory.Write(portalAddress, 6);
+                    } else
+                    {
+                        Memory.Write(portalAddress, 0);
+                    }
+                    portalAddress += 8;
+                }
+                /*Memory.Write(Addresses.IdolPortalAddress + 0x48, isIdolUnlocked ? 0x01100100 : 0x00100001);
+                Memory.Write(Addresses.ColossusPortalAddress + 0x48, isColossusUnlocked ? 0x01100100 : 0x00100001);
+                Memory.Write(Addresses.HurricosPortalAddress + 0x48, isHurricosUnlocked ? 0x01100100 : 0x00100001);
+                Memory.Write(Addresses.AquariaPortalAddress + 0x48, isAquariaUnlocked ? 0x01100100 : 0x00100001);
+                Memory.Write(Addresses.SunnyPortalAddress + 0x48, isSunnyUnlocked ? 0x01100100 : 0x00100001);
+                Memory.Write(Addresses.OceanPortalAddress + 0x48, isOceanUnlocked ? 0x01100100 : 0x00100001);*/
+            }
+            else if (currentLevel == LevelInGameIDs.AutumnPlains)
+            {
+                bool isSkelosUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
+                bool isCrystalUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
+                bool isBreezeUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
+                bool isZephyrUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Zephyr Unlock")).Count() ?? 0) > 0;
+                bool isMetroUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
+                bool isScorchUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Scorch Unlock")).Count() ?? 0) > 0;
+                bool isShadyUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
+                bool isMagmaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Magma Cone Unlock")).Count() ?? 0) > 0;
+                bool isFractureUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
+                bool isIcyUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
+                bool[] autumnUnlocks = [
+                    isSkelosUnlocked,
+                    isCrystalUnlocked,
+                    isBreezeUnlocked,
+                    isZephyrUnlocked,
+                    isMetroUnlocked,
+                    isScorchUnlocked,
+                    isShadyUnlocked,
+                    isMagmaUnlocked,
+                    isFractureUnlocked,
+                    isIcyUnlocked
+                ];
+                uint portalAddress = Addresses.AutumnPortalBlock;
+                foreach (bool isUnlocked in autumnUnlocks)
+                {
+                    if (isUnlocked)
+                    {
+                        Memory.Write(portalAddress, 6);
+                    }
+                    else
+                    {
+                        Memory.Write(portalAddress, 0);
+                    }
+                    portalAddress += 8;
+                }
+            }
+            else if (currentLevel == LevelInGameIDs.WinterTundra)
+            {
+                bool isMysticUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
+                bool isCloudUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
+                bool isCanyonUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
+                bool isRoboticaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
+                bool isMetropolisUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
+                bool isDragonShoresUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                bool[] winterUnlocks = [
+                    isMysticUnlocked,
+                    isCloudUnlocked,
+                    isCanyonUnlocked,
+                    isRoboticaUnlocked,
+                    isMetropolisUnlocked,
+                    isDragonShoresUnlocked
+                ];
+                uint portalAddress = Addresses.WinterPortalBlock;
+                foreach (bool isUnlocked in winterUnlocks)
+                {
+                    if (isUnlocked)
+                    {
+                        Memory.Write(portalAddress, 6);
+                    }
+                    else
+                    {
+                        Memory.Write(portalAddress, 0);
+                    }
+                    portalAddress += 8;
+                }
+            }
         }
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
@@ -550,6 +681,14 @@ public partial class App : Application
                     Memory.Write(unlockAddress, 65536);
                 }
             }
+        }
+        int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
+        Log.Logger.Information($"{openWorldOption} {Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()}");
+        if (openWorldOption != 0)
+        {
+            Memory.WriteByte(Addresses.CrushGuidebookUnlock, 1);
+            Memory.WriteByte(Addresses.GulpGuidebookUnlock, 1);
+            // TODO: Determine whether or not to unlock Autumn and Winter.
         }
         _loadGameTimer.Enabled = false;
     }

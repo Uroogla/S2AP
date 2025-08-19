@@ -67,6 +67,12 @@ class GuaranteedItemsOption(ItemDict):
     """Guarantees that the specified items will be in the item pool"""
     display_name = "Guaranteed Items"
 
+class EnableOpenWorld(Toggle):
+    """If on, Crush and Gulp do not require talismans.  Every level is unlocked by items.
+    You start with Glimmer and 3 other unlocks."""
+    # TODO: Determine what this means for goals around talismans.
+    display_name = "Enable Open World"
+
 class Enable25PctGemChecksOption(Toggle):
     """Adds checks for getting 25% of the gems in a level"""
     display_name = "Enable 25% Gem Checks"
@@ -274,6 +280,7 @@ class LogicRiptoEarly(Choice):
 class Spyro2Option(PerGameCommonOptions):
     goal: GoalOption
     guaranteed_items: GuaranteedItemsOption
+    enable_open_world: EnableOpenWorld
     enable_25_pct_gem_checks: Enable25PctGemChecksOption
     enable_50_pct_gem_checks: Enable50PctGemChecksOption
     enable_75_pct_gem_checks: Enable75PctGemChecksOption

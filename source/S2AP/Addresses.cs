@@ -129,5 +129,19 @@ namespace S2AP
         public const uint localGemRespawnFixAddress = 0x0001d380;
         public const uint localGemLoadFixAddress = 0x00076B98;
         public const uint globalGemLoadFixAddress = 0x00076BA0;
+
+        public const uint SummerPortalBlock = 0x000e2d34;
+        public const uint AutumnPortalBlock = 0x000f5330;
+        public const uint WinterPortalBlock = 0x000cf28c;
+
+        public const uint CrushGuidebookUnlock = 0x0006B08C;
+        public const uint GulpGuidebookUnlock = 0x0006B098;
+
+        public const uint IdolPortalAddress = 0x001757C8;
+        public const uint ColossusPortalAddress = 0x00175668;
+        public const uint HurricosPortalAddress = 0x001756c0;
+        public const uint AquariaPortalAddress = 0x00175770;
+        public const uint SunnyPortalAddress = 0x00175718;
+        public const uint OceanPortalAddress = 0x00179A20;
     }
 }
