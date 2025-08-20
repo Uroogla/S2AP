@@ -222,7 +222,11 @@ public partial class App : Application
         if (Client.GameState == null) return;
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
-        CalculateCurrentGems();
+        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        if (gemsanityOption != GemsanityOptions.Off)
+        {
+            CalculateCurrentGems();
+        }
         CheckGoalCondition();
     }
 
@@ -924,6 +928,11 @@ public partial class App : Application
     }
     private static int CalculateCurrentGems()
     {
+        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        if (gemsanityOption == GemsanityOptions.Off)
+        {
+            return Memory.ReadShort(Addresses.TotalGemAddress);
+        }
         uint levelGemCountAddress = Addresses.LevelGemsAddress;
         int totalGems = 0;
         int i = 0;

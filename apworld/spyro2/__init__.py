@@ -532,7 +532,7 @@ class Spyro2World(World):
         )
         set_rule(
             self.multiworld.get_location("Summer Forest: Atop a ladder", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Moneybags Unlock - Swim", self.player)
+            lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Climb", self.player)
         )
         set_rule(
             self.multiworld.get_location("Summer Forest: Behind the door", self.player),
