@@ -34,21 +34,30 @@ class AbilityOptions():
     VANILLA = 0
     IN_POOL = 1
     OFF = 2
+    START_WITH = 3
 
 class LogicTrickOptions():
     OFF = 0
     ON_WITH_DOUBLE_JUMP = 1
     ALWAYS_ON = 2
 
+class PortalTextColorOptions():
+    DEFAULT = 0
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+    PINK = 4
+    WHITE = 5
+
 
 class GoalOption(Choice):
     """Lets the user choose the completion goal.  Regardless of choice, the door to Ripto requires 40 orbs to open.
     Unless you are using glitches to enter boss fights, the first three goals should be equivalent.
     Ripto - Beat Ripto. The goal triggers during the ensuing cutscene.
-    14 Talisman - Collect 6 Summer Forest Talismans and 8 Autumn Plains Talismans and beat Ripto.
+    14 Talisman - Collect 6 Summer Forest Talismans and 8 Autumn Plains Talismans and beat Ripto. In Open World mode, defaults to Ripto.
     40 Orb - Collect 40 orbs and beat Ripto.
     64 Orb - Collect 64 orbs and beat Ripto.
-    100 Percent - Collect all talismans, orbs, and gems and beat Ripto.
+    100 Percent - Collect all talismans, orbs, and gems and beat Ripto. In Open World mode, no talismans are required.
     10 Tokens - Collect all 10 tokens in Dragon Shores.
     All Skillpoints - Collect all 16 skill points in the game. Excluded locations are still required for this goal.
     Epilogue - Unlock the full epilogue by collecting all 16 skill points and defeating Ripto. Excluded locations are still required for this goal."""
@@ -70,8 +79,22 @@ class GuaranteedItemsOption(ItemDict):
 class EnableOpenWorld(Toggle):
     """If on, Crush and Gulp do not require talismans.  Every level is unlocked by items.
     You start with Glimmer and 3 other unlocks."""
-    # TODO: Determine what this means for goals around talismans.
     display_name = "Enable Open World"
+
+class StartingLevelCount(Range):
+    """Determines how many level unlocks the player starts with.
+    The player always has access to Glimmer, homeworlds, and boss fights.
+    Starting with fewer than 8 unlocks requires you to add extra locations to the item pool.
+    NOTE: Only has an effect in Open World mode."""
+    display_name = "Open World Starting Level Unlocks"
+    range_start = 0
+    range_end = 22
+    default = 8
+
+class StartWithAbilitiesAndWarps(Toggle):
+    """If on in Open World mode, the player will start with swim, climb, headbash, and access to all 3 homeworlds.
+    NOTE: Open has an effect in Open World mode."""
+    display_name = "Open World Start With Abilities and Warps"
 
 class Enable25PctGemChecksOption(Toggle):
     """Adds checks for getting 25% of the gems in a level"""
@@ -110,6 +133,12 @@ class EnableSkillpointChecksOption(Toggle):
 class EnableLifeBottleChecksOption(Toggle):
     """Adds checks for getting life bottles"""
     display_name = "Enable Life Bottle Checks"
+
+class EnableSpiritParticleChecksOption(Toggle):
+    """Adds checks for getting all spirit particles in a level.
+    Some minigame enemies are counted as spirit particles, like Draclets in Crystal Glacier.
+    NOTE: Some enemies will only release spirit particles while the camera is on them."""
+    display_name = "Enable Spirit Particle Checks"
 
 class EnableGemsanityOption(Choice):
     """Adds checks for each individual gem.
@@ -231,12 +260,14 @@ class FireballAbility(Choice):
     This option affects how the game plays, not game logic.
     Vanilla - The fireball powerup in Dragon Shores behaves normally.
     In Pool - Adds Permanent Fireball to the item pool.  The Dragon Shores powerup does not work.
-    Off - Permanent Fireball is disabled. The Dragon Shores powerup does not work."""
+    Off - Permanent Fireball is disabled. The Dragon Shores powerup does not work.
+    Start With - You begin the game with fireball, as in New Game Plus."""
     display_name = "Permanent Fireball Ability"
     default = AbilityOptions.VANILLA
     option_vanilla = AbilityOptions.VANILLA
     option_in_pool = AbilityOptions.IN_POOL
     option_off = AbilityOptions.OFF
+    option_start_with = AbilityOptions.START_WITH
 
 # TODO: Support more granular tricks.
 class LogicCrushEarly(Choice):
@@ -275,12 +306,26 @@ class LogicRiptoEarly(Choice):
     option_on_with_double_jump = LogicTrickOptions.ON_WITH_DOUBLE_JUMP
     option_always_on = LogicTrickOptions.ALWAYS_ON
 
+class PortalAndGemCollectionColor(Choice):
+    """Changes the color of the number that appears when gems are collected,
+    as well as the text on portals."""
+    display_name = "Portal and Gem Collection Text Color"
+    default = PortalTextColorOptions.DEFAULT
+    option_default = PortalTextColorOptions.DEFAULT
+    option_red = PortalTextColorOptions.RED
+    option_green = PortalTextColorOptions.GREEN
+    option_blue = PortalTextColorOptions.BLUE
+    option_pink = PortalTextColorOptions.PINK
+    option_white = PortalTextColorOptions.WHITE
+
 
 @dataclass
 class Spyro2Option(PerGameCommonOptions):
     goal: GoalOption
     guaranteed_items: GuaranteedItemsOption
     enable_open_world: EnableOpenWorld
+    open_world_level_unlocks: StartingLevelCount
+    open_world_ability_and_warp_unlocks: StartWithAbilitiesAndWarps
     enable_25_pct_gem_checks: Enable25PctGemChecksOption
     enable_50_pct_gem_checks: Enable50PctGemChecksOption
     enable_75_pct_gem_checks: Enable75PctGemChecksOption
@@ -289,6 +334,7 @@ class Spyro2Option(PerGameCommonOptions):
     max_total_gem_checks: MaxTotalGemCheckOption
     enable_skillpoint_checks: EnableSkillpointChecksOption
     enable_life_bottle_checks: EnableLifeBottleChecksOption
+    enable_spirit_particle_checks: EnableSpiritParticleChecksOption
     enable_gemsanity: EnableGemsanityOption
     moneybags_settings: MoneybagsSettings
     enable_filler_extra_lives: EnableFillerExtraLives
@@ -307,6 +353,7 @@ class Spyro2Option(PerGameCommonOptions):
     logic_crush_early: LogicCrushEarly
     logic_gulp_early: LogicGulpEarly
     logic_ripto_early: LogicRiptoEarly
+    portal_gem_collection_color: PortalAndGemCollectionColor
 
 
 # Group logic/trick options together, especially for the local WebHost.
@@ -317,6 +364,13 @@ spyro_options_groups = [
             LogicCrushEarly,
             LogicGulpEarly,
             LogicRiptoEarly
+        ],
+        True
+    ),
+    OptionGroup(
+        "Cosmetics",
+        [
+            PortalAndGemCollectionColor
         ],
         True
     ),

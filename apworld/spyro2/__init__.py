@@ -100,6 +100,8 @@ class Spyro2World(World):
             for itemname, item in item_dictionary.items():
                 if item.category == Spyro2ItemCategory.GEM:
                     self.options.local_items.value.add(item)
+        if self.options.enable_life_bottle_checks.value:
+            self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
 
     def create_regions(self):
         # Create Regions
@@ -250,6 +252,30 @@ class Spyro2World(World):
         def is_boss_defeated(self, boss, state):
             return state.has(boss + " Defeated", self.player)
 
+        def can_swim(self, state):
+            return state.has("Moneybags Unlock - Swim", self.player)
+
+        def can_climb(self, state):
+            return state.has("Moneybags Unlock - Climb", self.player)
+
+        def can_headbash(self, state):
+            return state.has("Moneybags Unlock - Headbash", self.player)
+
+        def can_reach_summer_second_half(self, state):
+            return can_swim(self, state)
+
+        def can_reach_metro(self, state):
+            return state.has("Orb", self.player, 6)
+
+        def can_reach_autumn_second_half(self, state):
+            return can_climb(self, state)
+
+        def can_pass_autumn_door(self, state):
+            return can_reach_autumn_second_half(self, state) and state.has("Orb", self.player, 8)
+
+        def can_reach_winter_second_half(self, state):
+            return can_headbash(self, state)
+
         def get_gemsanity_gems(self, level, state):
             count = 0
             count += state.count(f"{level} Red Gem", self.player)
@@ -267,18 +293,18 @@ class Spyro2World(World):
             # Older versions of Python do not support switch statements, so use if/elif.
             if level == 'Glimmer':
                 gems = 353
-                if state.has("Moneybags Unlock - Climb", self.player):
+                if can_climb(self, state):
                     # Upper level in cave; technically accessible with double jump
                     gems += 47
                 return gems
             elif level == 'Summer Forest':
                 gems = 155
-                if state.has("Moneybags Unlock - Swim", self.player):
+                if can_swim(self, state):
                     # TODO: Count underwater gems for DJ logic.
                     gems += 221
                     if state.has("Moneybags Unlock - Door to Aquaria Towers", self.player):
                         gems += 14
-                    if state.has("Moneybags Unlock - Climb", self.player):
+                    if can_climb(self, state):
                         gems += 10
                 return gems
             elif level == 'Idol Springs':
@@ -286,7 +312,7 @@ class Spyro2World(World):
                     return 0
                 # Probably 315, but gem RNG from the strong chest could impact this - remove those gems from logic.
                 gems = 298
-                if state.has("Moneybags Unlock - Swim", self.player):
+                if can_swim(self, state):
                     gems += 102
                 return gems
             elif level == 'Colossus':
@@ -294,13 +320,13 @@ class Spyro2World(World):
                     return 0
                 return 400
             elif level == 'Hurricos':
-                if not state.has("Moneybags Unlock - Swim", self.player):
+                if not can_reach_summer_second_half(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Hurricos Unlock", self.player):
                     return 0
                 return 400
             elif level == 'Aquaria Towers':
-                if not state.has("Moneybags Unlock - Swim", self.player) or \
+                if not can_reach_summer_second_half(self, state) or \
                         not state.has("Moneybags Unlock - Door to Aquaria Towers", self.player) or \
                         (self.options.enable_progressive_sparx_logic.value and not has_sparx_health(self, 1, state)):
                     return 0
@@ -312,17 +338,17 @@ class Spyro2World(World):
                     gems += 273
                 return gems
             elif level == "Sunny Beach":
-                if not state.has("Moneybags Unlock - Swim", self.player):
+                if not can_reach_summer_second_half(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Sunny Beach Unlock", self.player):
                     return 0
                 # TODO: Allow for getting in without swim.
                 gems = 380
-                if state.has("Moneybags Unlock - Climb", self.player):
+                if can_climb(self, state):
                     gems += 20
                 return gems
             elif level == "Ocean Speedway":
-                if not state.has("Moneybags Unlock - Swim", self.player) or not state.has("Orb", self.player, 3):
+                if not can_reach_summer_second_half(self, state) or not state.has("Orb", self.player, 3):
                     return 0
                 if self.options.enable_open_world and not state.has("Ocean Speedway Unlock", self.player):
                     return 0
@@ -331,14 +357,14 @@ class Spyro2World(World):
                 if not is_boss_defeated(self, "Crush", state):
                     return 0
                 gems = 118
-                if state.has("Orb", self.player, 6):
+                if can_reach_metro(self, state):
                     gems += 22
-                if state.has("Moneybags Unlock - Climb", self.player):
+                if can_reach_autumn_second_half(self, state):
                     gems += 51
-                    if state.has("Orb", self.player, 8):
-                        gems += 202
-                        if state.has("Moneybags Unlock - Shady Oasis Portal", self.player):
-                            gems += 7
+                if can_pass_autumn_door(self, state):
+                    gems += 202
+                    if state.has("Moneybags Unlock - Shady Oasis Portal", self.player):
+                        gems += 7
                 return gems
             elif level == "Skelos Badlands":
                 if not is_boss_defeated(self, "Crush", state) or \
@@ -369,37 +395,35 @@ class Spyro2World(World):
                 if self.options.enable_open_world and not state.has("Zephyr Unlock", self.player):
                     return 0
                 gems = 284
-                if state.has("Moneybags Unlock - Climb", self.player):
+                if can_climb(self, state):
                     gems += 116
                 return gems
             elif level == "Metro Speedway":
-                if not is_boss_defeated(self, "Crush", state) or not state.has("Orb", self.player, 6):
+                if not is_boss_defeated(self, "Crush", state) or not can_reach_metro(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Metro Speedway Unlock", self.player):
                     return 0
                 return 400
             elif level == "Scorch":
-                if not is_boss_defeated(self, "Crush", state) or not state.has("Moneybags Unlock - Climb", self.player):
+                if not is_boss_defeated(self, "Crush", state) or not can_reach_autumn_second_half(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Scorch Unlock", self.player):
                     return 0
                 return 400
             elif level == "Shady Oasis":
                 if not is_boss_defeated(self, "Crush", state) or \
-                        not state.has("Moneybags Unlock - Climb", self.player) or \
-                        not state.has("Orb", self.player, 8) or \
+                        not can_pass_autumn_door(self, state) or \
                         not state.has("Moneybags Unlock - Shady Oasis Portal", self.player):
                     return 0
                 if self.options.enable_open_world and not state.has("Shady Oasis Unlock", self.player):
                     return 0
                 gems = 380
-                if state.has("Moneybags Unlock - Headbash", self.player):
+                if can_headbash(self, state):
                     gems += 20
                 return gems
             elif level == "Magma Cone":
                 if not is_boss_defeated(self, "Crush", state) or \
-                        not state.has("Moneybags Unlock - Climb", self.player) or \
-                        not state.has("Orb", self.player, 8):
+                        not can_pass_autumn_door(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Magma Cone Unlock", self.player):
                     return 0
@@ -408,15 +432,14 @@ class Spyro2World(World):
                     gems += 105
                 return gems
             elif level == "Fracture Hills":
-                if not is_boss_defeated(self, "Crush", state) or not state.has("Moneybags Unlock - Climb", self.player):
+                if not is_boss_defeated(self, "Crush", state) or not can_reach_autumn_second_half(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Fracture Hills Unlock", self.player):
                     return 0
                 return 400
             elif level == "Icy Speedway":
                 if not is_boss_defeated(self, "Crush", state) or \
-                        not state.has("Moneybags Unlock - Climb", self.player) or \
-                        not state.has("Orb", self.player, 8) or \
+                        not can_pass_autumn_door(self, state) or \
                         not state.has("Moneybags Unlock - Icy Speedway Portal", self.player):
                     return 0
                 if self.options.enable_open_world and not state.has("Icy Speedway Unlock", self.player):
@@ -426,7 +449,7 @@ class Spyro2World(World):
                 if not is_boss_defeated(self, "Gulp", state):
                     return 0
                 gems = 139
-                if state.has("Moneybags Unlock - Headbash", self.player):
+                if can_reach_winter_second_half(self, state):
                     gems += 254
                     if state.has("Orb", self.player, 40):
                         gems += 7
@@ -443,7 +466,7 @@ class Spyro2World(World):
                 if self.options.enable_open_world and not state.has("Cloud Temples Unlock", self.player):
                     return 0
                 gems = 375
-                if state.has("Moneybags Unlock - Headbash", self.player):
+                if can_headbash(self, state):
                     gems += 25
                 return gems
             elif level == "Canyon Speedway":
@@ -455,14 +478,14 @@ class Spyro2World(World):
                 return 400
             elif level == "Robotica Farms":
                 if not is_boss_defeated(self, "Gulp", state) or \
-                        not state.has("Moneybags Unlock - Headbash", self.player):
+                        not can_reach_winter_second_half(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Robotica Farms Unlock", self.player):
                     return 0
                 return 400
             elif level == "Metropolis":
                 if not is_boss_defeated(self, "Gulp", state) or \
-                        not state.has("Moneybags Unlock - Headbash", self.player):
+                        not can_reach_winter_second_half(self, state):
                     return 0
                 if self.options.enable_open_world and not state.has("Metropolis Unlock", self.player):
                     return 0
@@ -496,7 +519,7 @@ class Spyro2World(World):
                 max_health = 1
             max_health += state.count("Progressive Sparx Health Upgrade", self.player)
             return max_health >= health
-            
+
         def set_indirect_rule(self, regionName, rule):
             region = self.multiworld.get_region(regionName, self.player)
             entrance = self.multiworld.get_entrance(regionName, self.player)
@@ -507,7 +530,7 @@ class Spyro2World(World):
             for location in region.locations:
                     set_rule(location, lambda state: True)
 
-        if self.options.goal.value == GoalOptions.RIPTO:
+        if self.options.goal.value == GoalOptions.RIPTO or self.options.goal.value == GoalOptions.FOURTEEN_TALISMAN and self.options.enable_open_world.value:
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state)
         elif self.options.goal.value == GoalOptions.FOURTEEN_TALISMAN:
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8)
@@ -515,8 +538,10 @@ class Spyro2World(World):
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Orb", self.player, 40)
         elif self.options.goal.value == GoalOptions.SIXTY_FOUR_ORB:
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Orb", self.player, 64)
-        elif self.options.goal.value == GoalOptions.HUNDRED_PERCENT:
+        elif self.options.goal.value == GoalOptions.HUNDRED_PERCENT and not self.options.enable_open_world.value:
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8) and state.has("Orb", self.player, 64) and has_total_accessible_gems(self, state, 10000)
+        elif self.options.goal.value == GoalOptions.HUNDRED_PERCENT and self.options.enable_open_world.value:
+            self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Orb", self.player, 64) and has_total_accessible_gems(self, state, 10000)
         elif self.options.goal.value == GoalOptions.TEN_TOKENS:
             self.multiworld.completion_condition[self.player] = lambda state: state.has("Dragon Shores Token", self.player, 10)
         elif self.options.goal.value == GoalOptions.ALL_SKILLPOINTS:
@@ -525,28 +550,27 @@ class Spyro2World(World):
             self.multiworld.completion_condition[self.player] = lambda state: is_boss_defeated(self, "Ripto", state) and state.has("Skill Point", self.player, 16)
 
         # Summer Forest Rules
-        # TODO: Change logic based on tricks.
         set_rule(
             self.multiworld.get_location("Summer Forest: On a secret ledge", self.player),
-            lambda state: state.has("Moneybags Unlock - Swim", self.player)
+            lambda state: can_swim(self, state)
         )
         set_rule(
             self.multiworld.get_location("Summer Forest: Atop a ladder", self.player),
-            lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Climb", self.player)
+            lambda state: can_reach_summer_second_half(self, state) and can_climb(self, state)
         )
         set_rule(
             self.multiworld.get_location("Summer Forest: Behind the door", self.player),
-            lambda state: state.has("Moneybags Unlock - Swim", self.player)
+            lambda state: can_reach_summer_second_half(self, state)
         )
         if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", self.player),
-                lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                lambda state: can_reach_summer_second_half(self, state)
             )
         if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Summer Forest: Life Bottle Near Sunny Beach", self.player),
-                lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                lambda state: can_reach_summer_second_half(self, state)
             )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -564,7 +588,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                        lambda state: can_swim(self, state)
                     )
             for gem in climb_gems:
                 skipped_bits = 0
@@ -576,7 +600,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Climb", self.player)
+                        lambda state: can_swim(self, state) and can_climb(self, state)
                     )
             for gem in aquaria_gems:
                 skipped_bits = 0
@@ -588,13 +612,13 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
+                        lambda state: can_reach_summer_second_half(self, state) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
                     )
 
         # Glimmer Rules
         set_rule(
             self.multiworld.get_location("Glimmer: Gem Lamp Flight in cave", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            lambda state: can_climb(self, state)
         )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -610,7 +634,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Glimmer: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Glimmer: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                        lambda state: can_climb(self, state)
                     )
 
         # Idol Springs Rules
@@ -618,7 +642,7 @@ class Spyro2World(World):
             set_indirect_rule(self, "Idol Springs", lambda state: state.has("Idol Springs Unlock", self.player))
         set_rule(
             self.multiworld.get_location("Idol Springs: Foreman Bud's puzzles", self.player),
-            lambda state: state.has("Moneybags Unlock - Swim", self.player)
+            lambda state: can_swim(self, state)
         )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -634,7 +658,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Idol Springs: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Idol Springs: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                        lambda state: can_swim(self, state)
                     )
 
         # Colossus Rules
@@ -643,9 +667,9 @@ class Spyro2World(World):
 
         # Hurricos Rules
         if self.options.enable_open_world:
-            set_indirect_rule(self, "Hurricos", lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Hurricos Unlock", self.player))
+            set_indirect_rule(self, "Hurricos", lambda state: can_reach_summer_second_half(self, state) and state.has("Hurricos Unlock", self.player))
         else:
-            set_indirect_rule(self, "Hurricos", lambda state: state.has("Moneybags Unlock - Swim", self.player))
+            set_indirect_rule(self, "Hurricos", lambda state: can_reach_summer_second_half(self, state))
 
         # Aquaria Towers Rules
         if self.options.enable_open_world:
@@ -653,26 +677,26 @@ class Spyro2World(World):
                 set_indirect_rule(
                     self,
                     "Aquaria Towers",
-                    lambda state: state.has("Aquaria Towers Unlock", self.player) and state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player) and has_sparx_health(self, 1, state)
+                    lambda state: state.has("Aquaria Towers Unlock", self.player) and can_reach_summer_second_half(self, state) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player) and has_sparx_health(self, 1, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Aquaria Towers",
-                    lambda state: state.has("Aquaria Towers Unlock", self.player) and state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
+                    lambda state: state.has("Aquaria Towers Unlock", self.player) and can_reach_summer_second_half(self, state) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
                 )
         else:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Aquaria Towers",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player) and has_sparx_health(self, 1, state)
+                    lambda state: can_reach_summer_second_half(self, state) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player) and has_sparx_health(self, 1, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Aquaria Towers",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
+                    lambda state: can_reach_summer_second_half(self, state) and state.has("Moneybags Unlock - Door to Aquaria Towers", self.player)
                 )
         set_rule(
             self.multiworld.get_location("Aquaria Towers: Talisman", self.player),
@@ -700,6 +724,11 @@ class Spyro2World(World):
                 self.multiworld.get_location("Aquaria Towers: All Seaweed (Goal)", self.player),
                 lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
             )
+        if Spyro2LocationCategory.SPIRIT_PARTICLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Aquaria Towers: All Spirit Particles", self.player),
+                lambda state: state.has("Moneybags Unlock - Aquaria Towers Submarine", self.player)
+            )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
             sub_gems = [3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 29, 30, 31, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 93, 101, 102, 103, 104, 105, 106, 107, 108, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134]
@@ -719,16 +748,16 @@ class Spyro2World(World):
 
         # Sunny Beach rules
         if self.options.enable_open_world:
-            set_indirect_rule(self, "Sunny Beach", lambda state: state.has("Sunny Beach Unlock", self.player) and state.has("Moneybags Unlock - Swim", self.player))
+            set_indirect_rule(self, "Sunny Beach", lambda state: state.has("Sunny Beach Unlock", self.player) and can_reach_summer_second_half(self, state))
         else:
-            set_indirect_rule(self, "Sunny Beach", lambda state: state.has("Moneybags Unlock - Swim", self.player))
+            set_indirect_rule(self, "Sunny Beach", lambda state: can_reach_summer_second_half(self, state))
         set_rule(
             self.multiworld.get_location("Sunny Beach: Turtle soup I", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            lambda state: can_climb(self, state)
         )
         set_rule(
             self.multiworld.get_location("Sunny Beach: Turtle soup II", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            lambda state: can_climb(self, state)
         )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -744,7 +773,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Sunny Beach: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Sunny Beach: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                        lambda state: can_climb(self, state)
                     )
 
         # Ocean Speedway rules
@@ -752,13 +781,13 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Ocean Speedway",
-                lambda state: state.has("Ocean Speedway Unlock", self.player) and state.has("Moneybags Unlock - Swim", self.player) and state.has("Orb", self.player, 3)
+                lambda state: state.has("Ocean Speedway Unlock", self.player) and can_reach_summer_second_half(self, state) and state.has("Orb", self.player, 3)
             )
         else:
             set_indirect_rule(
                 self,
                 "Ocean Speedway",
-                lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Orb", self.player, 3)
+                lambda state: can_swim(self, state) and state.has("Orb", self.player, 3)
             )
 
         # Crush's Dungeon rules
@@ -769,65 +798,65 @@ class Spyro2World(World):
                 set_indirect_rule(
                     self,
                     "Crush's Dungeon",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and has_sparx_health(self, 1, state)
+                    lambda state: can_reach_summer_second_half(self, state) and has_sparx_health(self, 1, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Crush's Dungeon",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player)
+                    lambda state: can_reach_summer_second_half(self, state)
                 )
         elif self.options.logic_crush_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Crush's Dungeon",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and has_sparx_health(self, 1, state) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6))
+                    lambda state: can_reach_summer_second_half(self, state) and has_sparx_health(self, 1, state) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6))
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Crush's Dungeon",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6))
+                    lambda state: can_reach_summer_second_half(self, state) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6))
                 )
         else:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Crush's Dungeon",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Summer Forest Talisman", self.player, 6) and has_sparx_health(self, 1, state)
+                    lambda state: can_reach_summer_second_half(self, state) and state.has("Summer Forest Talisman", self.player, 6) and has_sparx_health(self, 1, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Crush's Dungeon",
-                    lambda state: state.has("Moneybags Unlock - Swim", self.player) and state.has("Summer Forest Talisman", self.player, 6)
+                    lambda state: can_reach_summer_second_half(self, state) and state.has("Summer Forest Talisman", self.player, 6)
                 )
 
         # Autumn Plains Rules
         set_indirect_rule(self, "Autumn Plains", lambda state: is_boss_defeated(self, "Crush", state))
         set_rule(
             self.multiworld.get_location("Autumn Plains: The end of the wall", self.player),
-            lambda state: state.has("Orb", self.player, 6)
+            lambda state: can_reach_metro(self, state) or can_pass_autumn_door(self, state)
         )
         set_rule(
             self.multiworld.get_location("Autumn Plains: Long glide!", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+            lambda state: can_pass_autumn_door(self, state)
         )
         if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Autumn Plains: Moneybags Unlock: Shady Oasis Portal", self.player),
-                lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                lambda state: can_pass_autumn_door(self, state)
             )
         if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Autumn Plains: Moneybags Unlock: Icy Speedway Portal", self.player),
-                lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                lambda state: can_pass_autumn_door(self, state)
             )
         if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Autumn Plains: Life Bottle", self.player),
-                lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                lambda state: can_reach_autumn_second_half(self, state)
             )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -846,7 +875,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Orb", self.player, 6)
+                        lambda state: can_reach_metro(self, state)
                     )
             for gem in climb_gems:
                 skipped_bits = 0
@@ -858,7 +887,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                        lambda state: can_reach_autumn_second_half(self, state)
                     )
             for gem in door_gems:
                 skipped_bits = 0
@@ -870,7 +899,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                        lambda state: can_pass_autumn_door(self, state)
                     )
             for gem in shady_gems:
                 skipped_bits = 0
@@ -882,7 +911,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
+                        lambda state: can_pass_autumn_door(self, state) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
                     )
 
         # Skelos Badlands rules
@@ -931,6 +960,11 @@ class Spyro2World(World):
                 self.multiworld.get_location("Crystal Glacier: Life Bottle", self.player),
                 lambda state: state.has("Moneybags Unlock - Crystal Glacier Bridge", self.player)
             )
+        if Spyro2LocationCategory.SPIRIT_PARTICLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Crystal Glacier: All Spirit Particles", self.player),
+                lambda state: state.has("Moneybags Unlock - Crystal Glacier Bridge", self.player)
+            )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
             bridge_gems = [23, 24, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96]
@@ -971,8 +1005,13 @@ class Spyro2World(World):
             )
         set_rule(
             self.multiworld.get_location("Zephyr: Cowlek corral II", self.player),
-            lambda state: state.has("Moneybags Unlock - Climb", self.player)
+            lambda state: can_climb(self, state)
         )
+        if Spyro2LocationCategory.SPIRIT_PARTICLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Zephyr: All Spirit Particles", self.player),
+                lambda state: can_climb(self, state)
+            )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
             climb_gems = [90, 91, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180]
@@ -987,7 +1026,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Zephyr: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Zephyr: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                        lambda state: can_climb(self, state)
                     )
 
         # Metro Speedway rules
@@ -995,13 +1034,13 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Metro Speedway",
-                lambda state: state.has("Metro Speedway Unlock", self.player) and state.has("Orb", self.player, 6)
+                lambda state: state.has("Metro Speedway Unlock", self.player) and can_reach_metro(self, state)
             )
         else:
             set_indirect_rule(
                 self,
                 "Metro Speedway",
-                lambda state: state.has("Orb", self.player, 6)
+                lambda state: can_reach_metro(self, state)
             )
 
         # Scorch rules
@@ -1009,13 +1048,13 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Scorch",
-                lambda state: state.has("Scorch Unlock", self.player) and state.has("Moneybags Unlock - Climb", self.player)
+                lambda state: state.has("Scorch Unlock", self.player) and can_reach_autumn_second_half(self, state)
             )
         else:
             set_indirect_rule(
                 self,
                 "Scorch",
-                lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                lambda state: can_reach_autumn_second_half(self, state)
             )
 
         # Shady Oasis rules
@@ -1023,17 +1062,17 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Shady Oasis",
-                lambda state: state.has("Shady Oasis Unlock", self.player) and state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
+                lambda state: state.has("Shady Oasis Unlock", self.player) and can_pass_autumn_door(self, state) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
             )
         else:
             set_indirect_rule(
                 self,
                 "Shady Oasis",
-                lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
+                lambda state: can_pass_autumn_door(self, state) and state.has("Moneybags Unlock - Shady Oasis Portal", self.player)
             )
         set_rule(
             self.multiworld.get_location("Shady Oasis: Free Hippos", self.player),
-            lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+            lambda state: can_headbash(self, state)
         )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -1049,7 +1088,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Shady Oasis: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Shady Oasis: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                        lambda state: can_headbash(self, state)
                     )
 
         # Magma Cone rules
@@ -1057,13 +1096,13 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Magma Cone",
-                lambda state: state.has("Magma Cone Unlock", self.player) and state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                lambda state: state.has("Magma Cone Unlock", self.player) and can_pass_autumn_door(self, state)
             )
         else:
             set_indirect_rule(
                 self,
                 "Magma Cone",
-                lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                lambda state: can_pass_autumn_door(self, state)
             )
         set_rule(
             self.multiworld.get_location("Magma Cone: Talisman", self.player),
@@ -1073,6 +1112,11 @@ class Spyro2World(World):
             self.multiworld.get_location("Magma Cone: Party crashers", self.player),
             lambda state: state.has("Moneybags Unlock - Magma Cone Elevator", self.player)
         )
+        if Spyro2LocationCategory.SPIRIT_PARTICLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Magma Cone: All Spirit Particles", self.player),
+                lambda state: state.has("Moneybags Unlock - Magma Cone Elevator", self.player)
+            )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
             elevator_gems = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 92, 93, 94, 95, 96, 97, 98, 99, 100, 114, 115, 116, 117, 118, 119, 120, 124, 125, 126]
@@ -1095,31 +1139,36 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Fracture Hills",
-                lambda state: state.has("Fracture Hills Unlock", self.player) and state.has("Moneybags Unlock - Climb", self.player)
+                lambda state: state.has("Fracture Hills Unlock", self.player) and can_reach_autumn_second_half(self, state)
             )
         else:
             set_indirect_rule(
                 self,
                 "Fracture Hills",
-                lambda state: state.has("Moneybags Unlock - Climb", self.player)
+                lambda state: can_reach_autumn_second_half(self, state)
             )
         set_rule(
             self.multiworld.get_location("Fracture Hills: Earthshaper bash", self.player),
-            lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+            lambda state: can_headbash(self, state)
         )
+        if Spyro2LocationCategory.SPIRIT_PARTICLE in self.enabled_location_categories:
+            set_rule(
+                self.multiworld.get_location("Fracture Hills: All Spirit Particles", self.player),
+                lambda state: can_headbash(self, state)
+            )
 
         # Icy Speedway rules
         if self.options.enable_open_world:
             set_indirect_rule(
                 self,
                 "Icy Speedway",
-                lambda state: state.has("Icy Speedway Unlock", self.player) and state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Icy Speedway Portal", self.player)
+                lambda state: state.has("Icy Speedway Unlock", self.player) and can_pass_autumn_door(self, state) and state.has("Moneybags Unlock - Icy Speedway Portal", self.player)
             )
         else:
             set_indirect_rule(
                 self,
                 "Icy Speedway",
-                lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Moneybags Unlock - Icy Speedway Portal", self.player)
+                lambda state: can_pass_autumn_door(self, state) and state.has("Moneybags Unlock - Icy Speedway Portal", self.player)
             )
 
         # Gulp's Overlook rules
@@ -1130,54 +1179,54 @@ class Spyro2World(World):
                 set_indirect_rule(
                     self,
                     "Gulp's Overlook",
-                    lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and has_sparx_health(self, 2, state)
+                    lambda state: can_pass_autumn_door(self, state) and has_sparx_health(self, 2, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Gulp's Overlook",
-                    lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8)
+                    lambda state: can_pass_autumn_door(self, state)
                 )
         elif self.options.logic_gulp_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Gulp's Overlook",
-                    lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8)) and has_sparx_health(self, 2, state)
+                    lambda state: can_pass_autumn_door(self, state) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8)) and has_sparx_health(self, 2, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Gulp's Overlook",
-                    lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8))
+                    lambda state: can_pass_autumn_door(self, state) and (state.has("Double Jump Ability", self.player) or state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8))
                 )
         else:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Gulp's Overlook",
-                    lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8) and has_sparx_health(self, 2, state)
+                    lambda state: can_pass_autumn_door(self, state) and state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8) and has_sparx_health(self, 2, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Gulp's Overlook",
-                    lambda state: state.has("Moneybags Unlock - Climb", self.player) and state.has("Orb", self.player, 8) and state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8)
+                    lambda state: can_pass_autumn_door(self, state) and state.has("Summer Forest Talisman", self.player, 6) and state.has("Autumn Plains Talisman", self.player, 8)
                 )
 
         # Winter Tundra Rules
         set_indirect_rule(self, "Winter Tundra", lambda state: is_boss_defeated(self, "Gulp", state))
         set_rule(
             self.multiworld.get_location("Winter Tundra: On the tall wall", self.player),
-            lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+            lambda state: can_reach_winter_second_half(self, state)
         )
         set_rule(
             self.multiworld.get_location("Winter Tundra: Top of the waterfall", self.player),
-            lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+            lambda state: can_reach_winter_second_half(self, state)
         )
         set_rule(
             self.multiworld.get_location("Winter Tundra: Smash the rock", self.player),
-            lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+            lambda state: can_headbash(self, state)
         )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
@@ -1194,7 +1243,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Winter Tundra: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Winter Tundra: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                        lambda state: can_headbash(self, state)
                     )
             for gem in door_gems:
                 skipped_bits = 0
@@ -1206,7 +1255,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Winter Tundra: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Winter Tundra: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Orb", self.player, 40)
+                        lambda state: can_reach_winter_second_half(self, state) and state.has("Orb", self.player, 40)
                     )
 
         # Mystic Marsh rules
@@ -1244,7 +1293,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Cloud Temples: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Cloud Temples: Gem {gem - skipped_bits}", self.player),
-                        lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                        lambda state: can_headbash(self, state)
                     )
 
         # Canyon Speedway rules
@@ -1266,13 +1315,13 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Robotica Farms",
-                lambda state: state.has("Robotica Farms Unlock", self.player) and state.has("Moneybags Unlock - Headbash", self.player)
+                lambda state: state.has("Robotica Farms Unlock", self.player) and can_reach_winter_second_half(self, state)
             )
         else:
             set_indirect_rule(
                 self,
                 "Robotica Farms",
-                lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                lambda state: can_headbash(self, state)
             )
 
         # Metropolis rules
@@ -1280,13 +1329,13 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Metropolis",
-                lambda state: state.has("Metropolis Unlock", self.player) and state.has("Moneybags Unlock - Headbash", self.player) and state.has("Orb", self.player, 25)
+                lambda state: state.has("Metropolis Unlock", self.player) and can_reach_winter_second_half(self, state) and state.has("Orb", self.player, 25)
             )
         else:
             set_indirect_rule(
                 self,
                 "Metropolis",
-                lambda state: state.has("Moneybags Unlock - Headbash", self.player) and state.has("Orb", self.player, 25)
+                lambda state: can_headbash(self, state) and state.has("Orb", self.player, 25)
             )
 
         # Ripto's Arena rules
@@ -1295,39 +1344,39 @@ class Spyro2World(World):
                 set_indirect_rule(
                     self,
                     "Ripto's Arena",
-                    lambda state: state.has("Moneybags Unlock - Headbash", self.player) and has_sparx_health(self, 3, state)
+                    lambda state: can_reach_winter_second_half(self, state) and has_sparx_health(self, 3, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Ripto's Arena",
-                    lambda state: state.has("Moneybags Unlock - Headbash", self.player)
+                    lambda state: can_reach_winter_second_half(self, state)
                 )
         elif self.options.logic_ripto_early.value == LogicTrickOptions.ON_WITH_DOUBLE_JUMP:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Ripto's Arena",
-                    lambda state: state.has("Moneybags Unlock - Headbash", self.player) and (state.has("Double Jump Ability", self.player) or state.has("Orb", self.player, 40)) and has_sparx_health(self, 3, state)
+                    lambda state: can_reach_winter_second_half(self, state) and (state.has("Double Jump Ability", self.player) or state.has("Orb", self.player, 40)) and has_sparx_health(self, 3, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Ripto's Arena",
-                    lambda state: state.has("Moneybags Unlock - Headbash", self.player) and (state.has("Double Jump Ability", self.player) or state.has("Orb", self.player, 40))
+                    lambda state: can_reach_winter_second_half(self, state) and (state.has("Double Jump Ability", self.player) or state.has("Orb", self.player, 40))
                 )
         else:
             if self.options.enable_progressive_sparx_logic.value:
                 set_indirect_rule(
                     self,
                     "Ripto's Arena",
-                    lambda state: state.has("Moneybags Unlock - Headbash", self.player) and state.has("Orb", self.player, 40) and has_sparx_health(self, 3, state)
+                    lambda state: can_reach_winter_second_half(self, state) and state.has("Orb", self.player, 40) and has_sparx_health(self, 3, state)
                 )
             else:
                 set_indirect_rule(
                     self,
                     "Ripto's Arena",
-                    lambda state: state.has("Moneybags Unlock - Headbash", self.player) and state.has("Orb", self.player, 40)
+                    lambda state: can_reach_winter_second_half(self, state) and state.has("Orb", self.player, 40)
                 )
 
         # Dragon Shores rules
@@ -1465,6 +1514,8 @@ class Spyro2World(World):
                 "goal": self.options.goal.value,
                 "guaranteed_items": self.options.guaranteed_items.value,
                 "enable_open_world": self.options.enable_open_world.value,
+                "open_world_level_unlocks": self.options.open_world_level_unlocks.value,
+                "open_world_ability_and_warp_unlocks": self.options.open_world_ability_and_warp_unlocks.value,
                 "enable_25_pct_gem_checks": self.options.enable_25_pct_gem_checks.value,
                 "enable_50_pct_gem_checks": self.options.enable_50_pct_gem_checks.value,
                 "enable_75_pct_gem_checks": self.options.enable_75_pct_gem_checks.value,
@@ -1473,6 +1524,7 @@ class Spyro2World(World):
                 "max_total_gem_checks": self.options.max_total_gem_checks.value,
                 "enable_skillpoint_checks": self.options.enable_skillpoint_checks.value,
                 "enable_life_bottle_checks": self.options.enable_life_bottle_checks.value,
+                "enable_spirit_particle_checks": self.options.enable_spirit_particle_checks.value,
                 "enable_gemsanity": self.options.enable_gemsanity.value,
                 "moneybags_settings": self.options.moneybags_settings.value,
                 "enable_filler_extra_lives": self.options.enable_filler_extra_lives.value,
@@ -1491,6 +1543,7 @@ class Spyro2World(World):
                 "logic_crush_early": self.options.logic_crush_early.value,
                 "logic_gulp_early": self.options.logic_gulp_early.value,
                 "logic_ripto_early": self.options.logic_ripto_early.value,
+                "portal_gem_collection_color": self.options.portal_gem_collection_color.value
             },
             "gemsanity_ids": gemsanity_locations,
             # "moneybags_prices": moneybags_prices,

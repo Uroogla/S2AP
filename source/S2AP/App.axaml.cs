@@ -43,6 +43,7 @@ public partial class App : Application
     private static Timer _abilitiesTimer { get; set; }
     private static Timer _cosmeticsTimer { get; set; }
     private static MoneybagsOptions _moneybagsOption { get; set; }
+    private static PortalTextColor _portalTextColor { get; set; }
     private static bool _destructiveMode { get; set; }
     public override void Initialize()
     {
@@ -335,19 +336,31 @@ public partial class App : Application
                 }
                 break;
             case "Moneybags Unlock - Swim":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                if (
+                    _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
+                    int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
+                    int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                )
                 {
                     UnlockMoneybags(Addresses.SwimUnlock);
                 }
                 break;
             case "Moneybags Unlock - Climb":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                if (
+                    _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
+                    int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
+                    int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                )
                 {
                     UnlockMoneybags(Addresses.ClimbUnlock);
                 }
                 break;
             case "Moneybags Unlock - Headbash":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                if (
+                    _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
+                    int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
+                    int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                )
                 {
                     UnlockMoneybags(Addresses.HeadbashUnlock);
                 }
@@ -397,7 +410,76 @@ public partial class App : Application
                 }
                 else if (args.Item.Name.EndsWith(" Unlock"))
                 {
-                    // Unlock effects managed by HandleAbilities().
+                    switch (args.Item.Name)
+                    {
+                        case "Idol Springs Unlock":
+                            WriteStringToMemory(Addresses.IdolNameAddress, Addresses.IdolNameAddress + 16, "Idol Springs", padWithSpaces: false);
+                            break;
+                        case "Colossus Unlock":
+                            WriteStringToMemory(Addresses.ColossusNameAddress, Addresses.ColossusNameAddress + 12, "Colossus", padWithSpaces: false);
+                            break;
+                        case "Hurricos Unlock":
+                            WriteStringToMemory(Addresses.HurricosNameAddress, Addresses.HurricosNameAddress + 12, "Hurricos", padWithSpaces: false);
+                            break;
+                        case "Aquaria Towers Unlock":
+                            WriteStringToMemory(Addresses.AquariaNameAddress, Addresses.AquariaNameAddress + 16, "Aquaria Towers", padWithSpaces: false);
+                            break;
+                        case "Sunny Beach Unlock":
+                            WriteStringToMemory(Addresses.SunnyNameAddress, Addresses.SunnyNameAddress + 12, "Sunny Beach", padWithSpaces: false);
+                            break;
+                        case "Ocean Speedway Unlock":
+                            WriteStringToMemory(Addresses.OceanNameAddress, Addresses.OceanNameAddress + 16, "Ocean Speedway", padWithSpaces: false);
+                            break;
+                        case "Skelos Badlands Unlock":
+                            WriteStringToMemory(Addresses.SkelosNameAddress, Addresses.SkelosNameAddress + 16, "Skelos Badlands", padWithSpaces: false);
+                            break;
+                        case "Crystal Glacier Unlock":
+                            WriteStringToMemory(Addresses.CrystalNameAddress, Addresses.CrystalNameAddress + 16, "Crystal Glacier", padWithSpaces: false);
+                            break;
+                        case "Breeze Harbor Unlock":
+                            WriteStringToMemory(Addresses.BreezeNameAddress, Addresses.BreezeNameAddress + 16, "Breeze Harbor", padWithSpaces: false);
+                            break;
+                        case "Zephyr Unlock":
+                            WriteStringToMemory(Addresses.ZephyrNameAddress, Addresses.ZephyrNameAddress + 8, "Zephyr", padWithSpaces: false);
+                            break;
+                        case "Metro Speedway Unlock":
+                            WriteStringToMemory(Addresses.MetroNameAddress, Addresses.MetroNameAddress + 16, "Metro Speedway", padWithSpaces: false);
+                            break;
+                        case "Scorch Unlock":
+                            WriteStringToMemory(Addresses.ScorchNameAddress, Addresses.ScorchNameAddress + 8, "Scorch", padWithSpaces: false);
+                            break;
+                        case "Shady Oasis Unlock":
+                            WriteStringToMemory(Addresses.ShadyNameAddress, Addresses.ShadyNameAddress + 12, "Shady Oasis", padWithSpaces: false);
+                            break;
+                        case "Magma Cone Unlock":
+                            WriteStringToMemory(Addresses.MagmaNameAddress, Addresses.MagmaNameAddress + 12, "Magma Cone", padWithSpaces: false);
+                            break;
+                        case "Fracture Hills Unlock":
+                            WriteStringToMemory(Addresses.FractureNameAddress, Addresses.FractureNameAddress + 16, "Fracture Hills", padWithSpaces: false);
+                            break;
+                        case "Icy Speedway Unlock":
+                            WriteStringToMemory(Addresses.IcyNameAddress, Addresses.IcyNameAddress + 16, "Icy Speedway", padWithSpaces: false);
+                            break;
+                        case "Mystic Marsh Unlock":
+                            WriteStringToMemory(Addresses.MysticNameAddress, Addresses.MysticNameAddress + 16, "Mystic Marsh", padWithSpaces: false);
+                            break;
+                        case "Cloud Temples Unlock":
+                            WriteStringToMemory(Addresses.CloudNameAddress, Addresses.CloudNameAddress + 16, "Cloud Temples", padWithSpaces: false);
+                            break;
+                        case "Canyon Speedway Unlock":
+                            WriteStringToMemory(Addresses.CanyonNameAddress, Addresses.CanyonNameAddress + 16, "Canyon Speedway", padWithSpaces: false);
+                            break;
+                        case "Robotica Farms Unlock":
+                            WriteStringToMemory(Addresses.RoboticaNameAddress, Addresses.RoboticaNameAddress + 16, "Robotica Farms", padWithSpaces: false);
+                            break;
+                        case "Metropolis Unlock":
+                            WriteStringToMemory(Addresses.MetropolisNameAddress, Addresses.MetropolisNameAddress + 12, "Metropolis", padWithSpaces: false);
+                            break;
+                        case "Dragon Shores Unlock":
+                            WriteStringToMemory(Addresses.ShoresNameAddress, Addresses.ShoresNameAddress + 16, "Dragon Shores", padWithSpaces: false);
+                            break;
+                    }
+                    // Other unlock effects managed by HandleAbilities().
                     showUnlockedLevels();
                 }
                 break;
@@ -406,20 +488,40 @@ public partial class App : Application
     private void showUnlockedLevels()
     {
         List<Item> unlockedLevels = (Client.GameState?.ReceivedItems.Where(x => x.Name.EndsWith(" Unlock")).ToList() ?? new List<Item>());
-        if (unlockedLevels.Count > 0)
+        if (unlockedLevels.Count >= int.Parse(Client.Options?.GetValueOrDefault("open_world_level_unlocks", "0").ToString()))
         {
-            string unlockedLevelsString = "You have unlocked: ";
+            Log.Logger.Information("You have unlocked: ");
+            string unlockedLevelsString = "";
+            int levelCount = 0;
             foreach (Item unlockedLevel in unlockedLevels)
             {
-                unlockedLevelsString += (unlockedLevel.Name.Split(" Unlock")[0] + "; ");
+                if (unlockedLevel.Name == "Dragon Shores Unlock")
+                {
+                    unlockedLevelsString += ("Shores" + "; ");
+                }
+                else
+                {
+                    string newLevel = unlockedLevel.Name.Split(" Unlock")[0].Split(" ")[0];
+                    unlockedLevelsString += (newLevel + "; ");
+                }
+                levelCount++;
+                // Print 6 per line so it is easier to read.
+                if (levelCount % 6 == 0)
+                {
+                    Log.Logger.Information(unlockedLevelsString.Substring(0, unlockedLevelsString.Length - 2));
+                    unlockedLevelsString = "";
+                }
             }
-            unlockedLevelsString = unlockedLevelsString.Substring(0, unlockedLevelsString.Length - 2);
-            Log.Logger.Information(unlockedLevelsString);
+            if (unlockedLevelsString.Length > 0)
+            {
+                unlockedLevelsString = unlockedLevelsString.Substring(0, unlockedLevelsString.Length - 2);
+                Log.Logger.Information(unlockedLevelsString);
+            }
         }
     }
     private static async void HandleAbilities(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame())
+        if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
         {
             return;
         }
@@ -444,7 +546,7 @@ public partial class App : Application
         {
             Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)0);
         }
-        else if (fireballOption == AbilityOptions.InPool && hasFireballItem == 1)
+        else if (fireballOption == AbilityOptions.StartWith || fireballOption == AbilityOptions.InPool && hasFireballItem == 1)
         {
             Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)1);
         } // else vanilla behavior, controlled by game.
@@ -552,12 +654,13 @@ public partial class App : Application
                 bool isRoboticaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
                 bool isMetropolisUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
                 bool isDragonShoresUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                // This order does not match the index order, for whatever reason.
                 bool[] winterUnlocks = [
                     isMysticUnlocked,
                     isCloudUnlocked,
-                    isCanyonUnlocked,
                     isRoboticaUnlocked,
                     isMetropolisUnlocked,
+                    isCanyonUnlocked,
                     isDragonShoresUnlocked
                 ];
                 uint portalAddress = Addresses.WinterPortalBlock;
@@ -578,7 +681,7 @@ public partial class App : Application
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame())
+        if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
         {
             return;
         }
@@ -596,7 +699,12 @@ public partial class App : Application
     {
         // Avoid overwhelming the game when many cosmetic effects are received at once by processing only 1
         // every 5 seconds.  This also lets the user see effects when logging in asynchronously.
-        if (_cosmeticEffects.Count > 0 && Memory.ReadShort(Addresses.GameStatus) == (short)GameStatus.InGame)
+        if (
+            _cosmeticEffects.Count > 0 &&
+            Memory.ReadShort(Addresses.GameStatus) == (short)GameStatus.InGame &&
+            Client.GameState != null &&
+            Client.CurrentSession != null
+        )
         {
             string effect = _cosmeticEffects.Dequeue();
             switch (effect)
@@ -630,7 +738,7 @@ public partial class App : Application
     }
     private static void StartSpyroGame(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame())
+        if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
         {
             Log.Logger.Information("Player is not yet in game.");
             return;
@@ -643,8 +751,6 @@ public partial class App : Application
         Dictionary<string, uint> moneybagsAddresses = new Dictionary<string, uint>()
         {
             { "Crystal Glacier Bridge", Addresses.CrystalBridgeUnlock },
-            // v0.1.0 had a typo, so support both spellings.
-            { "Aquaria Tower Submarine", Addresses.AquariaSubUnlock },
             { "Aquaria Towers Submarine", Addresses.AquariaSubUnlock },
             { "Magma Cone Elevator", Addresses.MagmaElevatorUnlock },
             { "Swim", Addresses.SwimUnlock },
@@ -686,13 +792,87 @@ public partial class App : Application
                 }
             }
         }
+        // TODO: Handle this on game reset as well.
         int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
-        Log.Logger.Information($"{openWorldOption} {Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()}");
         if (openWorldOption != 0)
         {
             Memory.WriteByte(Addresses.CrushGuidebookUnlock, 1);
             Memory.WriteByte(Addresses.GulpGuidebookUnlock, 1);
-            // TODO: Determine whether or not to unlock Autumn and Winter.
+            if (int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) != 0)
+            {
+                Memory.WriteByte(Addresses.AutumnGuidebookUnlock, 1);
+                Memory.WriteByte(Addresses.WinterGuidebookUnlock, 1);
+            }
+            Dictionary<string, uint[]> levelNames = new Dictionary<string, uint[]>()
+            {
+                { "Idol Springs", [Addresses.IdolNameAddress, Addresses.IdolNameAddress + 16] },
+                { "Colossus", [Addresses.ColossusNameAddress, Addresses.ColossusNameAddress + 12] },
+                { "Hurricos", [Addresses.HurricosNameAddress, Addresses.HurricosNameAddress + 12] },
+                { "Aquaria Towers", [Addresses.AquariaNameAddress, Addresses.AquariaNameAddress + 16] },
+                { "Sunny Beach", [Addresses.SunnyNameAddress, Addresses.SunnyNameAddress + 12] },
+                { "Ocean Speedway", [Addresses.OceanNameAddress, Addresses.OceanNameAddress + 16] },
+                { "Skelos Badlands", [Addresses.SkelosNameAddress, Addresses.SkelosNameAddress + 16] },
+                { "Crystal Glacier", [Addresses.CrystalNameAddress, Addresses.CrystalNameAddress + 16] },
+                { "Breeze Harbor", [Addresses.BreezeNameAddress, Addresses.BreezeNameAddress + 16] },
+                { "Zephyr", [Addresses.ZephyrNameAddress, Addresses.ZephyrNameAddress + 8] },
+                { "Metro Speedway", [Addresses.MetroNameAddress, Addresses.MetroNameAddress + 16] },
+                { "Scorch", [Addresses.ScorchNameAddress, Addresses.ScorchNameAddress + 8] },
+                { "Shady Oasis", [Addresses.ShadyNameAddress, Addresses.ShadyNameAddress + 12] },
+                { "Magma Cone", [Addresses.MagmaNameAddress, Addresses.MagmaNameAddress + 12] },
+                { "Fracture Hills", [Addresses.FractureNameAddress, Addresses.FractureNameAddress + 16] },
+                { "Icy Speedway", [Addresses.IcyNameAddress, Addresses.IcyNameAddress + 16] },
+                { "Mystic Marsh", [Addresses.MysticNameAddress, Addresses.MysticNameAddress + 16] },
+                { "Cloud Temples", [Addresses.CloudNameAddress, Addresses.CloudNameAddress + 16] },
+                { "Canyon Speedway", [Addresses.CanyonNameAddress, Addresses.CanyonNameAddress + 16] },
+                { "Robotica Farms", [Addresses.RoboticaNameAddress, Addresses.RoboticaNameAddress + 16] },
+                { "Metropolis", [Addresses.MetropolisNameAddress, Addresses.MetropolisNameAddress + 12] },
+                { "Dragon Shores", [Addresses.ShoresNameAddress, Addresses.ShoresNameAddress + 16] }
+            };
+            foreach (string levelName in levelNames.Keys)
+            {
+                uint[] nameAddresses = levelNames[levelName];
+                if ((Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Unlock").Count() ?? 0) == 0)
+                {
+                    WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                }
+                else
+                {
+                    WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                }
+            }
+        }
+        switch (_portalTextColor)
+        {
+            case PortalTextColor.Red:
+                Memory.WriteByte(Addresses.PortalTextRed, 128);
+                Memory.WriteByte(Addresses.PortalTextGreen, 0);
+                Memory.WriteByte(Addresses.PortalTextBlue, 0);
+                break;
+            case PortalTextColor.Green:
+                Memory.WriteByte(Addresses.PortalTextRed, 0);
+                Memory.WriteByte(Addresses.PortalTextGreen, 128);
+                Memory.WriteByte(Addresses.PortalTextBlue, 0);
+                break;
+            case PortalTextColor.Blue:
+                Memory.WriteByte(Addresses.PortalTextRed, 0);
+                Memory.WriteByte(Addresses.PortalTextGreen, 0);
+                Memory.WriteByte(Addresses.PortalTextBlue, 128);
+                break;
+            case PortalTextColor.Pink:
+                Memory.WriteByte(Addresses.PortalTextRed, 64);
+                Memory.WriteByte(Addresses.PortalTextGreen, 0);
+                Memory.WriteByte(Addresses.PortalTextBlue, 64);
+                break;
+            case PortalTextColor.White:
+                Memory.WriteByte(Addresses.PortalTextRed, 128);
+                Memory.WriteByte(Addresses.PortalTextGreen, 128);
+                Memory.WriteByte(Addresses.PortalTextBlue, 128);
+                break;
+            default:
+                Memory.WriteByte(Addresses.PortalTextRed, 64);
+                Memory.WriteByte(Addresses.PortalTextGreen, 64);
+                Memory.WriteByte(Addresses.PortalTextBlue, 0);
+                break;
         }
         _loadGameTimer.Enabled = false;
     }
@@ -708,7 +888,8 @@ public partial class App : Application
         var currentTokens = CalculateCurrentTokens();
         var currentGems = Memory.ReadShort(Addresses.TotalGemAddress);
         int goal = int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString());
-        if ((CompletionGoal)goal == CompletionGoal.Ripto)
+        int isOpenWorld = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", 0).ToString());
+        if ((CompletionGoal)goal == CompletionGoal.Ripto || (CompletionGoal)goal == CompletionGoal.FourteenTali && isOpenWorld != 0)
         {
             if (Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
             {
@@ -742,7 +923,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.HundredPercent)
         {
-            if (currentOrbs >= 64 && currentTalismans >= 14 && currentGems == 10000 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -869,7 +1050,11 @@ public partial class App : Application
     }
     private static void Locations_CheckedLocationsUpdated(System.Collections.ObjectModel.ReadOnlyCollection<long> newCheckedLocations)
     {
-        if (Client.GameState == null) return;
+        if (Client.GameState == null || Client.CurrentSession == null) return;
+        if (!Helpers.IsInGame())
+        {
+            Log.Logger.Error("Check sent while not in game. Please report this in the Discord thread!");
+        }
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
         CheckGoalCondition();
@@ -877,13 +1062,17 @@ public partial class App : Application
     /**
      * Writes a block of text to memory. endAddress will generally be the null terminator and will not be written to.
      */
-    private static void WriteStringToMemory(uint startAddress, uint endAddress, string stringToWrite)
+    private static void WriteStringToMemory(uint startAddress, uint endAddress, string stringToWrite, bool padWithSpaces=true)
     {
         uint address = startAddress;
         int stringIndex = 0;
         while (address < endAddress)
         {
             char charToWrite = ' ';
+            if (!padWithSpaces)
+            {
+                charToWrite = '\0';
+            }
             if (stringIndex < stringToWrite.Length)
             {
                 charToWrite = stringToWrite[stringIndex];
@@ -1010,6 +1199,7 @@ public partial class App : Application
         }
 
         _moneybagsOption = (MoneybagsOptions)int.Parse(Client.Options?.GetValueOrDefault("moneybags_settings", "0").ToString());
+        _portalTextColor = (PortalTextColor)int.Parse(Client.Options?.GetValueOrDefault("portal_gem_collection_color", "0").ToString());
 
         // Repopulate hint list.  There is likely a better way to do this using the Get network protocol
         // with keys=[$"hints_{team}_{slot}"].

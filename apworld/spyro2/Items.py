@@ -278,37 +278,45 @@ def BuildItemPool(world, count, options):
             item_dictionary["Metropolis Unlock"],
             item_dictionary["Dragon Shores Unlock"]
         ]
-        starting_unlocks = multiworld.random.sample(level_unlocks, k=4)
+        starting_unlocks = multiworld.random.sample(level_unlocks, k=world.options.open_world_level_unlocks.value)
         starting_unlocks = [lvl.name for lvl in starting_unlocks]
         for level in level_unlocks:
             if level.name in starting_unlocks:
                 multiworld.push_precollected(world.create_item(level.name))
             else:
                 item_pool.append(level)
-        remaining_count = remaining_count - 4
+        remaining_count = remaining_count - (22 - world.options.open_world_level_unlocks.value)
     else:
         for i in range(6):
             item_pool.append(item_dictionary["Summer Forest Talisman"])
         for i in range(8):
             item_pool.append(item_dictionary["Autumn Plains Talisman"])
+        remaining_count = remaining_count - 14
     for i in range(64):
         item_pool.append(item_dictionary["Orb"])
-    remaining_count = remaining_count - 78
+    remaining_count = remaining_count - 64
+
+    if world.options.enable_open_world.value and world.options.open_world_ability_and_warp_unlocks.value:
+        multiworld.push_precollected(world.create_item("Moneybags Unlock - Swim"))
+        multiworld.push_precollected(world.create_item("Moneybags Unlock - Climb"))
+        multiworld.push_precollected(world.create_item("Moneybags Unlock - Headbash"))
 
     if options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
         item_pool.append(item_dictionary["Moneybags Unlock - Crystal Glacier Bridge"])
         item_pool.append(item_dictionary["Moneybags Unlock - Aquaria Towers Submarine"])
         item_pool.append(item_dictionary["Moneybags Unlock - Magma Cone Elevator"])
         # item_pool.append(item_dictionary["Moneybags Unlock - Glimmer Bridge"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Swim"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Climb"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Headbash"])
         item_pool.append(item_dictionary["Moneybags Unlock - Door to Aquaria Towers"])
         item_pool.append(item_dictionary["Moneybags Unlock - Zephyr Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Shady Oasis Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Icy Speedway Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Canyon Speedway Portal"])
-        remaining_count = remaining_count - 11
+        remaining_count = remaining_count - 8
+        if not world.options.enable_open_world.value or not world.options.open_world_ability_and_warp_unlocks.value:
+            item_pool.append(item_dictionary["Moneybags Unlock - Swim"])
+            item_pool.append(item_dictionary["Moneybags Unlock - Climb"])
+            item_pool.append(item_dictionary["Moneybags Unlock - Headbash"])
+            remaining_count = remaining_count - 3
 
     if options.double_jump_ability.value == AbilityOptions.IN_POOL:
         item_pool.append(item_dictionary["Double Jump Ability"])

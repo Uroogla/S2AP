@@ -15,6 +15,7 @@ namespace S2AP
         public const uint ResetCheckAddress = 0x00066f14;
         public const uint PlayerLives = 0x0006712c;
         public const uint PlayerHealth = 0x0006a248;
+        public const uint SpiritParticlesAddress = 0x00066fb0;
 
         public const uint TotalGemAddress = 0x000670cc; // 0x00067660 is the HUD display; may need to be edited if this value is modified.
         public const uint LevelGemsAddress = 0x0006ac04; // One entire word per level, including boss levels.
@@ -46,6 +47,9 @@ namespace S2AP
         public const uint SpyroHeight = 0x0698c5;
         public const uint SpyroLength = 0x0698c9;
         public const uint SpyroColorAddress = 0x0698cc;
+        public const uint PortalTextRed = 0x00064468;
+        public const uint PortalTextGreen = 0x00064469;
+        public const uint PortalTextBlue = 0x0006446a;
 
         public const uint PermanentFireballAddress = 0x000698bb;
         public const uint DoubleJumpAddress1 = 0x00035ba8;
@@ -135,7 +139,9 @@ namespace S2AP
         public const uint WinterPortalBlock = 0x000cf28c;
 
         public const uint CrushGuidebookUnlock = 0x0006B08C;
+        public const uint AutumnGuidebookUnlock = 0x0006B08D;
         public const uint GulpGuidebookUnlock = 0x0006B098;
+        public const uint WinterGuidebookUnlock = 0x0006B099;
 
         public const uint IdolPortalAddress = 0x001757C8;
         public const uint ColossusPortalAddress = 0x00175668;
@@ -143,5 +149,28 @@ namespace S2AP
         public const uint AquariaPortalAddress = 0x00175770;
         public const uint SunnyPortalAddress = 0x00175718;
         public const uint OceanPortalAddress = 0x00179A20;
+
+        public const uint IdolNameAddress = 0x000106d0;
+        public const uint ColossusNameAddress = 0x000106c4;
+        public const uint HurricosNameAddress = 0x000106b8;
+        public const uint AquariaNameAddress = 0x000106a8;
+        public const uint SunnyNameAddress = 0x0001069c;
+        public const uint OceanNameAddress = 0x0001068c;
+        public const uint SkelosNameAddress = 0x0001065c;
+        public const uint CrystalNameAddress = 0x0001064c;
+        public const uint BreezeNameAddress = 0x0001063c;
+        public const uint ZephyrNameAddress = 0x00066e98;
+        public const uint MetroNameAddress = 0x0001062c;
+        public const uint ScorchNameAddress = 0x00066e90;
+        public const uint ShadyNameAddress = 0x00010620;
+        public const uint MagmaNameAddress = 0x00010614;
+        public const uint FractureNameAddress = 0x00010604;
+        public const uint IcyNameAddress = 0x000105f4;
+        public const uint MysticNameAddress = 0x000105c4;
+        public const uint CloudNameAddress = 0x000105b4;
+        public const uint CanyonNameAddress = 0x000105a4;
+        public const uint RoboticaNameAddress = 0x00010594;
+        public const uint MetropolisNameAddress = 0x00010588;
+        public const uint ShoresNameAddress = 0x00010578;
     }
 }
