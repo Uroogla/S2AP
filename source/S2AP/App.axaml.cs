@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Timers;
 using static S2AP.Models.Enums;
@@ -48,6 +49,12 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+    private static bool IsRunningAsAdministrator()
+    {
+        var identity = WindowsIdentity.GetCurrent();
+        var principal = new WindowsPrincipal(identity);
+        return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -86,9 +93,15 @@ public partial class App : Application
         _useQuietHints = true;
         Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
         Log.Logger.Information("Trying to play with a different version will not work and may release all of your locations at the start.");
+        if (!IsRunningAsAdministrator())
+        {
+            Log.Logger.Warning("You do not appear to be running this client as an administrator.");
+            Log.Logger.Warning("This may result in errors or crashes when trying to connect to Duckstation.");
+        }
     }
     private void HandleCommand(string command)
     {
+        if (Client == null || Client.GameState == null || Client.CurrentSession == null) return;
         switch (command)
         {
             case "clearSpyroGameState":
@@ -109,6 +122,41 @@ public partial class App : Application
                 break;
             case "showUnlockedLevels":
                 showUnlockedLevels();
+                break;
+            case "showGoal":
+                CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
+                string goalText = "";
+                switch (goal)
+                {
+                    case CompletionGoal.Ripto:
+                        goalText = "Defeat Ripto";
+                        break;
+                    case CompletionGoal.FourteenTali:
+                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off)";
+                        break;
+                    case CompletionGoal.FortyOrb:
+                        goalText = "Defeat Ripto and collect 40 orbs";
+                        break;
+                    case CompletionGoal.SixtyFourOrb:
+                        goalText = "Defeat Ripto and collect 64 orbs";
+                        break;
+                    case CompletionGoal.HundredPercent:
+                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off), 40 orbs, and 10000 gems";
+                        break;
+                    case CompletionGoal.TenTokens:
+                        goalText = "Collect all 10 tokens in Dragon Shores";
+                        break;
+                    case CompletionGoal.AllSkillpoints:
+                        goalText = "Collect all 16 skill points";
+                        break;
+                    case CompletionGoal.Epilogue:
+                        goalText = "Defeat Ripto and collect all 16 skill points";
+                        break;
+                    default:
+                        goalText = "Defeat Ripto and collect 40 orbs";
+                        break;
+                }
+                Log.Logger.Information($"Your goal is: {goalText}");
                 break;
         }
     }
@@ -178,39 +226,6 @@ public partial class App : Application
             GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
-            CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
-            string goalText = "";
-            switch (goal)
-            {
-                case CompletionGoal.Ripto:
-                    goalText = "Defeat Ripto";
-                    break;
-                case CompletionGoal.FourteenTali:
-                    goalText = "Defeat Ripto and collect 14 talismans";
-                    break;
-                case CompletionGoal.FortyOrb:
-                    goalText = "Defeat Ripto and collect 40 orbs";
-                    break;
-                case CompletionGoal.SixtyFourOrb:
-                    goalText = "Defeat Ripto and collect 64 orbs";
-                    break;
-                case CompletionGoal.HundredPercent:
-                    goalText = "Defeat Ripto and collect 14 talismans, 40 orbs, and 10000 gems";
-                    break;
-                case CompletionGoal.TenTokens:
-                    goalText = "Collect all 10 tokens in Dragon Shores";
-                    break;
-                case CompletionGoal.AllSkillpoints:
-                    goalText = "Collect all 16 skill points";
-                    break;
-                case CompletionGoal.Epilogue:
-                    goalText = "Defeat Ripto and collect all 16 skill points";
-                    break;
-                default:
-                    goalText = "Defeat Ripto and collect 40 orbs";
-                    break;
-            }
-            Log.Logger.Information($"Your goal is: {goalText}");
         }
         else
         {
