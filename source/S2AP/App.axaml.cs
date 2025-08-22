@@ -172,7 +172,7 @@ public partial class App : Application
             }
 
             GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
-            // GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
+            GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
             CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
@@ -251,9 +251,8 @@ public partial class App : Application
                 CheckGoalCondition();
                 break;
             case "Skill Point":
-                CheckGoalCondition();
-                break;
             case "Dragon Shores Token":
+            case "Ripto Defeated":
                 CheckGoalCondition();
                 break;
             case "Extra Life":
