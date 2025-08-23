@@ -65,7 +65,18 @@
         {
             Vanilla = 0,
             InPool = 1,
-            AlwaysOff = 2
+            AlwaysOff = 2,
+            StartWith = 3
+        }
+
+        public enum PortalTextColor
+        {
+            Default = 0,
+            Red = 1,
+            Green = 2,
+            Blue = 3,
+            Pink = 4,
+            White = 5
         }
 
         public enum ImportantLocationIDs : int

@@ -18,7 +18,8 @@ class Spyro2LocationCategory(IntEnum):
     SHORES_TOKEN = 10,
     MONEYBAGS = 11,
     LIFE_BOTTLE = 12,
-    GEM = 13
+    GEM = 13,
+    SPIRIT_PARTICLE = 14
 
 
 class Spyro2LocationData(NamedTuple):
@@ -670,6 +671,11 @@ for i in range(41):
 for i in range(8):
     metropolis_gems += [Spyro2LocationData(f"Metropolis: Gem {i + 119}", "Metropolis Gold Gem", Spyro2LocationCategory.GEM)]
 location_tables["Metropolis"] = location_tables["Metropolis"] + metropolis_gems
+
+# To ensure backwards compatibility, do not move gem location IDs.
+for level in location_tables.keys():
+    if level not in ["Summer Forest", "Ocean Speedway", "Crush's Dungeon", "Autumn Plains", "Metro Speedway", "Icy Speedway", "Gulp's Overlook", "Winter Tundra", "Canyon Speedway", "Dragon Shores", "Ripto's Arena", "Inventory"]:
+        location_tables[level] = location_tables[level] + [Spyro2LocationData(f"{level}: All Spirit Particles", "Filler", Spyro2LocationCategory.SPIRIT_PARTICLE)]
 
 location_dictionary: Dict[str, Spyro2LocationData] = {}
 for location_table in location_tables.values():
