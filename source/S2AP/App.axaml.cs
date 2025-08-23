@@ -224,6 +224,7 @@ public partial class App : Application
             }
 
             GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
+            GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
         }
@@ -235,7 +236,7 @@ public partial class App : Application
 
     private void Client_LocationCompleted(object? sender, LocationCompletedEventArgs e)
     {
-        if (Client.GameState == null) return;
+        if (Client.GameState == null || Client.CurrentSession == null) return;
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
@@ -248,6 +249,7 @@ public partial class App : Application
 
     private async void ItemReceived(object? o, ItemReceivedEventArgs args)
     {
+        if (Client.GameState == null || Client.CurrentSession == null) return;
         Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
         int currentHealth;
         Dictionary<string, int> talismans;
@@ -268,9 +270,8 @@ public partial class App : Application
                 CheckGoalCondition();
                 break;
             case "Skill Point":
-                CheckGoalCondition();
-                break;
             case "Dragon Shores Token":
+            case "Ripto Defeated":
                 CheckGoalCondition();
                 break;
             case "Extra Life":
@@ -712,6 +713,7 @@ public partial class App : Application
     }
     private static async void HandleCosmeticQueue(object source, ElapsedEventArgs e)
     {
+        if (Client.GameState == null || Client.CurrentSession == null) return;
         // Avoid overwhelming the game when many cosmetic effects are received at once by processing only 1
         // every 5 seconds.  This also lets the user see effects when logging in asynchronously.
         if (
@@ -893,6 +895,17 @@ public partial class App : Application
     }
     private static void CheckGoalCondition()
     {
+        if (
+            Client == null ||
+            Client.CurrentSession == null ||
+            Client.CurrentSession.Locations == null ||
+            Client.CurrentSession.Locations.AllLocationsChecked == null ||
+            Client.GameState == null ||
+            GameLocations == null
+        )
+        {
+            return;
+        }
         if (_hasSubmittedGoal)
         {
             return;
@@ -906,7 +919,7 @@ public partial class App : Application
         int isOpenWorld = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", 0).ToString());
         if ((CompletionGoal)goal == CompletionGoal.Ripto || (CompletionGoal)goal == CompletionGoal.FourteenTali && isOpenWorld != 0)
         {
-            if (Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if ((Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -914,7 +927,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.FourteenTali)
         {
-            if (currentTalismans >= 14 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if (currentTalismans >= 14 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -922,7 +935,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.FortyOrb)
         {
-            if (currentOrbs >= 40 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if (currentOrbs >= 40 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -930,7 +943,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.SixtyFourOrb)
         {
-            if (currentOrbs >= 64 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if (currentOrbs >= 64 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -938,7 +951,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.HundredPercent)
         {
-            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -962,7 +975,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.Epilogue)
         {
-            if (currentSkillPoints >= 16 && Client.CurrentSession.Locations.AllLocationsChecked.Any(x => GameLocations.First(y => y.Id == x).Id == (int)ImportantLocationIDs.RiptoDefeated))
+            if (currentSkillPoints >= 16 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
