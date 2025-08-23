@@ -600,7 +600,7 @@ class Spyro2World(World):
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
-                        lambda state: can_swim(self, state) and can_climb(self, state)
+                        lambda state: can_reach_summer_second_half(self, state) and can_climb(self, state)
                     )
             for gem in aquaria_gems:
                 skipped_bits = 0
@@ -787,7 +787,7 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Ocean Speedway",
-                lambda state: can_swim(self, state) and state.has("Orb", self.player, 3)
+                lambda state: can_reach_summer_second_half(self, state) and state.has("Orb", self.player, 3)
             )
 
         # Crush's Dungeon rules
@@ -1321,7 +1321,7 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Robotica Farms",
-                lambda state: can_headbash(self, state)
+                lambda state: can_reach_winter_second_half(self, state)
             )
 
         # Metropolis rules
@@ -1335,7 +1335,7 @@ class Spyro2World(World):
             set_indirect_rule(
                 self,
                 "Metropolis",
-                lambda state: can_headbash(self, state) and state.has("Orb", self.player, 25)
+                lambda state: can_reach_winter_second_half(self, state) and state.has("Orb", self.player, 25)
             )
 
         # Ripto's Arena rules
