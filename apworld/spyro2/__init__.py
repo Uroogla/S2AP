@@ -622,7 +622,7 @@ class Spyro2World(World):
         )
         if Spyro2LocationCategory.GEM in self.enabled_location_categories:
             # Bits of the gems, not accounting for empty bits
-            climb_gems = [14, 15, 16, 17, 18, 19, 21, 22, 23, 55]
+            climb_gems = [110, 111, 112, 113, 114, 115, 117, 118, 119, 151]
             empty_bits = [1, 2, 3, 4, 5, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 152]
             for gem in climb_gems:
                 skipped_bits = 0

@@ -63,3 +63,5 @@ If playing on a new save file, you will still need to get to the end of each lev
 - `showTalismanCount` Prints how many Summer Forest Talisman items and how many Autumn Plains Talisman items the player has received.
 - `useQuietHints` Suppresses hints for found locations to make the client easier to read. On by default.
 - `useVerboseHints` Include found locations in hint lists. Due to Archipelago Server limitations, only applies to hints requested after this change.
+- `showUnlockedLevels` Show which levels the player has unlocked in open world mode.
+- `showGoal` Show what your completion goal is.
