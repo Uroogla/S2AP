@@ -12,6 +12,7 @@ namespace S2AP.Models
         public uint[] MoneybagsAddresses { get; set; }
         public uint[] SkillPointAddresses { get; set; }
         public List<uint>[] LifeBottleAddresses { get; set; }
+        public int SpiritParticles { get; set; }
         public uint GemMaskAddress { get; set; }
         public int TotalGemCount { get; set; }
         public int[] GemSkipIndices { get; set; }
@@ -24,6 +25,7 @@ namespace S2AP.Models
             uint[] moneybagsAddresses,
             uint[] skillPointAddresses,
             List<uint>[] lifeBottleAddresses,
+            int spiritParticles,
             uint gemMaskAddress = 0x0,
             int totalGemCount = 0,
             int[] gemSkipIndices = null
@@ -37,6 +39,7 @@ namespace S2AP.Models
             MoneybagsAddresses = moneybagsAddresses;
             SkillPointAddresses = skillPointAddresses;
             LifeBottleAddresses = lifeBottleAddresses;
+            SpiritParticles = spiritParticles;
             GemMaskAddress = gemMaskAddress;
             TotalGemCount = totalGemCount;
             if (gemSkipIndices == null)

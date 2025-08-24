@@ -16,7 +16,8 @@ class Spyro2ItemCategory(IntEnum):
     TOKEN = 7,
     ABILITY = 8,
     GEM = 9,
-    GEMSANITY_PARTIAL = 10
+    GEMSANITY_PARTIAL = 10,
+    LEVEL_UNLOCK = 11
 
 
 class Spyro2ItemData(NamedTuple):
@@ -83,6 +84,29 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Moneybags Unlock - Shady Oasis Portal", 3009, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Icy Speedway Portal", 3010, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Canyon Speedway Portal", 3011, Spyro2ItemCategory.MONEYBAGS),
+    ("Colossus Unlock", 3012, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Idol Springs Unlock", 3013, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Hurricos Unlock", 3014, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Aquaria Towers Unlock", 3015, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Sunny Beach Unlock", 3016, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Ocean Speedway Unlock", 3017, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Skelos Badlands Unlock", 3018, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Crystal Glacier Unlock", 3019, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Breeze Harbor Unlock", 3020, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Zephyr Unlock", 3021, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Metro Speedway Unlock", 3022, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Scorch Unlock", 3023, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Shady Oasis Unlock", 3024, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Magma Cone Unlock", 3025, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Fracture Hills Unlock", 3026, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Icy Speedway Unlock", 3027, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Mystic Marsh Unlock", 3028, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Cloud Temples Unlock", 3029, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Canyon Speedway Unlock", 3030, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Robotica Farms Unlock", 3031, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Metropolis Unlock", 3032, Spyro2ItemCategory.LEVEL_UNLOCK),
+    ("Dragon Shores Unlock", 3033, Spyro2ItemCategory.LEVEL_UNLOCK),
+
 
     ("Glimmer Red Gem", 4000, Spyro2ItemCategory.GEM),
     ("Glimmer Green Gem", 4001, Spyro2ItemCategory.GEM),
@@ -218,9 +242,10 @@ item_descriptions = {}
 item_dictionary = {item_data.name: item_data for item_data in _all_items}
 
 
-def BuildItemPool(multiworld, count, options):
+def BuildItemPool(world, count, options):
     item_pool = []
     included_itemcount = 0
+    multiworld = world.multiworld
 
     if options.guaranteed_items.value:
         for item_name in options.guaranteed_items.value:
@@ -228,28 +253,70 @@ def BuildItemPool(multiworld, count, options):
             item_pool.append(item)
             included_itemcount = included_itemcount + 1
     remaining_count = count - included_itemcount
-    for i in range(6):
-        item_pool.append(item_dictionary["Summer Forest Talisman"])
-    for i in range(8):
-        item_pool.append(item_dictionary["Autumn Plains Talisman"])
+    if options.enable_open_world:
+        level_unlocks = [
+            item_dictionary["Colossus Unlock"],
+            item_dictionary["Idol Springs Unlock"],
+            item_dictionary["Hurricos Unlock"],
+            item_dictionary["Aquaria Towers Unlock"],
+            item_dictionary["Sunny Beach Unlock"],
+            item_dictionary["Ocean Speedway Unlock"],
+            item_dictionary["Skelos Badlands Unlock"],
+            item_dictionary["Crystal Glacier Unlock"],
+            item_dictionary["Breeze Harbor Unlock"],
+            item_dictionary["Zephyr Unlock"],
+            item_dictionary["Metro Speedway Unlock"],
+            item_dictionary["Scorch Unlock"],
+            item_dictionary["Shady Oasis Unlock"],
+            item_dictionary["Magma Cone Unlock"],
+            item_dictionary["Fracture Hills Unlock"],
+            item_dictionary["Icy Speedway Unlock"],
+            item_dictionary["Mystic Marsh Unlock"],
+            item_dictionary["Cloud Temples Unlock"],
+            item_dictionary["Canyon Speedway Unlock"],
+            item_dictionary["Robotica Farms Unlock"],
+            item_dictionary["Metropolis Unlock"],
+            item_dictionary["Dragon Shores Unlock"]
+        ]
+        starting_unlocks = multiworld.random.sample(level_unlocks, k=world.options.open_world_level_unlocks.value)
+        starting_unlocks = [lvl.name for lvl in starting_unlocks]
+        for level in level_unlocks:
+            if level.name in starting_unlocks:
+                multiworld.push_precollected(world.create_item(level.name))
+            else:
+                item_pool.append(level)
+        remaining_count = remaining_count - (22 - world.options.open_world_level_unlocks.value)
+    else:
+        for i in range(6):
+            item_pool.append(item_dictionary["Summer Forest Talisman"])
+        for i in range(8):
+            item_pool.append(item_dictionary["Autumn Plains Talisman"])
+        remaining_count = remaining_count - 14
     for i in range(64):
         item_pool.append(item_dictionary["Orb"])
-    remaining_count = remaining_count - 78
+    remaining_count = remaining_count - 64
+
+    if world.options.enable_open_world.value and world.options.open_world_ability_and_warp_unlocks.value:
+        multiworld.push_precollected(world.create_item("Moneybags Unlock - Swim"))
+        multiworld.push_precollected(world.create_item("Moneybags Unlock - Climb"))
+        multiworld.push_precollected(world.create_item("Moneybags Unlock - Headbash"))
 
     if options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
         item_pool.append(item_dictionary["Moneybags Unlock - Crystal Glacier Bridge"])
         item_pool.append(item_dictionary["Moneybags Unlock - Aquaria Towers Submarine"])
         item_pool.append(item_dictionary["Moneybags Unlock - Magma Cone Elevator"])
         # item_pool.append(item_dictionary["Moneybags Unlock - Glimmer Bridge"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Swim"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Climb"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Headbash"])
         item_pool.append(item_dictionary["Moneybags Unlock - Door to Aquaria Towers"])
         item_pool.append(item_dictionary["Moneybags Unlock - Zephyr Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Shady Oasis Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Icy Speedway Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Canyon Speedway Portal"])
-        remaining_count = remaining_count - 11
+        remaining_count = remaining_count - 8
+        if not world.options.enable_open_world.value or not world.options.open_world_ability_and_warp_unlocks.value:
+            item_pool.append(item_dictionary["Moneybags Unlock - Swim"])
+            item_pool.append(item_dictionary["Moneybags Unlock - Climb"])
+            item_pool.append(item_dictionary["Moneybags Unlock - Headbash"])
+            remaining_count = remaining_count - 3
 
     if options.double_jump_ability.value == AbilityOptions.IN_POOL:
         item_pool.append(item_dictionary["Double Jump Ability"])
