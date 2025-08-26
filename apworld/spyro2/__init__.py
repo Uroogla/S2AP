@@ -100,8 +100,11 @@ class Spyro2World(World):
             for itemname, item in item_dictionary.items():
                 if item.category == Spyro2ItemCategory.GEM:
                     self.options.local_items.value.add(item)
-        if self.options.enable_life_bottle_checks.value:
+        if self.options.enable_spirit_particle_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
+        # Generation struggles to place swim, which restricts too much of the seed.
+        if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
+            self.multiworld.early_items[self.player]["Moneybags Unlock - Swim"] = 1
 
     def create_regions(self):
         # Create Regions
