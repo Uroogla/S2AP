@@ -42,13 +42,11 @@ class Spyro2World(World):
     data_version = 0
     base_id = 1230000
     enabled_location_categories: Set[Spyro2LocationCategory]
-    enabled_hint_locations = []
     required_client_version = (0, 5, 0)
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
     item_descriptions = item_descriptions
-    chosen_gem_locations = []
 
     all_levels = [
         "Summer Forest","Glimmer","Idol Springs","Colossus","Hurricos","Aquaria Towers","Sunny Beach","Ocean Speedway","Crush's Dungeon",
@@ -62,6 +60,8 @@ class Spyro2World(World):
         self.locked_locations = []
         self.main_path_locations = []
         self.enabled_location_categories = set()
+        self.enabled_hint_locations = []
+        self.chosen_gem_locations = []
 
     def generate_early(self):
         self.enabled_location_categories.add(Spyro2LocationCategory.TALISMAN)
@@ -579,7 +579,7 @@ class Spyro2World(World):
             # Bits of the gems, not accounting for empty bits
             swim_gems = [1, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 49, 50, 51, 52, 53, 54, 68, 69, 74, 77, 78, 79, 80, 87, 88, 89, 90, 91, 92, 93, 116, 117, 118, 119, 120, 121, 138, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158]
             climb_gems = [83, 84, 85, 86, 94, 102, 103, 104, 105, 106]
-            aquaria_gems = [2, 3, 4, 5, 13, 21, 37, 43]
+            aquaria_gems = [2, 3, 4, 5, 13, 21, 101, 107]
             empty_bits = [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]
             for gem in swim_gems:
                 skipped_bits = 0

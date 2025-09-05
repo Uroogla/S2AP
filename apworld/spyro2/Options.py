@@ -93,7 +93,7 @@ class StartingLevelCount(Range):
 
 class StartWithAbilitiesAndWarps(Toggle):
     """If on in Open World mode, the player will start with swim, climb, headbash, and access to all 3 homeworlds.
-    NOTE: Open has an effect in Open World mode."""
+    NOTE: Only has an effect in Open World mode."""
     display_name = "Open World Start With Abilities and Warps"
 
 class Enable25PctGemChecksOption(Toggle):
