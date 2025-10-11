@@ -17,7 +17,7 @@ Important: As the mandatory client runs only on Windows, no other systems are su
 
 #### What is a config file and why do I need one?
 
-See the guide on setting up a basic YAML at the Archipelago setup guide: [Basic Multiworld Setup Guide](/tutorial/Archipelago/setup/en)
+See the guide on setting up a basic YAML at the Archipelago setup guide: [Basic Multiworld Setup Guide](https://archipelago.gg/tutorial/Archipelago/setup_en)
 
 This also includes instructions on generating and hosting the file.  The "On your local installation" instructions
 are particularly important.
@@ -26,14 +26,6 @@ are particularly important.
 
 Run `ArchipelagoLauncher.exe` and generate template files.  Copy `Spyro 2.yaml`, fill it out, and place
 it in the `players` folder.
-
-Alternatively, if you are using the local Webhost rather than [archipelago.gg](archipelago.gg), the Player Options page allows you to configure
-your personal options and export a config file from them. Player options page: [Spyro 2 Player Options Page](/games/Spyro%202/player-options).
-
-#### Verifying your config file
-
-If you would like to validate your config file to make sure it works and are using the local Webhost,
-you may do so on the YAML Validator page. YAML validator page: [YAML Validation page](/mysterycheck).
 
 ### Generate and host your world
 
