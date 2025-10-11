@@ -49,6 +49,14 @@ You may upload this to [the Archipelago website](https://archipelago.gg/uploads)
 10. Click Connect. The first time you connect, a few error messages may appear - these are okay.
 11. Start playing!
 
+### Optional Setup
+
+There is a [Poptracker](https://poptracker.github.io) package for this game, which can help you identify which checks are available.
+It can be found at https://github.com/routhken/Spyro_2_tracker/releases.
+
+[Universal Tracker](https://github.com/FarisTheAncient/Archipelago/releases) is partially supported as well, but you may encounter
+issues with random settings, gemsanity, and world keys.
+
 ## What does randomization do to this game?
 
 When the player completes a task (such as collecting a talisman or orb), an item is sent.
