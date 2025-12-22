@@ -146,12 +146,13 @@ class EnableGemsanityOption(Choice):
     all Moneybags prices will be set to 0 in game.
     Off: Individual gems are not checks.
     Partial: Every gem has a chance to be a check, but only 200 will be (chosen at random).  For every level with loose
-        gems (not speedways), 8 items giving 50 gems for that level will be added to the pool."""
+        gems (not speedways), 8 items giving 50 gems for that level will be added to the pool.
+    Full: Every gem is a check."""
     display_name = "Enable Gemsanity"
     default = GemsanityOptions.OFF
     option_off = GemsanityOptions.OFF
     option_partial = GemsanityOptions.PARTIAL
-    #option_full = GemsanityOptions.FULL
+    option_full = GemsanityOptions.FULL
     #option_full_global = GemsanityOptions.FULL_GLOBAL
     #Full: All gems are checks.  Gem items will be shuffled only within your world.
     #Full Global: All gems are checks.  Gem items can be anywhere.

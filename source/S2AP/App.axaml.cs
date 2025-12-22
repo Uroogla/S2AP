@@ -141,7 +141,7 @@ public partial class App : Application
                         goalText = "Defeat Ripto and collect 64 orbs";
                         break;
                     case CompletionGoal.HundredPercent:
-                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off), 40 orbs, and 10000 gems";
+                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off), 64 orbs, and 10000 gems";
                         break;
                     case CompletionGoal.TenTokens:
                         goalText = "Collect all 10 tokens in Dragon Shores";

@@ -99,7 +99,7 @@ class Spyro2World(World):
         if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
             for itemname, item in item_dictionary.items():
                 if item.category == Spyro2ItemCategory.GEM:
-                    self.options.local_items.value.add(item)
+                    self.options.local_items.value.add(itemname)
         if self.options.enable_spirit_particle_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
         # Generation struggles to place swim, which restricts too much of the seed.
@@ -249,7 +249,7 @@ class Spyro2World(World):
         return Spyro2Item(name, item_classification, data, self.player)
 
     def get_filler_item_name(self) -> str:
-        return "Orb"
+        return "Extra Life"
     
     def set_rules(self) -> None:
         def is_boss_defeated(self, boss, state):

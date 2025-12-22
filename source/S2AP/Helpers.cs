@@ -179,7 +179,7 @@ namespace S2AP
                             CheckType = LocationCheckType.Bit,
                             Category = "Gemsanity"
                         };
-                        if (includeGemsanity && gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset))
+                        if (includeGemsanity && (gemsanityIDs.Count == 0 || gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset)))
                         {
                             locations.Add(gemsLocation);
                         }
