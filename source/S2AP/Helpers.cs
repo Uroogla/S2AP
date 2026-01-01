@@ -48,7 +48,7 @@ namespace S2AP
             }
             return result;
         }
-        public static List<ILocation> BuildLocationList(bool includeGemsanity=false, List<int> gemsanityIDs = null)
+        public static List<ILocation> BuildLocationList(bool easyFracture=false, bool includeGemsanity=false, List<int> gemsanityIDs = null)
         {
             if (gemsanityIDs == null)
             {
@@ -179,7 +179,7 @@ namespace S2AP
                             CheckType = LocationCheckType.Bit,
                             Category = "Gemsanity"
                         };
-                        if (includeGemsanity && gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset))
+                        if (includeGemsanity && (gemsanityIDs.Count == 0 || gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset)))
                         {
                             locations.Add(gemsLocation);
                         }
@@ -189,6 +189,10 @@ namespace S2AP
                 }
                 if (level.SpiritParticles > 0)
                 {
+                    if (easyFracture && level.Name == "Fracture Hills")
+                    {
+                        level.SpiritParticles = level.SpiritParticles - 7;
+                    }
                     List<ILocation> conditionsList = new List<ILocation>();
                     Location spiritLocation = new Location()
                     {

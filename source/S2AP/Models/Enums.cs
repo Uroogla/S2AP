@@ -69,6 +69,14 @@
             StartWith = 3
         }
 
+        public enum BomboOptions
+        {
+            Vanilla = 0,
+            ThirdOnly = 1,
+            FirstOnly = 2,
+            FirstOnlyNoAttack = 3
+        }
+
         public enum PortalTextColor
         {
             Default = 0,

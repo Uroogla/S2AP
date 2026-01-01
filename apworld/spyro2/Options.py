@@ -4,8 +4,6 @@ from Options import Toggle, DefaultOnToggle, Option, Range, Choice, ItemDict, De
 
 class GoalOptions():
     RIPTO = 0
-    FOURTEEN_TALISMAN = 1
-    FORTY_ORB = 2
     SIXTY_FOUR_ORB = 3
     HUNDRED_PERCENT = 4
     TEN_TOKENS = 5
@@ -36,10 +34,11 @@ class AbilityOptions():
     OFF = 2
     START_WITH = 3
 
-class LogicTrickOptions():
-    OFF = 0
-    ON_WITH_DOUBLE_JUMP = 1
-    ALWAYS_ON = 2
+class BomboOptions():
+    VANILLA = 0
+    THIRD_ONLY = 1
+    FIRST_ONLY = 2
+    FIRST_ONLY_NO_ATTACK = 3
 
 class PortalTextColorOptions():
     DEFAULT = 0
@@ -49,28 +48,37 @@ class PortalTextColorOptions():
     PINK = 4
     WHITE = 5
 
+class RandomizeGemColorOptions():
+    DEFAULT = 0
+    SHUFFLE = 1
+    TRUE_RANDOM = 2
+
 
 class GoalOption(Choice):
-    """Lets the user choose the completion goal.  Regardless of choice, the door to Ripto requires 40 orbs to open.
-    Unless you are using glitches to enter boss fights, the first three goals should be equivalent.
-    Ripto - Beat Ripto. The goal triggers during the ensuing cutscene.
-    14 Talisman - Collect 6 Summer Forest Talismans and 8 Autumn Plains Talismans and beat Ripto. In Open World mode, defaults to Ripto.
-    40 Orb - Collect 40 orbs and beat Ripto.
+    """Lets the user choose the completion goal.
+    Ripto - Collect enough orbs to open the arena, and beat Ripto. The game marks you as having defeated Ripto during the ensuing cutscene.
     64 Orb - Collect 64 orbs and beat Ripto.
     100 Percent - Collect all talismans, orbs, and gems and beat Ripto. In Open World mode, no talismans are required.
-    10 Tokens - Collect all 10 tokens in Dragon Shores.
+    10 Tokens - Collect 8000 gems and 55 orbs to unlock the theme park and collect all 10 tokens in Dragon Shores.
     All Skillpoints - Collect all 16 skill points in the game. Excluded locations are still required for this goal.
     Epilogue - Unlock the full epilogue by collecting all 16 skill points and defeating Ripto. Excluded locations are still required for this goal."""
     display_name = "Completion Goal"
-    default = GoalOptions.FORTY_ORB
+    default = GoalOptions.RIPTO
     option_ripto = GoalOptions.RIPTO
-    option_14_talisman = GoalOptions.FOURTEEN_TALISMAN
-    option_40_orb = GoalOptions.FORTY_ORB
     option_64_orb = GoalOptions.SIXTY_FOUR_ORB
     option_100_percent = GoalOptions.HUNDRED_PERCENT
     option_10_tokens = GoalOptions.TEN_TOKENS
     option_all_skillpoints = GoalOptions.ALL_SKILLPOINTS
     option_epilogue = GoalOptions.EPILOGUE
+
+class RiptoDoorOrbs(Range):
+    """Determines how many orbs are required to unlock the door to Ripto.
+    NOTE: Due to limitations of Spyro 2, if you connect to Archipelago while in Winter Tundra, the game will default
+    to 40 orbs until you exit Winter Tundra and return."""
+    display_name = "Orbs to Unlock Ripto"
+    range_start = 0
+    range_end = 64
+    default = 40
 
 class GuaranteedItemsOption(ItemDict):
     """Guarantees that the specified items will be in the item pool"""
@@ -269,42 +277,77 @@ class FireballAbility(Choice):
     option_off = AbilityOptions.OFF
     option_start_with = AbilityOptions.START_WITH
 
-# TODO: Support more granular tricks.
-class LogicCrushEarly(Choice):
-    """Puts entering the Crush fight without all 6 Summer Forest Talismans into logic.
-    Requires one of numerous out-of-bounds glitches.
-    Off: Requires 6 summer forest talismans, like normal.
-    On With Double Jump: If the player has access to double jump, skipping into Crush is in logic.
-    Always On: Skipping into Crush is always in logic."""
-    display_name = "Enter Crush Early"
-    default = LogicTrickOptions.OFF
-    option_off = LogicTrickOptions.OFF
-    option_on_with_double_jump = LogicTrickOptions.ON_WITH_DOUBLE_JUMP
-    option_always_on = LogicTrickOptions.ALWAYS_ON
+class ColossusStartingGoals(Range):
+    """Determines how many goals you start with in both Colossus orb challenges."""
+    display_name = "Colossus Starting Goals"
+    range_start = 0
+    range_end = 4
+    default = 0
 
-class LogicGulpEarly(Choice):
-    """Puts entering the Gulp fight without all 14 Talismans into logic.
-    See https://www.youtube.com/watch?v=zkIq-2g8x8U.
-    Off: Requires 14 talismans, like normal.
-    On With Double Jump: If the player has access to double jump, skipping into Gulp is in logic.
-    Always On: Skipping into Gulp is always in logic."""
-    display_name = "Enter Gulp Early"
-    default = LogicTrickOptions.OFF
-    option_off = LogicTrickOptions.OFF
-    option_on_with_double_jump = LogicTrickOptions.ON_WITH_DOUBLE_JUMP
-    option_always_on = LogicTrickOptions.ALWAYS_ON
+class IdolEasyFish(Toggle):
+    """Makes it so red fish behave the same as other types of fish in Idol Springs."""
+    display_name = "Idol Easy Fish"
 
-# TODO: Add Swim/Theater and Sproder logic.
-class LogicRiptoEarly(Choice):
-    """Puts entering the Ripto fight without 40 orbs into logic.
-    Off: Requires 40 orbs, like normal.
-    On With Double Jump: If the player has access to double jump, skipping into Ripto is in logic.
-    Always On: Skipping into Ripto is always in logic."""
-    display_name = "Enter Gulp Early"
-    default = LogicTrickOptions.OFF
-    option_off = LogicTrickOptions.OFF
-    option_on_with_double_jump = LogicTrickOptions.ON_WITH_DOUBLE_JUMP
-    option_always_on = LogicTrickOptions.ALWAYS_ON
+class HurricosEasyLightningOrbs(Toggle):
+    """Makes it so lightning thieves do not steal the orbs in Hurricos."""
+    display_name = "Hurricos Easy Lightning Orbs"
+
+class BreezeRequiredGears(Range):
+    """Determines how many gears you must collect to complete the trolley orb."""
+    display_name = "Breeze Required Gears"
+    range_start = 1
+    range_end = 50
+    default = 50
+
+class ScorchBomboSettings(Choice):
+    """Determines how the Bombo orb works in Scorch.
+    Vanilla - Bombo behaves as normal.
+    Third Only - Complete the final (longest) path to complete the orb.
+    First Only - Complete the first (shortest) path to complete the orb.
+    Attackless First Only - Complete the first (shortest) path to complete the orb. Bombo will not attack."""
+    display_name = "Scorch Bombo Settings"
+    default = BomboOptions.VANILLA
+    option_vanilla = BomboOptions.VANILLA
+    option_third_only = BomboOptions.THIRD_ONLY
+    option_first_only = BomboOptions.FIRST_ONLY
+    option_attackless_first_only = BomboOptions.FIRST_ONLY_NO_ATTACK
+
+class FractureRequireHeadbash(DefaultOnToggle):
+    """Determines if Hunter requires headbash to start Earthshaper Bash.
+    Without headbash, this orb can be completed with fireball or the Fracture Easy Earthshapers setting.
+    This does not change the orb's logic or change how it plays."""
+    display_name = "Fracture Require Headbash"
+
+class FractureEasyEarthshapers(Toggle):
+    """Removes the 7 earthshapers from the Alchemist area and reduces the maximum number of spirit particles in the level
+    accordingly.
+    Removes the headbash requirement from the Fracture Hills all spirit particles check.
+    The second orb still requires headbash, unless Fracture Require Headbash is disabled."""
+    display_name = "Fracture Easy Earthshapers"
+
+class MagmaSpyroStartingPopcorn(Range):
+    """Determines how many popcorn crystals you start with in each Hunter orb challenge."""
+    display_name = "Magma Spyro Starting Popcorn"
+    range_start = 0
+    range_end = 5
+    default = 0
+
+class MagmaHunterStartingPopcorn(Range):
+    """Determines how many popcorn crystals Hunter starts with in each Hunter orb challenge."""
+    display_name = "Magma Hunter Starting Popcorn"
+    range_start = 0
+    range_end = 5
+    default = 0
+
+class ShadyRequireHeadbash(DefaultOnToggle):
+    """Determines if Free Hippos in Shady Oasis requires headbash to start.
+    Without headbash, this orb can be completed with fireball.
+    This does not change the orb's logic or change how it plays."""
+    display_name = "Shady Require Headbash"
+
+class EasyGulp(Toggle):
+    """If turned on, Spyro does double damage to Gulp."""
+    display_name = "Easy Gulp"
 
 class PortalAndGemCollectionColor(Choice):
     """Changes the color of the number that appears when gems are collected,
@@ -318,11 +361,20 @@ class PortalAndGemCollectionColor(Choice):
     option_pink = PortalTextColorOptions.PINK
     option_white = PortalTextColorOptions.WHITE
 
+class GemColor(Choice):
+    """Changes the color of gem types (and some other items in game).
+    Default: No changes.
+    Shuffle: Mixes up the colors of gem types."""
+    display_name = "Gem Color"
+    default = RandomizeGemColorOptions.DEFAULT
+    option_default = RandomizeGemColorOptions.DEFAULT
+    option_shuffle = RandomizeGemColorOptions.SHUFFLE
 
 @dataclass
 class Spyro2Option(PerGameCommonOptions):
     goal: GoalOption
     guaranteed_items: GuaranteedItemsOption
+    ripto_door_orbs: RiptoDoorOrbs
     enable_open_world: EnableOpenWorld
     open_world_level_unlocks: StartingLevelCount
     open_world_ability_and_warp_unlocks: StartWithAbilitiesAndWarps
@@ -350,27 +402,45 @@ class Spyro2Option(PerGameCommonOptions):
     enable_progressive_sparx_logic: ProgressiveSparxHealthLogic
     double_jump_ability: DoubleJumpAbility
     permanent_fireball_ability: FireballAbility
-    logic_crush_early: LogicCrushEarly
-    logic_gulp_early: LogicGulpEarly
-    logic_ripto_early: LogicRiptoEarly
+    colossus_starting_goals: ColossusStartingGoals
+    idol_easy_fish: IdolEasyFish
+    hurricos_easy_lightning_orbs: HurricosEasyLightningOrbs
+    breeze_required_gears: BreezeRequiredGears
+    scorch_bombo_settings: ScorchBomboSettings
+    fracture_require_headbash: FractureRequireHeadbash
+    fracture_easy_earthshapers: FractureEasyEarthshapers
+    magma_spyro_starting_popcorn: MagmaSpyroStartingPopcorn
+    magma_hunter_starting_popcorn: MagmaHunterStartingPopcorn
+    shady_require_headbash: ShadyRequireHeadbash
+    easy_gulp: EasyGulp
     portal_gem_collection_color: PortalAndGemCollectionColor
+    gem_color: GemColor
 
 
 # Group logic/trick options together, especially for the local WebHost.
 spyro_options_groups = [
     OptionGroup(
-        "Tricks",
+        "Difficulty",
         [
-            LogicCrushEarly,
-            LogicGulpEarly,
-            LogicRiptoEarly
+            ColossusStartingGoals,
+            IdolEasyFish,
+            HurricosEasyLightningOrbs,
+            BreezeRequiredGears,
+            ScorchBomboSettings,
+            FractureRequireHeadbash,
+            FractureEasyEarthshapers,
+            MagmaSpyroStartingPopcorn,
+            MagmaHunterStartingPopcorn,
+            ShadyRequireHeadbash,
+            EasyGulp
         ],
         True
     ),
     OptionGroup(
         "Cosmetics",
         [
-            PortalAndGemCollectionColor
+            PortalAndGemCollectionColor,
+            GemColor
         ],
         True
     ),

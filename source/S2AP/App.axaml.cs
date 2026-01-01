@@ -46,6 +46,8 @@ public partial class App : Application
     private static MoneybagsOptions _moneybagsOption { get; set; }
     private static PortalTextColor _portalTextColor { get; set; }
     private static bool _destructiveMode { get; set; }
+    // Avoid marking the playthrough complete or opening the Ripto door before this value is populated.
+    private static int _requiredOrbs = 65;
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -129,22 +131,16 @@ public partial class App : Application
                 switch (goal)
                 {
                     case CompletionGoal.Ripto:
-                        goalText = "Defeat Ripto";
-                        break;
-                    case CompletionGoal.FourteenTali:
-                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off)";
-                        break;
-                    case CompletionGoal.FortyOrb:
-                        goalText = "Defeat Ripto and collect 40 orbs";
+                        goalText = "Defeat Ripto and collect " + _requiredOrbs + " orbs, the requirement to open his arena";
                         break;
                     case CompletionGoal.SixtyFourOrb:
                         goalText = "Defeat Ripto and collect 64 orbs";
                         break;
                     case CompletionGoal.HundredPercent:
-                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off), 40 orbs, and 10000 gems";
+                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off), 64 orbs, and 10000 gems";
                         break;
                     case CompletionGoal.TenTokens:
-                        goalText = "Collect all 10 tokens in Dragon Shores";
+                        goalText = "Collect 55 orbs and 8000 gems to unlock the theme park and collect all 10 tokens in Dragon Shores";
                         break;
                     case CompletionGoal.AllSkillpoints:
                         goalText = "Collect all 16 skill points";
@@ -153,7 +149,7 @@ public partial class App : Application
                         goalText = "Defeat Ripto and collect all 16 skill points";
                         break;
                     default:
-                        goalText = "Defeat Ripto and collect 40 orbs";
+                        goalText = "Defeat Ripto and collect " + _requiredOrbs + " orbs, the requirement to open his arena";
                         break;
                 }
                 Log.Logger.Information($"Your goal is: {goalText}");
@@ -222,8 +218,10 @@ public partial class App : Application
                     gemsanityIDs = System.Text.Json.JsonSerializer.Deserialize<List<int>>(value.ToString());
                 }
             }
+            _requiredOrbs = int.Parse(Client.Options?.GetValueOrDefault("ripto_door_orbs", 0).ToString());
+            bool easyFracture = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", 0).ToString()) > 0;
 
-            GameLocations = Helpers.BuildLocationList(includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
+            GameLocations = Helpers.BuildLocationList(easyFracture: easyFracture, includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
             GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
             Client.MonitorLocations(GameLocations);
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
@@ -543,6 +541,7 @@ public partial class App : Application
         }
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
+        CheckGoalCondition();
         AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
         int hasDoubleJumpItem = (byte)(Client.GameState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
         AbilityOptions fireballOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("permanent_fireball_ability", "0").ToString());
@@ -584,11 +583,134 @@ public partial class App : Application
             //Memory.Write(Addresses.localGemLoadFixAddress, 0);
             //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
         }
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        if (currentLevel == LevelInGameIDs.Colossus)
+        {
+            int startingGoals = int.Parse(Client.Options?.GetValueOrDefault("colossus_starting_goals", "0").ToString());
+            int currentGoals = (int)Memory.ReadByte(Addresses.ColossusSpyroHockeyScore);
+            if (currentGoals < startingGoals)
+            {
+                Memory.WriteByte(Addresses.ColossusSpyroHockeyScore, (byte)startingGoals);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.IdolSprings)
+        {
+            bool easyFish = int.Parse(Client.Options?.GetValueOrDefault("idol_easy_fish", "0").ToString()) > 0;
+            if (easyFish)
+            {
+                Memory.Write(Addresses.IdolFishThrowUp, 0x0802080c);
+                Memory.Write(Addresses.IdolFishIncludeReds, 0x28820006);
+                Memory.Write(Addresses.IdolFishIncludeRedsHUD, 0x28a20006);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.Hurricos)
+        {
+            bool easyLightningOrbs = int.Parse(Client.Options?.GetValueOrDefault("hurricos_easy_lightning_orbs", "0").ToString()) > 0;
+            if (easyLightningOrbs)
+            {
+                foreach (uint thiefStatus in Addresses.HurricosLightningThiefStatuses)
+                {
+                    Memory.WriteByte(thiefStatus, 253);
+                }
+                foreach (uint thiefZCoordinate in Addresses.HurricosLightningThiefZCoordinates)
+                {
+                    Memory.Write(thiefZCoordinate, 0);
+                }
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.BreezeHarbor)
+        {
+            int requiredGears = int.Parse(Client.Options?.GetValueOrDefault("breeze_required_gears", "0").ToString());
+            int currentGears = (int)Memory.ReadByte(Addresses.spyroHUDScore);
+            if (currentGears > 50) {
+                Memory.WriteByte(Addresses.spyroHUDScore, 50);
+            }
+            else if (currentGears < 50 - requiredGears)
+            {
+                Memory.WriteByte(Addresses.spyroHUDScore, (byte)(50 - requiredGears));
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.Scorch)
+        {
+            // Nothing ever goes wrong in Scorch : )
+            BomboOptions bomboSettings = (BomboOptions)int.Parse(Client.Options?.GetValueOrDefault("scorch_bombo_settings", "0").ToString());
+            if (bomboSettings == BomboOptions.ThirdOnly)
+            {
+                Memory.WriteByte(Addresses.firstBomboStatus, 11);
+                Memory.WriteByte(Addresses.secondBomboStatus, 11);
+            }
+            else if (bomboSettings == BomboOptions.FirstOnly)
+            {
+                Memory.WriteByte(Addresses.secondBomboStatus, 11);
+                Memory.WriteByte(Addresses.thirdBomboStatus, 11);
+            }
+            else if (bomboSettings == BomboOptions.FirstOnlyNoAttack)
+            {
+                Memory.WriteByte(Addresses.secondBomboStatus, 11);
+                Memory.WriteByte(Addresses.thirdBomboStatus, 11);
+                Memory.Write(Addresses.bomboAttackAddress, 0x0801E71E);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.FractureHills)
+        {
+            bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("fracture_require_headbash", "0").ToString()) > 0;
+            bool easyEarthshapers = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", "0").ToString()) > 0;
+            if (!requireHeadbash)
+            {
+                Memory.Write(Addresses.fractureHeadbashCheck, 0x0801E2A5);
+            }
+            if (easyEarthshapers)
+            {
+                foreach (uint earthshaperStatus in Addresses.FractureEarthshaperStatuses)
+                {
+                    Memory.WriteByte(earthshaperStatus, 253);
+                }
+                foreach (uint earthshaperZCoordinate in Addresses.FractureEarthshaperZCoordinates)
+                {
+                    Memory.Write(earthshaperZCoordinate, 0);
+                }
+                Memory.WriteByte(Addresses.maxFractureSpiritParticles, 22);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.MagmaCone)
+        {
+            int spyroStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_spyro_starting_popcorn", "0").ToString());
+            int hunterStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_hunter_starting_popcorn", "0").ToString());
+            int spyroScore = Memory.ReadByte(Addresses.spyroHUDScore);
+            int hunterScore = Memory.ReadByte(Addresses.opponentHUDScore);
+            if (spyroScore < spyroStartingScore)
+            {
+                Memory.WriteByte(Addresses.spyroHUDScore, (byte)spyroStartingScore);
+            }
+            if (hunterScore < hunterStartingScore)
+            {
+                Memory.WriteByte(Addresses.opponentHUDScore, (byte)hunterStartingScore);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.ShadyOasis)
+        {
+            bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("shady_require_headbash", "0").ToString()) > 0;
+            if (!requireHeadbash)
+            {
+                Memory.Write(Addresses.ShadyHeadbashCheck, 0x00000000);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.GulpsOverlook)
+        {
+            bool easyGulp = int.Parse(Client.Options?.GetValueOrDefault("easy_gulp", "0").ToString()) > 0;
+            if (easyGulp)
+            {
+                Memory.WriteByte(Addresses.GulpDoubleDamage, 1);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.WinterTundra)
+        {
+            Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
+            Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
+        }
         int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
         if (openWorldOption != 0)
         {
-            LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
-
             if (currentLevel == LevelInGameIDs.SummerForest)
             {
                 bool isIdolUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
@@ -618,12 +740,6 @@ public partial class App : Application
                     }
                     portalAddress += 8;
                 }
-                /*Memory.Write(Addresses.IdolPortalAddress + 0x48, isIdolUnlocked ? 0x01100100 : 0x00100001);
-                Memory.Write(Addresses.ColossusPortalAddress + 0x48, isColossusUnlocked ? 0x01100100 : 0x00100001);
-                Memory.Write(Addresses.HurricosPortalAddress + 0x48, isHurricosUnlocked ? 0x01100100 : 0x00100001);
-                Memory.Write(Addresses.AquariaPortalAddress + 0x48, isAquariaUnlocked ? 0x01100100 : 0x00100001);
-                Memory.Write(Addresses.SunnyPortalAddress + 0x48, isSunnyUnlocked ? 0x01100100 : 0x00100001);
-                Memory.Write(Addresses.OceanPortalAddress + 0x48, isOceanUnlocked ? 0x01100100 : 0x00100001);*/
             }
             else if (currentLevel == LevelInGameIDs.AutumnPlains)
             {
@@ -715,6 +831,7 @@ public partial class App : Application
     private static async void HandleCosmeticQueue(object source, ElapsedEventArgs e)
     {
         if (Client.GameState == null || Client.CurrentSession == null) return;
+        CheckGoalCondition();
         // Avoid overwhelming the game when many cosmetic effects are received at once by processing only 1
         // every 5 seconds.  This also lets the user see effects when logging in asynchronously.
         // TODO: Handle this on game reset as well.
@@ -766,6 +883,16 @@ public partial class App : Application
                 }
             }
         }
+        Memory.Write(Addresses.RedGemShadow, int.Parse(Client.Options?.GetValueOrDefault("red_gem_shadow_color", "0").ToString()));
+        Memory.Write(Addresses.RedGemColor, int.Parse(Client.Options?.GetValueOrDefault("red_gem_color", "0").ToString()));
+        Memory.Write(Addresses.GreenGemShadow, int.Parse(Client.Options?.GetValueOrDefault("green_gem_shadow_color", "0").ToString()));
+        Memory.Write(Addresses.GreenGemColor, int.Parse(Client.Options?.GetValueOrDefault("green_gem_color", "0").ToString()));
+        Memory.Write(Addresses.BlueGemShadow, int.Parse(Client.Options?.GetValueOrDefault("blue_gem_shadow_color", "0").ToString()));
+        Memory.Write(Addresses.BlueGemColor, int.Parse(Client.Options?.GetValueOrDefault("blue_gem_color", "0").ToString()));
+        Memory.Write(Addresses.GoldGemShadow, int.Parse(Client.Options?.GetValueOrDefault("gold_gem_shadow_color", "0").ToString()));
+        Memory.Write(Addresses.GoldGemColor, int.Parse(Client.Options?.GetValueOrDefault("gold_gem_color", "0").ToString()));
+        Memory.Write(Addresses.PinkGemShadow, int.Parse(Client.Options?.GetValueOrDefault("pink_gem_shadow_color", "0").ToString()));
+        Memory.Write(Addresses.PinkGemColor, int.Parse(Client.Options?.GetValueOrDefault("pink_gem_color", "0").ToString()));
         switch (_portalTextColor)
         {
             case PortalTextColor.Red:
@@ -918,25 +1045,9 @@ public partial class App : Application
         var currentGems = Memory.ReadShort(Addresses.TotalGemAddress);
         int goal = int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString());
         int isOpenWorld = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", 0).ToString());
-        if ((CompletionGoal)goal == CompletionGoal.Ripto || (CompletionGoal)goal == CompletionGoal.FourteenTali && isOpenWorld != 0)
+        if ((CompletionGoal)goal == CompletionGoal.Ripto)
         {
-            if ((Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
-            {
-                Client.SendGoalCompletion();
-                _hasSubmittedGoal = true;
-            }
-        }
-        else if ((CompletionGoal)goal == CompletionGoal.FourteenTali)
-        {
-            if (currentTalismans >= 14 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
-            {
-                Client.SendGoalCompletion();
-                _hasSubmittedGoal = true;
-            }
-        }
-        else if ((CompletionGoal)goal == CompletionGoal.FortyOrb)
-        {
-            if (currentOrbs >= 40 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= _requiredOrbs && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;

@@ -17,6 +17,9 @@ namespace S2AP
         public const uint PlayerHealth = 0x0006a248;
         public const uint SpiritParticlesAddress = 0x00066fb0;
 
+        public const uint RiptoDoorOrbRequirementAddress = 0x0007695c;
+        public const uint RiptoDoorOrbDisplayAddress = 0x000769e0;
+
         public const uint TotalGemAddress = 0x000670cc; // 0x00067660 is the HUD display; may need to be edited if this value is modified.
         public const uint LevelGemsAddress = 0x0006ac04; // One entire word per level, including boss levels.
 
@@ -50,6 +53,17 @@ namespace S2AP
         public const uint PortalTextRed = 0x00064468;
         public const uint PortalTextGreen = 0x00064469;
         public const uint PortalTextBlue = 0x0006446a;
+
+        public const uint RedGemShadow = 0x00064450;
+        public const uint RedGemColor = 0x00064454;
+        public const uint GreenGemShadow = 0x00064460;
+        public const uint GreenGemColor = 0x00064464;
+        public const uint BlueGemShadow = 0x00064470;
+        public const uint BlueGemColor = 0x00064474;
+        public const uint GoldGemShadow = 0x00064480;
+        public const uint GoldGemColor = 0x00064484;
+        public const uint PinkGemShadow = 0x00064490;
+        public const uint PinkGemColor = 0x00064494;
 
         public const uint PermanentFireballAddress = 0x000698bb;
         public const uint DoubleJumpAddress1 = 0x00035ba8;
@@ -172,5 +186,63 @@ namespace S2AP
         public const uint RoboticaNameAddress = 0x00010594;
         public const uint MetropolisNameAddress = 0x00010588;
         public const uint ShoresNameAddress = 0x00010578;
+
+        public const uint ColossusSpyroHockeyScore = 0x00198ec5;
+        public const uint ColossusOpponentHockeyScore = 0x00198cc9;
+        public const uint IdolFishThrowUp = 0x00082010;
+        public const uint IdolFishIncludeReds = 0x00082048;
+        public const uint IdolFishIncludeRedsHUD = 0x0007efe0;
+        public static readonly List<uint> HurricosLightningThiefStatuses = [
+            0x18C8DC,
+            0x18CB44,
+            0x18CBF4,
+            0x18CCA4,
+            0x18CCFC,
+            0x18CD54,
+            0x18CDAC,
+            0x18CE04,
+            0x18CF0C,
+            0x18CFBC
+        ];
+        public static readonly List<uint> HurricosLightningThiefZCoordinates = [
+            0x18C8A8,
+            0x18CB10,
+            0x18CBC0,
+            0x18CC70,
+            0x18CCC8,
+            0x18CD20,
+            0x18CD78,
+            0x18CDD0,
+            0x18CED8,
+            0x18CF88
+        ];
+        public const uint spyroHUDScore = 0x00066FEC;
+        public const uint opponentHUDScore = 0x67084;
+        public const uint firstBomboStatus = 0x189f3d;
+        public const uint secondBomboStatus = 0x189b75;
+        public const uint thirdBomboStatus = 0x189805;
+        public const uint bomboAttackAddress = 0x79b34;
+        public const uint fractureHeadbashCheck = 0x78a88;
+        public const uint maxFractureSpiritParticles = 0x64826;
+        public static readonly List<uint> FractureEarthshaperStatuses = [
+            0x188DEC,
+            0x188E44,
+            0x188E9C,
+            0x188EF4,
+            0x188F4C,
+            0x188FA4,
+            0x188FFC
+        ];
+        public static readonly List<uint> FractureEarthshaperZCoordinates = [
+            0x188DB8,
+            0x188E10,
+            0x188E68,
+            0x188EC0,
+            0x188F18,
+            0x188F70,
+            0x188FC8
+        ];
+        public static uint ShadyHeadbashCheck = 0x7d6c0;
+        public static uint GulpDoubleDamage = 0x120c5e;
     }
 }
