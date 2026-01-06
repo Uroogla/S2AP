@@ -132,5 +132,12 @@
             Flop = 6,
             Dying = 31
         }
+
+        public enum LevelLockOptions : int
+        {
+            Vanilla = 0,
+            Keys = 1,
+            Orbs = 2,
+        }
     }
 }

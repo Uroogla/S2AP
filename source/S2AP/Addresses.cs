@@ -248,5 +248,7 @@ namespace S2AP
         ];
         public static uint ShadyHeadbashCheck = 0x7d6c0;
         public static uint GulpDoubleDamage = 0x120c5e;
+
+        public const uint GuidebookText = 0x00010308;
     }
 }

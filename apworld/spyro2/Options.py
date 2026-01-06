@@ -11,6 +11,11 @@ class GoalOptions():
     EPILOGUE = 7
     ORB_HUNT = 8
 
+class LevelLockOptions():
+    VANILLA = 0
+    KEYS = 1
+    ORBS = 2
+
 class MoneybagsOptions():
     VANILLA = 0
     PRICE_SHUFFLE = 1
@@ -105,16 +110,28 @@ class GuaranteedItemsOption(ItemDict):
     display_name = "Guaranteed Items"
 
 class EnableOpenWorld(Toggle):
-    """If on, Crush and Gulp do not require talismans.  Every level is unlocked by items.
-    You start with Glimmer and 3 other unlocks."""
+    """If on, Crush and Gulp do not require talismans."""
     display_name = "Enable Open World"
+
+class LevelLockOption(Choice):
+    """Determines the rules for unlocking each level. Glimmer, Homeworlds, and bosses are bosses always have their
+    vanilla requirements.
+    Vanilla: Levels are available if you meet the vanilla requirements.
+    Keys: Levels are unlocked by finding "Unlock" items. Note: you may need to increase the number of locations (for example,
+      by adding gem checks) to add keys.
+    """
+    display_name = "Level Locks"
+    default = LevelLockOptions.VANILLA
+    option_vanilla = LevelLockOptions.VANILLA
+    option_keys = LevelLockOptions.KEYS
+    # option_orbs = LevelLockOptions.ORBS
 
 class StartingLevelCount(Range):
     """Determines how many level unlocks the player starts with.
     The player always has access to Glimmer, homeworlds, and boss fights.
     Starting with fewer than 8 unlocks requires you to add extra locations to the item pool.
-    NOTE: Only has an effect in Open World mode."""
-    display_name = "Open World Starting Level Unlocks"
+    NOTE: Only has an effect when level locks are on."""
+    display_name = "Starting Level Unlocks"
     range_start = 0
     range_end = 22
     default = 8
@@ -303,7 +320,8 @@ class FireballAbility(Choice):
     option_start_with = AbilityOptions.START_WITH
 
 class ColossusStartingGoals(Range):
-    """Determines how many goals you start with in both Colossus orb challenges."""
+    """Determines how many goals you start with in both Colossus orb challenges.
+    The score will only reflect this after your first goal."""
     display_name = "Colossus Starting Goals"
     range_start = 0
     range_end = 4
@@ -327,13 +345,11 @@ class BreezeRequiredGears(Range):
 class ScorchBomboSettings(Choice):
     """Determines how the Bombo orb works in Scorch.
     Vanilla - Bombo behaves as normal.
-    Third Only - Complete the final (longest) path to complete the orb.
     First Only - Complete the first (shortest) path to complete the orb.
     Attackless First Only - Complete the first (shortest) path to complete the orb. Bombo will not attack."""
     display_name = "Scorch Bombo Settings"
     default = BomboOptions.VANILLA
     option_vanilla = BomboOptions.VANILLA
-    option_third_only = BomboOptions.THIRD_ONLY
     option_first_only = BomboOptions.FIRST_ONLY
     option_attackless_first_only = BomboOptions.FIRST_ONLY_NO_ATTACK
 
@@ -410,8 +426,9 @@ class Spyro2Option(PerGameCommonOptions):
     # TODO: Handle edge cases and enable.
     # available_orbs: TotalAvailableOrbs
     enable_open_world: EnableOpenWorld
-    open_world_level_unlocks: StartingLevelCount
     open_world_ability_and_warp_unlocks: StartWithAbilitiesAndWarps
+    level_lock_options: LevelLockOption
+    level_unlocks: StartingLevelCount
     enable_25_pct_gem_checks: Enable25PctGemChecksOption
     enable_50_pct_gem_checks: Enable50PctGemChecksOption
     enable_75_pct_gem_checks: Enable75PctGemChecksOption

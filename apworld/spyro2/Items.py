@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import NamedTuple
 from BaseClasses import Item
-from .Options import MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions
+from .Options import MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
 from Options import OptionError
 
 
@@ -254,7 +254,7 @@ def BuildItemPool(world, count, options):
             item_pool.append(item)
             included_itemcount = included_itemcount + 1
     remaining_count = count - included_itemcount
-    if options.enable_open_world:
+    if options.level_lock_options.value == LevelLockOptions.KEYS:
         level_unlocks = [
             item_dictionary["Colossus Unlock"],
             item_dictionary["Idol Springs Unlock"],
@@ -279,15 +279,15 @@ def BuildItemPool(world, count, options):
             item_dictionary["Metropolis Unlock"],
             item_dictionary["Dragon Shores Unlock"]
         ]
-        starting_unlocks = multiworld.random.sample(level_unlocks, k=world.options.open_world_level_unlocks.value)
+        starting_unlocks = multiworld.random.sample(level_unlocks, k=world.options.level_unlocks.value)
         starting_unlocks = [lvl.name for lvl in starting_unlocks]
         for level in level_unlocks:
             if level.name in starting_unlocks:
                 multiworld.push_precollected(world.create_item(level.name))
             else:
                 item_pool.append(level)
-        remaining_count = remaining_count - (22 - world.options.open_world_level_unlocks.value)
-    else:
+        remaining_count = remaining_count - (22 - world.options.level_unlocks.value)
+    if not world.options.enable_open_world.value:
         for i in range(6):
             item_pool.append(item_dictionary["Summer Forest Talisman"])
         for i in range(8):
@@ -595,7 +595,7 @@ def BuildItemPool(world, count, options):
         remaining_count = remaining_count - 1
 
     if remaining_count < 0:
-        raise OptionError(f"The options you have selected require at least {remaining_count * -1} more checks to be enabled.")
+        raise OptionError(f"The options you have selected have {remaining_count * -1} more items than locations. You must choose options that add at least this many more locations.")
 
     # Build a weighted list of allowed filler items.
     # Make changing Spyro's color in general the same weight as other items.

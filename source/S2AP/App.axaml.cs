@@ -553,7 +553,7 @@ public partial class App : Application
     private void showUnlockedLevels()
     {
         List<Item> unlockedLevels = (Client.GameState?.ReceivedItems.Where(x => x.Name.EndsWith(" Unlock")).ToList() ?? new List<Item>());
-        if (unlockedLevels.Count >= int.Parse(Client.Options?.GetValueOrDefault("open_world_level_unlocks", "0").ToString()))
+        if (unlockedLevels.Count >= int.Parse(Client.Options?.GetValueOrDefault("level_unlocks", "0").ToString()))
         {
             Log.Logger.Information("You have unlocked: ");
             string unlockedLevelsString = "";
@@ -634,6 +634,7 @@ public partial class App : Application
             if (!_justDied && gameStatus != GameStatus.Cutscene && gameStatus != GameStatus.Loading && (health == 255 || zPos < 0x400 || (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)))
             {
                 _justDied = true;
+                Log.Logger.Information("Sending DeathLink.");
                 _deathLinkService.SendDeathLink(new DeathLink(Client.CurrentSession.Players.ActivePlayer.Name, cause: Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2."));
             }
             else if (_justDied && !(health == 255 || zPos < 0x400 || (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)))
@@ -705,12 +706,7 @@ public partial class App : Application
         {
             // Nothing ever goes wrong in Scorch : )
             BomboOptions bomboSettings = (BomboOptions)int.Parse(Client.Options?.GetValueOrDefault("scorch_bombo_settings", "0").ToString());
-            if (bomboSettings == BomboOptions.ThirdOnly)
-            {
-                Memory.WriteByte(Addresses.firstBomboStatus, 11);
-                Memory.WriteByte(Addresses.secondBomboStatus, 11);
-            }
-            else if (bomboSettings == BomboOptions.FirstOnly)
+            if (bomboSettings == BomboOptions.FirstOnly)
             {
                 Memory.WriteByte(Addresses.secondBomboStatus, 11);
                 Memory.WriteByte(Addresses.thirdBomboStatus, 11);
@@ -779,8 +775,8 @@ public partial class App : Application
             Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
             Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
         }
-        int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
-        if (openWorldOption != 0)
+        LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+        if (levelLockOption == LevelLockOptions.Keys)
         {
             if (currentLevel == LevelInGameIDs.SummerForest)
             {
@@ -805,7 +801,8 @@ public partial class App : Application
                     if (isUnlocked)
                     {
                         Memory.Write(portalAddress, 6);
-                    } else
+                    }
+                    else
                     {
                         Memory.Write(portalAddress, 0);
                     }
@@ -916,6 +913,10 @@ public partial class App : Application
                 Memory.WriteByte(Addresses.AutumnGuidebookUnlock, 1);
                 Memory.WriteByte(Addresses.WinterGuidebookUnlock, 1);
             }
+        }
+        LevelLockOptions levelLockOptions = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+        if (levelLockOptions == LevelLockOptions.Keys)
+        {
             Dictionary<string, uint[]> levelNames = new Dictionary<string, uint[]>()
             {
                 { "Idol Springs", [Addresses.IdolNameAddress, Addresses.IdolNameAddress + 16] },

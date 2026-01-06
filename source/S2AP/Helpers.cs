@@ -16,6 +16,7 @@ namespace S2AP
     public class Helpers
     {
         private static GameStatus lastNonZeroStatus = GameStatus.Spawning;
+        public static string gameVersion = "";
         public static string OpenEmbeddedResource(string resourceName)
         {
             var assembly = Assembly.GetExecutingAssembly();
@@ -33,10 +34,27 @@ namespace S2AP
         public static bool IsInGame()
         {
             var status = GetGameStatus();
+            bool isCorrectGameVersion = IsCorrectVersion();
             return !IsInDemoMode() &&
                 status != GameStatus.TitleScreen &&
                 status != GameStatus.Loading && // Handle loading into and out of demo mode.
+                isCorrectGameVersion &&
                 Memory.ReadInt(Addresses.ResetCheckAddress) != 0; // Handle status being 0 on console reset.
+        }
+        public static bool IsCorrectVersion()
+        {
+            // Handle case where user resets Duckstation or loads a new ROM.
+            // Certain versions of the BIOS are incompatible with Addresses.ResetCheckAddress.
+            /*if (gameVersion == "NTSC-U")
+            {
+                return true;
+            }*/
+            if (Memory.ReadString(Addresses.GuidebookText, 9) == "Guidebook")
+            {
+                gameVersion = "NTSC-U";
+                return true;
+            } // TODO: Check for PAL, NTSC-J.
+            return false;
         }
         public static GameStatus GetGameStatus()
         {
