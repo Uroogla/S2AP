@@ -17,6 +17,10 @@ namespace S2AP
         public const uint PlayerHealth = 0x0006a248;
         public const uint SpiritParticlesAddress = 0x00066fb0;
 
+        public const uint PlayerZPos = 0x69FF8;
+        public const uint PlayerAnimationLength = 0x6A04C;
+        public const uint PlayerVelocityStatus = 0x6A044;
+
         public const uint RiptoDoorOrbRequirementAddress = 0x0007695c;
         public const uint RiptoDoorOrbDisplayAddress = 0x000769e0;
 

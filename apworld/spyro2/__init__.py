@@ -1457,9 +1457,35 @@ class Spyro2World(World):
             loc_id = self.location_name_to_id[loc]
             gemsanity_locations.append(loc_id)
 
-        colors = [[0x00000040, 0x002000ff], [0x00104808, 0x0020ff00], [0x00480020, 0x00ff0080], [0x00005066, 0x0000c0ff], [0x00240034, 0x008000c0]]
+        colors = [
+            [0x00000040, 0x002000ff],  # Red
+            [0x00104808, 0x0020ff00],  # Green
+            [0x00480020, 0x00ff0080],  # Blue/Purple
+            [0x00005066, 0x0000c0ff],  # Gold
+            [0x00240034, 0x008000c0],  # Magenta
+        ]
         if self.options.gem_color.value == RandomizeGemColorOptions.SHUFFLE:
             self.random.shuffle(colors)
+        elif self.options.gem_color.value == RandomizeGemColorOptions.RANDOM:
+            colors = colors + [
+                [0x00003848, 0x002060ff],  # Orange
+                [0x00482400, 0x00ff9000],  # Cyan
+                [0x00160826, 0x00642288],  # Violet
+                [0x00801490, 0x004314ff],  # Hot Pink
+                [0x00202626, 0x00c0c0c0],  # Silver
+                [0x000a2026, 0x0000d7ff],  # Gold
+                [0x0000a050, 0x0000fc7c],  # Neon Green
+                [0x00808000, 0x00808000],  # Teal
+            ]
+            self.random.shuffle(colors)
+        elif self.options.gem_color.value == RandomizeGemColorOptions.TRUE_RANDOM:
+            colors = [
+                [self.random.randint(0, 16777216), self.random.randint(0, 16777216)],
+                [self.random.randint(0, 16777216), self.random.randint(0, 16777216)],
+                [self.random.randint(0, 16777216), self.random.randint(0, 16777216)],
+                [self.random.randint(0, 16777216), self.random.randint(0, 16777216)],
+                [self.random.randint(0, 16777216), self.random.randint(0, 16777216)],
+            ]
 
         slot_data = {
             "options": {
@@ -1480,6 +1506,7 @@ class Spyro2World(World):
                 "enable_spirit_particle_checks": self.options.enable_spirit_particle_checks.value,
                 "enable_gemsanity": self.options.enable_gemsanity.value,
                 "moneybags_settings": self.options.moneybags_settings.value,
+                "death_link": self.options.death_link.value,
                 "enable_filler_extra_lives": self.options.enable_filler_extra_lives.value,
                 "enable_destructive_spyro_filler": self.options.enable_destructive_spyro_filler.value,
                 "enable_filler_color_change": self.options.enable_filler_color_change.value,

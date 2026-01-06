@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import NamedTuple
 from BaseClasses import Item
-from .Options import MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions
+from .Options import MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions
 from Options import OptionError
 
 
@@ -70,6 +70,7 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Double Jump Ability", 1020, Spyro2ItemCategory.ABILITY),
     ("Permanent Fireball Ability", 1021, Spyro2ItemCategory.ABILITY),
     ("Destructive Spyro", 1022, Spyro2ItemCategory.MISC),
+    ("Normal Spyro", 1023, Spyro2ItemCategory.MISC),
 
     ("Moneybags Unlock - Crystal Glacier Bridge", 3000, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Aquaria Towers Submarine", 3001, Spyro2ItemCategory.MONEYBAGS),
@@ -292,9 +293,16 @@ def BuildItemPool(world, count, options):
         for i in range(8):
             item_pool.append(item_dictionary["Autumn Plains Talisman"])
         remaining_count = remaining_count - 14
-    for i in range(64):
+    orb_count = 64
+    # TODO: Preliminary orb hunt code - have to properly handle all edge cases, such as 64 orb goal.
+    # orb_count = world.options.available_orbs.value
+    # if orb_count < world.options.ripto_door_orbs.value:
+    #     orb_count = world.options.ripto_door_orbs.value
+    # if world.options.goal.value == GoalOptions.ORB_HUNT and orb_count < world.options.orb_hunt_requirement.value:
+    #     orb_count = world.options.orb_hunt_requirement.value
+    for i in range(orb_count):
         item_pool.append(item_dictionary["Orb"])
-    remaining_count = remaining_count - 64
+    remaining_count = remaining_count - orb_count
 
     if world.options.enable_open_world.value and world.options.open_world_ability_and_warp_unlocks.value:
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Swim"))
@@ -615,6 +623,9 @@ def BuildItemPool(world, count, options):
             allowed_trap_items.append(item)
         elif item.name == 'Invisibility Trap' and options.enable_trap_invisibility:
             allowed_trap_items.append(item)
+        elif item.name == "Normal Spyro" and (options.enable_filler_color_change or options.enable_filler_big_head_mode or len(allowed_misc_items) == 0):
+            for i in range(0, 4):
+                allowed_misc_items.append(item)
 
     if remaining_count > 0 and options.trap_filler_percent.value > 0 and len(allowed_trap_items) == 0:
         raise OptionError(f"Trap percentage is set to {options.trap_filler_percent.value}, but none have been turned on.")

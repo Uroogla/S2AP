@@ -126,5 +126,11 @@
             DragonShores = 27,
             RiptosArena = 28
         }
+
+        public enum SpyroStates : byte
+        {
+            Flop = 6,
+            Dying = 31
+        }
     }
 }

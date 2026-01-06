@@ -5,6 +5,7 @@ using Archipelago.Core.AvaloniaGUI.Views;
 using Archipelago.Core.GameClients;
 using Archipelago.Core.Models;
 using Archipelago.Core.Util;
+using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Packets;
 using Avalonia;
@@ -33,6 +34,7 @@ public partial class App : Application
 {
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
+    private static string _playerName { get; set; }
     public static List<ILocation> GameLocations { get; set; }
     private static readonly object _lockObject = new object();
     private static Queue<string> _cosmeticEffects { get; set; }
@@ -46,6 +48,9 @@ public partial class App : Application
     private static MoneybagsOptions _moneybagsOption { get; set; }
     private static PortalTextColor _portalTextColor { get; set; }
     private static bool _destructiveMode { get; set; }
+    private static bool _justDied { get; set; }
+    private static bool _justReceivedDeathLink { get; set; }
+    private static DeathLinkService _deathLinkService { get; set; }
     // Avoid marking the playthrough complete or opening the Ripto door before this value is populated.
     private static int _requiredOrbs = 65;
     public override void Initialize()
@@ -100,6 +105,22 @@ public partial class App : Application
             Log.Logger.Warning("You do not appear to be running this client as an administrator.");
             Log.Logger.Warning("This may result in errors or crashes when trying to connect to Duckstation.");
         }
+    }
+
+    private static void HandleDeathLink(DeathLink deathLink)
+    {
+        if (deathLink.Source == Client.CurrentSession.Players.ActivePlayer.Name)
+        {
+            return;
+        }
+        _justReceivedDeathLink = true;
+        Memory.WriteByte(Addresses.SpyroStateAddress, (byte)SpyroStates.Dying);
+        string message = "Received DeathLink from " + deathLink.Source;
+        if (deathLink.Cause != null)
+        {
+            message = message + " - " + deathLink.Cause;
+        }
+        Log.Logger.Information(message);
     }
     private void HandleCommand(string command)
     {
@@ -204,6 +225,7 @@ public partial class App : Application
         Client.MessageReceived += Client_MessageReceived;
         Client.ItemReceived += ItemReceived;
         Client.EnableLocationsCondition = () => Helpers.IsInGame();
+        _playerName = e.Slot;
         await Client.Login(e.Slot, !string.IsNullOrWhiteSpace(e.Password) ? e.Password : null);
         if (Client.Options?.Count > 0)
         {
@@ -310,6 +332,7 @@ public partial class App : Application
             case "Turn Spyro Pink":
             case "Turn Spyro Green":
             case "Turn Spyro Black":
+            case "Normal Spyro":
                 _cosmeticEffects.Enqueue(args.Item.Name);
                 break;
             case "Invisibility Trap":
@@ -571,6 +594,26 @@ public partial class App : Application
         {
             Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
         } // Turns off automatically on its own.
+
+        if (_deathLinkService != null)
+        {
+            byte health = Memory.ReadByte(Addresses.PlayerHealth);
+            int zPos = Memory.ReadInt(Addresses.PlayerZPos);
+            int animationLength = Memory.ReadInt(Addresses.PlayerAnimationLength);
+            byte spyroState = Memory.ReadByte(Addresses.SpyroStateAddress);
+            byte spyroVelocityFlag = Memory.ReadByte(Addresses.PlayerVelocityStatus);
+            GameStatus gameStatus = (GameStatus)Memory.ReadByte(Addresses.GameStatus);
+            if (!_justDied && gameStatus != GameStatus.Cutscene && gameStatus != GameStatus.Loading && (health == 255 || zPos < 0x400 || (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)))
+            {
+                _justDied = true;
+                _deathLinkService.SendDeathLink(new DeathLink(Client.CurrentSession.Players.ActivePlayer.Name, cause: Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2."));
+            }
+            else if (_justDied && !(health == 255 || zPos < 0x400 || (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)))
+            {
+                _justDied = false;
+                _justReceivedDeathLink = false;
+            }
+        }
 
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
         if (gemsanityOption != GemsanityOptions.Off)
@@ -936,6 +979,10 @@ public partial class App : Application
             string effect = _cosmeticEffects.Dequeue();
             switch (effect)
             {
+                case "Normal Spyro":
+                    TurnSpyroColor(SpyroColor.SpyroColorDefault);
+                    DeactivateBigHeadMode();
+                    break;
                 case "Big Head Mode":
                     ActivateBigHeadMode();
                     break;
@@ -969,6 +1016,12 @@ public partial class App : Application
         {
             Log.Logger.Information("Player is not yet in game.");
             return;
+        }
+        bool deathLink = int.Parse(Client.Options?.GetValueOrDefault("death_link", "0").ToString()) > 0;
+        if (deathLink)
+        {
+            _deathLinkService = Client.EnableDeathLink();
+            _deathLinkService.OnDeathLinkReceived += new DeathLinkService.DeathLinkReceivedHandler(HandleDeathLink);
         }
         // Make Glimmer bridge free.  In normal settings, this cannot be an item or the start is too restrictive.
         // It's not worth making this payment an item for Gemsanity alone.
@@ -1019,6 +1072,7 @@ public partial class App : Application
                 }
             }
         }
+        CheckGoalCondition();
         _loadGameTimer.Enabled = false;
     }
     private static void CheckGoalCondition()
@@ -1093,6 +1147,11 @@ public partial class App : Application
                 _hasSubmittedGoal = true;
             }
         }
+    }
+    private static async void DeactivateBigHeadMode()
+    {
+        // Disables both big head mode and flat spyro.
+        Memory.Write(Addresses.BigHeadMode, (short)0);
     }
     private static async void ActivateBigHeadMode()
     {
@@ -1356,6 +1415,10 @@ public partial class App : Application
         Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
         Log.Logger.Information("Trying to play with a different version will not work and may release all of your locations at the start.");
 
+        if (_deathLinkService != null)
+        {
+            _deathLinkService = null;
+        }
         if (_loadGameTimer != null)
         {
             _loadGameTimer.Enabled = false;

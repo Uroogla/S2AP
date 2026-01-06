@@ -9,6 +9,7 @@ class GoalOptions():
     TEN_TOKENS = 5
     ALL_SKILLPOINTS = 6
     EPILOGUE = 7
+    ORB_HUNT = 8
 
 class MoneybagsOptions():
     VANILLA = 0
@@ -51,7 +52,8 @@ class PortalTextColorOptions():
 class RandomizeGemColorOptions():
     DEFAULT = 0
     SHUFFLE = 1
-    TRUE_RANDOM = 2
+    RANDOM = 2
+    TRUE_RANDOM = 3
 
 
 class GoalOption(Choice):
@@ -70,6 +72,15 @@ class GoalOption(Choice):
     option_10_tokens = GoalOptions.TEN_TOKENS
     option_all_skillpoints = GoalOptions.ALL_SKILLPOINTS
     option_epilogue = GoalOptions.EPILOGUE
+    # TODO: Allow this once edge cases are handled.
+    # option_orb_hunt = GoalOptions.ORB_HUNT
+
+class OrbHuntRequirement(Range):
+    """Determines how many orbs are needed to complete the Orb Hunt goal.  Has no effect if any other goal is chosen."""
+    display_name = "Orbs Required for Orb Hunt"
+    range_start = 2
+    range_end = 64
+    default = 40
 
 class RiptoDoorOrbs(Range):
     """Determines how many orbs are required to unlock the door to Ripto.
@@ -79,6 +90,15 @@ class RiptoDoorOrbs(Range):
     range_start = 0
     range_end = 64
     default = 40
+
+class TotalAvailableOrbs(Range):
+    """Determines the number of orbs available.
+    NOTE: If fewer than the amount required for the Ripto door ar an Orb Hunt goal, more will be added.
+    Other orb requirements throughout the game will be adjusted according to the number available."""
+    display_name = "Orbs Available"
+    range_start = 2
+    range_end = 64
+    default = 64
 
 class GuaranteedItemsOption(ItemDict):
     """Guarantees that the specified items will be in the item pool"""
@@ -176,6 +196,11 @@ class MoneybagsSettings(Choice):
     # TODO: Implement.
     # option_price_shuffle = MoneybagsOptions.PRICE_SHUFFLE
     option_moneybagssanity = MoneybagsOptions.MONEYBAGSSANITY
+
+class EnableDeathLink(DeathLink):
+    """If enabled, Spyro will die when a DeathLink is received and will send them on his death.
+    This is a beta feature and does not fully support all edge cases yet."""
+    display_name = "DeathLink"
 
 class EnableFillerExtraLives(DefaultOnToggle):
     """Allows filler items to include extra lives"""
@@ -329,14 +354,14 @@ class MagmaSpyroStartingPopcorn(Range):
     """Determines how many popcorn crystals you start with in each Hunter orb challenge."""
     display_name = "Magma Spyro Starting Popcorn"
     range_start = 0
-    range_end = 5
+    range_end = 9
     default = 0
 
 class MagmaHunterStartingPopcorn(Range):
     """Determines how many popcorn crystals Hunter starts with in each Hunter orb challenge."""
     display_name = "Magma Hunter Starting Popcorn"
     range_start = 0
-    range_end = 5
+    range_end = 9
     default = 0
 
 class ShadyRequireHeadbash(DefaultOnToggle):
@@ -364,17 +389,26 @@ class PortalAndGemCollectionColor(Choice):
 class GemColor(Choice):
     """Changes the color of gem types (and some other items in game).
     Default: No changes.
-    Shuffle: Mixes up the colors of gem types."""
+    Shuffle: Mixes up the colors of gem types.
+    Random Choice: Gem colors are randomly selected from a curated set of options.
+    True Random: Gem colors are completely random.  This probably won't look great.
+    """
     display_name = "Gem Color"
     default = RandomizeGemColorOptions.DEFAULT
     option_default = RandomizeGemColorOptions.DEFAULT
     option_shuffle = RandomizeGemColorOptions.SHUFFLE
+    option_random_choice = RandomizeGemColorOptions.RANDOM
+    option_true_random = RandomizeGemColorOptions.TRUE_RANDOM
 
 @dataclass
 class Spyro2Option(PerGameCommonOptions):
     goal: GoalOption
     guaranteed_items: GuaranteedItemsOption
+    # TODO: Enable.
+    # orb_hunt_requirement: OrbHuntRequirement
     ripto_door_orbs: RiptoDoorOrbs
+    # TODO: Handle edge cases and enable.
+    # available_orbs: TotalAvailableOrbs
     enable_open_world: EnableOpenWorld
     open_world_level_unlocks: StartingLevelCount
     open_world_ability_and_warp_unlocks: StartWithAbilitiesAndWarps
@@ -389,6 +423,7 @@ class Spyro2Option(PerGameCommonOptions):
     enable_spirit_particle_checks: EnableSpiritParticleChecksOption
     enable_gemsanity: EnableGemsanityOption
     moneybags_settings: MoneybagsSettings
+    death_link: EnableDeathLink
     enable_filler_extra_lives: EnableFillerExtraLives
     enable_destructive_spyro_filler: EnableFillerDestructiveSpyro
     enable_filler_color_change: EnableFillerColorChange
