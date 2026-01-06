@@ -43,6 +43,8 @@ class Spyro2World(World):
     base_id = 1230000
     enabled_location_categories: Set[Spyro2LocationCategory]
     required_client_version = (0, 5, 0)
+    # TODO: Remember to update this!
+    ap_world_version = "1.0.0"
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
@@ -1553,7 +1555,8 @@ class Spyro2World(World):
             "locationsAddress": locations_address,
             "locationsTarget": locations_target,
             "itemsId": items_id,
-            "itemsAddress": items_address
+            "itemsAddress": items_address,
+            "apworldVersion": self.ap_world_version,
         }
 
         return slot_data

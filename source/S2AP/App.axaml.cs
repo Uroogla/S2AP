@@ -32,6 +32,10 @@ namespace S2AP;
 
 public partial class App : Application
 {
+    // TODO: Remember to set this in S2AP.Desktop as well.
+    public static string Version = "1.0.0";
+    public static List<string> SupportedVersions = ["1.0.0"];
+
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
     private static string _playerName { get; set; }
@@ -85,7 +89,7 @@ public partial class App : Application
     }
     public void Start()
     {
-        Context = new MainWindowViewModel("0.6.2");
+        Context = new MainWindowViewModel("0.6.1 or later");
         Context.ClientVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
         Context.ConnectClicked += Context_ConnectClicked;
         Context.CommandReceived += (e, a) =>
@@ -231,14 +235,37 @@ public partial class App : Application
         {
             GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
             int slot = Client.CurrentSession.ConnectionInfo.Slot;
-            Dictionary<string, object> obj = await Client.CurrentSession.DataStorage.GetSlotDataAsync(slot);
+            Dictionary<string, object> slotData = await Client.CurrentSession.DataStorage.GetSlotDataAsync(slot);
             List<int> gemsanityIDs = new List<int>();
-            if (obj.TryGetValue("gemsanity_ids", out var value))
+            if (slotData.TryGetValue("gemsanity_ids", out var value))
             {
                 if (value != null)
                 {
                     gemsanityIDs = System.Text.Json.JsonSerializer.Deserialize<List<int>>(value.ToString());
                 }
+            }
+            if (slotData.TryGetValue("apworldVersion", out var versionValue))
+            {
+                if (versionValue != null && SupportedVersions.Contains(versionValue.ToString().ToLower()))
+                {
+                    Log.Logger.Information($"The host's AP world version is {versionValue.ToString()} and the client version is {Version}.");
+                    Log.Logger.Information("These versions are known to be compatible.");
+                }
+                else if (versionValue != null && versionValue.ToString().ToLower() != Version.ToLower())
+                {
+                    Log.Logger.Warning($"The host's AP world version is {versionValue.ToString()} but the client version is {Version}.");
+                    Log.Logger.Warning("Please ensure these are compatible before proceeding.");
+                }
+                else if (versionValue == null)
+                {
+                    Log.Logger.Error($"The host's AP world version predates 1.0.0, but the client version is {Version}.");
+                    Log.Logger.Error("This will almost certainly result in errors.");
+                }
+            }
+            else
+            {
+                Log.Logger.Error($"The host's AP world version predates 1.0.0, but the client version is {Version}.");
+                Log.Logger.Error("This will almost certainly result in errors.");
             }
             _requiredOrbs = int.Parse(Client.Options?.GetValueOrDefault("ripto_door_orbs", 0).ToString());
             bool easyFracture = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", 0).ToString()) > 0;
@@ -246,6 +273,7 @@ public partial class App : Application
             GameLocations = Helpers.BuildLocationList(easyFracture: easyFracture, includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
             GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
             Client.MonitorLocations(GameLocations);
+
             Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
         }
         else
