@@ -129,7 +129,6 @@ class LevelLockOption(Choice):
 class StartingLevelCount(Range):
     """Determines how many level unlocks the player starts with.
     The player always has access to Glimmer, homeworlds, and boss fights.
-    Starting with fewer than 8 unlocks requires you to add extra locations to the item pool.
     NOTE: Only has an effect when level locks are on."""
     display_name = "Starting Level Unlocks"
     range_start = 0
@@ -216,7 +215,8 @@ class MoneybagsSettings(Choice):
 
 class EnableDeathLink(DeathLink):
     """If enabled, Spyro will die when a DeathLink is received and will send them on his death.
-    This is a beta feature and does not fully support all edge cases yet."""
+    This is a beta feature and does not fully support all edge cases yet - not every death will trigger a DeathLink,
+    and not every received DeathLink will kill Spyro."""
     display_name = "DeathLink"
 
 class EnableFillerExtraLives(DefaultOnToggle):
@@ -264,6 +264,11 @@ class EnableTrapInvisible(Toggle):
     """Allows filler items to turn Spyro invisible briefly.
     NOTE: Duckstation must be run in Interpreter mode for this to have any effect."""
     display_name = "Enable Invisibility Trap"
+
+class EnableTrapRemappedController(Toggle):
+    """Allows filler items to "remap" your controller briefly.
+    NOTE: Duckstation must be run in Interpreter mode for this to have any effect."""
+    display_name = "Enable Remapped Controller"
 
 class EnableProgressiveSparxHealth(Choice):
     """Start the game with lower max health and add items to the pool to increase your max health.

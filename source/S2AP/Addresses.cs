@@ -250,5 +250,10 @@ namespace S2AP
         public static uint GulpDoubleDamage = 0x120c5e;
 
         public const uint GuidebookText = 0x00010308;
+
+        public const uint AnalogReadAddressOne = 0x12320;
+        public const uint AnalogReadAddressTwo = 0x12324;
+        public const uint ControllerReadLeftHalf = 0x122fc;
+        public const uint ControllerReadRightHalf = 0x12304;
     }
 }

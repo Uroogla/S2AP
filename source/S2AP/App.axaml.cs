@@ -382,6 +382,21 @@ public partial class App : Application
                     _destructiveMode = false;
                 });
                 break;
+            case "Remapped Controller Trap":
+                // This can crash the game, presumably due to changing lines that are being executed.
+                /*await Task.Run(async () =>
+                {
+                    Memory.Write(Addresses.AnalogReadAddressOne, 0x3c027f7f); // Set both analog sticks to 0x7f7f, which is off.
+                    Memory.Write(Addresses.AnalogReadAddressTwo, 0x34427f7f);
+                    Memory.Write(Addresses.ControllerReadLeftHalf, 0x9042a95f); // Swap the left and right half of the controller.
+                    Memory.Write(Addresses.ControllerReadRightHalf, 0x9063a95e);
+                    await Task.Delay(15000);
+                    Memory.Write(Addresses.AnalogReadAddressOne, 0x3c028007); // Correctly load analog stick data.
+                    Memory.Write(Addresses.AnalogReadAddressTwo, 0x9063a95e);
+                    Memory.Write(Addresses.ControllerReadLeftHalf, 0x9042a95e); // Load the controller halves in the right order.
+                    Memory.Write(Addresses.ControllerReadRightHalf, 0x9063a95f);
+                });*/
+                break;
             case "Moneybags Unlock - Crystal Glacier Bridge":
                 if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                 {
