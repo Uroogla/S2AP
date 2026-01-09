@@ -144,7 +144,7 @@ class Spyro2World(World):
                 "Magma Cone", "Fracture Hills", "Icy Speedway", "Mystic Marsh", "Cloud Temples", "Canyon Speedway",
                 "Robotica Farms", "Metropolis", "Dragon Shores"
             ]
-            self.key_locked_levels = self.multiworld.random.sample(possible_locked_levels, k=self.options.level_unlocks.value)
+            self.key_locked_levels = self.multiworld.random.sample(possible_locked_levels, k=22 - self.options.level_unlocks.value)
 
         # Generation struggles to place swim, which restricts too much of the seed.
         if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
