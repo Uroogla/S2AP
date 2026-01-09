@@ -1469,7 +1469,6 @@ class Spyro2World(World):
 
     # Universal Tracker Support
     def interpret_slot_data(self, slot_data):
-        world.options.enable_open_world.value
         return slot_data
 
     def fill_slot_data(self) -> Dict[str, object]:
