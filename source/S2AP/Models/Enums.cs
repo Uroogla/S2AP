@@ -69,6 +69,14 @@
             StartWith = 3
         }
 
+        public enum BomboOptions
+        {
+            Vanilla = 0,
+            ThirdOnly = 1,
+            FirstOnly = 2,
+            FirstOnlyNoAttack = 3
+        }
+
         public enum PortalTextColor
         {
             Default = 0,
@@ -117,6 +125,22 @@
             Metropolis = 26,
             DragonShores = 27,
             RiptosArena = 28
+        }
+
+        public enum SpyroStates : byte
+        {
+            Flop = 6,
+            DeathDrowning = 30,
+            DeathPirouette = 31,
+            DeathSquash = 32,
+            DeathBurn = 58,
+        }
+
+        public enum LevelLockOptions : int
+        {
+            Vanilla = 0,
+            Keys = 1,
+            Orbs = 2,
         }
     }
 }
