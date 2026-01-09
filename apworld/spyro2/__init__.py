@@ -49,6 +49,9 @@ class Spyro2World(World):
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
     item_descriptions = item_descriptions
+    key_locked_levels = []
+    glitches_item_name: str = "Glitched Item"  # UT Glitched Logic Support, Not implemented yet.
+    options_copy = []  # Copy of options used to support UT.
 
     all_levels = [
         "Summer Forest","Glimmer","Idol Springs","Colossus","Hurricos","Aquaria Towers","Sunny Beach","Ocean Speedway","Crush's Dungeon",
@@ -86,6 +89,8 @@ class Spyro2World(World):
         }
 
     def generate_early(self):
+        is_ut = getattr(self.multiworld, "generation_is_fake", False)
+
         self.enabled_location_categories.add(Spyro2LocationCategory.TALISMAN)
         self.enabled_location_categories.add(Spyro2LocationCategory.ORB)
         self.enabled_location_categories.add(Spyro2LocationCategory.EVENT)
@@ -117,13 +122,30 @@ class Spyro2World(World):
             for location in location_dictionary:
                 if location_dictionary[location].category == Spyro2LocationCategory.GEM:
                     all_gem_locations.append(location)
-            self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=200)
+            # Universal Tracker does not know which gems were picked.  Have it assume all gems were picked when it
+            # creates its seed.  The location list on the AP server will then remove all non-selected gems.
+            if is_ut:
+                self.chosen_gem_locations = []
+            else:
+                self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=200)
         if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
             for itemname, item in item_dictionary.items():
                 if item.category == Spyro2ItemCategory.GEM:
                     self.options.local_items.value.add(item)
         if self.options.enable_spirit_particle_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
+
+        if hasattr(self.multiworld, "re_gen_passthrough"):
+            self.key_locked_levels = self.multiworld.re_gen_passthrough["Spyro 3"]["key_locked_levels"]
+        else:
+            possible_locked_levels = [
+                "Colossus", "Idol Springs", "Hurricos", "Aquaria Towers", "Sunny Beach", "Ocean Speedway",
+                "Skelos Badlands", "Crystal Glacier", "Breeze Harbor", "Zephyr", "Metro Speedway", "Scorch", "Shady Oasis",
+                "Magma Cone", "Fracture Hills", "Icy Speedway", "Mystic Marsh", "Cloud Temples", "Canyon Speedway",
+                "Robotica Farms", "Metropolis", "Dragon Shores"
+            ]
+            self.key_locked_levels = self.multiworld.random.sample(possible_locked_levels, k=self.options.level_unlocks.value)
+
         # Generation struggles to place swim, which restricts too much of the seed.
         if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
             self.multiworld.early_items[self.player]["Moneybags Unlock - Swim"] = 1
@@ -244,7 +266,7 @@ class Spyro2World(World):
             elif location.category in self.enabled_location_categories:
                 itempoolSize += 1
 
-        foo = BuildItemPool(self, itempoolSize, self.options)
+        foo = BuildItemPool(self, itempoolSize, self.options, self.key_locked_levels)
         for item in foo:
             itempool.append(self.create_item(item.name))
 
@@ -256,6 +278,7 @@ class Spyro2World(World):
         useful_categories = {}
 
         if name in key_item_names or \
+                name == "Glitched Item" or \
                 item_dictionary[name].category in [Spyro2ItemCategory.LEVEL_UNLOCK, Spyro2ItemCategory.TALISMAN, Spyro2ItemCategory.ORB, Spyro2ItemCategory.EVENT, Spyro2ItemCategory.MONEYBAGS, Spyro2ItemCategory.SKILLPOINT_GOAL, Spyro2ItemCategory.TOKEN, Spyro2ItemCategory.GEM, Spyro2ItemCategory.GEMSANITY_PARTIAL] or \
                 self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade':
             item_classification = ItemClassification.progression
@@ -1444,6 +1467,11 @@ class Spyro2World(World):
                 else:
                     break
 
+    # Universal Tracker Support
+    def interpret_slot_data(self, slot_data):
+        world.options.enable_open_world.value
+        return slot_data
+
     def fill_slot_data(self) -> Dict[str, object]:
         slot_data: Dict[str, object] = {}
 
@@ -1570,6 +1598,7 @@ class Spyro2World(World):
             "gemsanity_ids": gemsanity_locations,
             # "moneybags_prices": moneybags_prices,
             "level_orb_requirements": self.level_orb_requirements,
+            "key_locked_levels": self.key_locked_levels,
             "seed": self.multiworld.seed_name,  # to verify the server's multiworld
             "slot": self.multiworld.player_name[self.player],  # to connect to server
             "base_id": self.base_id,  # to merge location and items lists
