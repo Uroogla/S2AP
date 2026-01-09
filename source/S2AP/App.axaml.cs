@@ -117,8 +117,47 @@ public partial class App : Application
         {
             return;
         }
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        LevelInGameIDs[] deathLinkLevels = [
+            LevelInGameIDs.SummerForest,
+            LevelInGameIDs.Glimmer,
+            LevelInGameIDs.Colossus,
+            LevelInGameIDs.IdolSprings,
+            LevelInGameIDs.Hurricos,
+            LevelInGameIDs.SunnyBeach,
+            LevelInGameIDs.AquariaTowers,
+            LevelInGameIDs.CrushsDungeon,
+            LevelInGameIDs.AutumnPlains,
+            LevelInGameIDs.BreezeHarbor,
+            LevelInGameIDs.SkelosBadlands,
+            LevelInGameIDs.CrystalGlacier,
+            LevelInGameIDs.Zephyr,
+            LevelInGameIDs.Scorch,
+            LevelInGameIDs.FractureHills,
+            LevelInGameIDs.MagmaCone,
+            LevelInGameIDs.ShadyOasis,
+            LevelInGameIDs.GulpsOverlook,
+            LevelInGameIDs.WinterTundra,
+            LevelInGameIDs.MysticMarsh,
+            LevelInGameIDs.CloudTemples,
+            LevelInGameIDs.RoboticaFarms,
+            LevelInGameIDs.Metropolis,
+            LevelInGameIDs.RiptosArena
+        ];
+        if (!deathLinkLevels.Contains(currentLevel))
+        {
+            string ignoreMessage = "Received DeathLink from " + deathLink.Source;
+            if (deathLink.Cause != null)
+            {
+                ignoreMessage = ignoreMessage + " - " + deathLink.Cause;
+            }
+            Log.Logger.Information(ignoreMessage);
+            Log.Logger.Information("Ignored the DeathLink to avoid softlock in current level.");
+            return;
+        }
+
         _justReceivedDeathLink = true;
-        Memory.WriteByte(Addresses.SpyroStateAddress, (byte)SpyroStates.Dying);
+        Memory.WriteByte(Addresses.SpyroStateAddress, (byte)SpyroStates.DeathPirouette);
         string message = "Received DeathLink from " + deathLink.Source;
         if (deathLink.Cause != null)
         {
@@ -638,21 +677,75 @@ public partial class App : Application
             Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
         } // Turns off automatically on its own.
 
-        if (_deathLinkService != null)
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        if (_deathLinkService != null && !_hasSubmittedGoal)
         {
             byte health = Memory.ReadByte(Addresses.PlayerHealth);
             int zPos = Memory.ReadInt(Addresses.PlayerZPos);
             int animationLength = Memory.ReadInt(Addresses.PlayerAnimationLength);
             byte spyroState = Memory.ReadByte(Addresses.SpyroStateAddress);
             byte spyroVelocityFlag = Memory.ReadByte(Addresses.PlayerVelocityStatus);
+            LevelInGameIDs[] deathLinkLevels = [
+                LevelInGameIDs.SummerForest,
+                LevelInGameIDs.Glimmer,
+                LevelInGameIDs.Colossus,
+                LevelInGameIDs.IdolSprings,
+                LevelInGameIDs.Hurricos,
+                LevelInGameIDs.SunnyBeach,
+                LevelInGameIDs.AquariaTowers,
+                LevelInGameIDs.CrushsDungeon,
+                LevelInGameIDs.AutumnPlains,
+                LevelInGameIDs.BreezeHarbor,
+                LevelInGameIDs.SkelosBadlands,
+                LevelInGameIDs.CrystalGlacier,
+                LevelInGameIDs.Zephyr,
+                LevelInGameIDs.Scorch,
+                LevelInGameIDs.FractureHills,
+                LevelInGameIDs.MagmaCone,
+                LevelInGameIDs.ShadyOasis,
+                LevelInGameIDs.GulpsOverlook,
+                LevelInGameIDs.WinterTundra,
+                LevelInGameIDs.MysticMarsh,
+                LevelInGameIDs.CloudTemples,
+                LevelInGameIDs.RoboticaFarms,
+                LevelInGameIDs.Metropolis,
+                LevelInGameIDs.RiptosArena
+            ];
+
             GameStatus gameStatus = (GameStatus)Memory.ReadByte(Addresses.GameStatus);
-            if (!_justDied && gameStatus != GameStatus.Cutscene && gameStatus != GameStatus.Loading && (health == 255 || zPos < 0x400 || (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)))
+            if (
+                !_justDied &&
+                Helpers.IsInGame() &&
+                Client.GameState != null &&
+                Client.CurrentSession != null &&
+                deathLinkLevels.Contains(currentLevel) &&
+                gameStatus != GameStatus.Cutscene &&
+                gameStatus != GameStatus.Loading &&
+                gameStatus != GameStatus.TitleScreen &&
+                (
+                    health > 128 ||
+                    zPos < 0x400 ||
+                    (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
+                    spyroState == (byte)SpyroStates.DeathBurn ||
+                    spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
+                    spyroState == (byte)SpyroStates.DeathSquash
+                )
+            )
             {
                 _justDied = true;
                 Log.Logger.Information("Sending DeathLink.");
                 _deathLinkService.SendDeathLink(new DeathLink(Client.CurrentSession.Players.ActivePlayer.Name, cause: Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2."));
             }
-            else if (_justDied && !(health == 255 || zPos < 0x400 || (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)))
+            else if (_justDied &&
+                !(
+                    health > 128 ||
+                    zPos < 0x400 ||
+                    (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
+                    spyroState == (byte)SpyroStates.DeathBurn ||
+                    spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
+                    spyroState == (byte)SpyroStates.DeathSquash
+                )
+            )
             {
                 _justDied = false;
                 _justReceivedDeathLink = false;
@@ -670,7 +763,6 @@ public partial class App : Application
             //Memory.Write(Addresses.localGemLoadFixAddress, 0);
             //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
         }
-        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
         if (currentLevel == LevelInGameIDs.Colossus)
         {
             int startingGoals = int.Parse(Client.Options?.GetValueOrDefault("colossus_starting_goals", "0").ToString());
@@ -678,6 +770,7 @@ public partial class App : Application
             if (currentGoals < startingGoals)
             {
                 Memory.WriteByte(Addresses.ColossusSpyroHockeyScore, (byte)startingGoals);
+                Memory.WriteByte(Addresses.spyroHUDScore, (byte)startingGoals);
             }
         }
         else if (currentLevel == LevelInGameIDs.IdolSprings)
@@ -1091,7 +1184,10 @@ public partial class App : Application
             foreach (string unlock in moneybagsAddresses.Keys)
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
-                if ((Client.GameState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
+                if (
+                    (Client.GameState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0 &&
+                    (Client.GameState?.ReceivedItems.Where(x => x.Name == "Ripto Defeated").Count() ?? 0) == 0
+                )
                 {
                     Memory.Write(unlockAddress, 20001);
                 }

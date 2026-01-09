@@ -130,7 +130,10 @@
         public enum SpyroStates : byte
         {
             Flop = 6,
-            Dying = 31
+            DeathDrowning = 30,
+            DeathPirouette = 31,
+            DeathSquash = 32,
+            DeathBurn = 58,
         }
 
         public enum LevelLockOptions : int

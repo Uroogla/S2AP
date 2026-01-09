@@ -325,8 +325,7 @@ class FireballAbility(Choice):
     option_start_with = AbilityOptions.START_WITH
 
 class ColossusStartingGoals(Range):
-    """Determines how many goals you start with in both Colossus orb challenges.
-    The score will only reflect this after your first goal."""
+    """Determines how many goals you start with in both Colossus orb challenges."""
     display_name = "Colossus Starting Goals"
     range_start = 0
     range_end = 4
@@ -349,6 +348,7 @@ class BreezeRequiredGears(Range):
 
 class ScorchBomboSettings(Choice):
     """Determines how the Bombo orb works in Scorch.
+    NOTE: This is a beta option. Multiple Bombos may appear, and interacting with the wrong one may softlock Bombo.
     Vanilla - Bombo behaves as normal.
     First Only - Complete the first (shortest) path to complete the orb.
     Attackless First Only - Complete the first (shortest) path to complete the orb. Bombo will not attack."""
