@@ -52,6 +52,7 @@ public partial class App : Application
     private static MoneybagsOptions _moneybagsOption { get; set; }
     private static PortalTextColor _portalTextColor { get; set; }
     private static bool _destructiveMode { get; set; }
+    private static byte _previousLifeCount { get; set; }
     private static bool _justDied { get; set; }
     private static bool _justReceivedDeathLink { get; set; }
     private static DeathLinkService _deathLinkService { get; set; }
@@ -99,6 +100,9 @@ public partial class App : Application
             HandleCommand(a.Command);
         };
         Context.ConnectButtonEnabled = true;
+        Context.AutoscrollEnabled = true;
+        // TODO: Autopopulate based on last connection.
+        //Context.Host = "Hello World";
         _sparxUpgrades = 0;
         _hasSubmittedGoal = false;
         _useQuietHints = true;
@@ -647,6 +651,7 @@ public partial class App : Application
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
         CheckGoalCondition();
+        byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
         AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
         int hasDoubleJumpItem = (byte)(Client.GameState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
         AbilityOptions fireballOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("permanent_fireball_ability", "0").ToString());
@@ -733,8 +738,41 @@ public partial class App : Application
             )
             {
                 _justDied = true;
-                Log.Logger.Information("Sending DeathLink.");
-                _deathLinkService.SendDeathLink(new DeathLink(Client.CurrentSession.Players.ActivePlayer.Name, cause: Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2."));
+                string deathlinkCause = "Unknown";
+                if (health > 128)
+                {
+                    deathlinkCause = "Damage";
+                }
+                else if (zPos < 0x400)
+                {
+                    deathlinkCause = "Fell below death plane";
+                }
+                else if (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)
+                {
+                    deathlinkCause = "Fell to death";
+                }
+                else if (spyroState == (byte)SpyroStates.DeathBurn)
+                {
+                    deathlinkCause = "Burned";
+                }
+                else if (spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116)
+                {
+                    deathlinkCause = "Drowned";
+                }
+                else if (spyroState == (byte)SpyroStates.DeathSquash)
+                {
+                    deathlinkCause = "Squashed";
+                }
+                Log.Logger.Information($"Sending DeathLink. Cause: {deathlinkCause}");
+                if (deathlinkCause == "Unknown")
+                {
+                    deathlinkCause = Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2.";
+                }
+                else
+                {
+                    deathlinkCause = Client.CurrentSession.Players.ActivePlayer.Name + $" died in Spyro 2: {deathlinkCause}";
+                }
+                    _deathLinkService.SendDeathLink(new DeathLink(Client.CurrentSession.Players.ActivePlayer.Name, cause: deathlinkCause));
             }
             else if (_justDied &&
                 !(
@@ -987,6 +1025,7 @@ public partial class App : Application
                 }
             }
         }
+        _previousLifeCount = lifeCount;
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
@@ -995,7 +1034,8 @@ public partial class App : Application
             return;
         }
         byte currentHealth = Memory.ReadByte(Addresses.PlayerHealth);
-        if (currentHealth > _sparxUpgrades)
+        // Don't adjust negative health, which breaks deathlink.
+        if (currentHealth <= 128 && currentHealth > _sparxUpgrades)
         {
             Memory.WriteByte(Addresses.PlayerHealth, _sparxUpgrades);
         }
@@ -1151,7 +1191,7 @@ public partial class App : Application
     {
         if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
         {
-            Log.Logger.Information("Player is not yet in game.");
+            Log.Logger.Information("Player is not yet in control of Spyro.");
             return;
         }
         bool deathLink = int.Parse(Client.Options?.GetValueOrDefault("death_link", "0").ToString()) > 0;

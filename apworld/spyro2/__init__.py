@@ -136,7 +136,7 @@ class Spyro2World(World):
             self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
 
         if hasattr(self.multiworld, "re_gen_passthrough"):
-            self.key_locked_levels = self.multiworld.re_gen_passthrough["Spyro 3"]["key_locked_levels"]
+            self.key_locked_levels = self.multiworld.re_gen_passthrough["Spyro 2"]["key_locked_levels"]
         else:
             possible_locked_levels = [
                 "Colossus", "Idol Springs", "Hurricos", "Aquaria Towers", "Sunny Beach", "Ocean Speedway",
@@ -512,7 +512,7 @@ class Spyro2World(World):
                 if not is_boss_defeated(self, "Gulp", state):
                     return 0
                 if self.options.level_lock_options.value == LevelLockOptions.KEYS and not state.has("Cloud Temples Unlock", self.player) or \
-                        not state.has("Orb", self.player, 16):
+                        not state.has("Orb", self.player, 15):
                     return 0
                 gems = 375
                 if can_headbash(self, state):
