@@ -171,7 +171,7 @@ public partial class App : Application
     }
     private void HandleCommand(string command)
     {
-        if (Client == null || Client.GameState == null || Client.CurrentSession == null) return;
+        if (Client == null || Client.ItemState == null || Client.CurrentSession == null) return;
         switch (command)
         {
             case "clearSpyroGameState":
@@ -253,14 +253,13 @@ public partial class App : Application
             return;
         }
         Client = new ArchipelagoClient(client);
-        Client.ShouldSaveStateOnItemReceived = false;
 
         Memory.GlobalOffset = Memory.GetDuckstationOffset();
 
         Client.Connected += OnConnected;
         Client.Disconnected += OnDisconnected;
 
-        await Client.Connect(e.Host, "Spyro 2");
+        await Client.Connect(e.Host, "Spyro 2", "save1");
         if (!Client.IsConnected)
         {
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
@@ -327,7 +326,7 @@ public partial class App : Application
 
     private void Client_LocationCompleted(object? sender, LocationCompletedEventArgs e)
     {
-        if (Client.GameState == null || Client.CurrentSession == null) return;
+        if (Client.ItemState == null || Client.CurrentSession == null) return;
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
@@ -340,7 +339,7 @@ public partial class App : Application
 
     private async void ItemReceived(object? o, ItemReceivedEventArgs args)
     {
-        if (Client.GameState == null || Client.CurrentSession == null) return;
+        if (Client.ItemState == null || Client.CurrentSession == null) return;
         Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
         int currentHealth;
         Dictionary<string, int> talismans;
@@ -603,6 +602,8 @@ public partial class App : Application
                             break;
                     }
                     // Other unlock effects managed by HandleAbilities().
+                    // Newer versions of Archipelago.Core have a delay before the list of received levels updates.
+                    await Task.Delay(500);
                     showUnlockedLevels();
                 }
                 break;
@@ -610,7 +611,7 @@ public partial class App : Application
     }
     private void showUnlockedLevels()
     {
-        List<Item> unlockedLevels = (Client.GameState?.ReceivedItems.Where(x => x.Name.EndsWith(" Unlock")).ToList() ?? new List<Item>());
+        List<Item> unlockedLevels = (Client.ItemState?.ReceivedItems.Where(x => x.Name.EndsWith(" Unlock")).ToList() ?? new List<Item>());
         if (unlockedLevels.Count >= int.Parse(Client.Options?.GetValueOrDefault("level_unlocks", "0").ToString()))
         {
             Log.Logger.Information("You have unlocked: ");
@@ -644,18 +645,23 @@ public partial class App : Application
     }
     private static async void HandleAbilities(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
+        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
         {
             return;
         }
         CalculateCurrentTalismans();
         CalculateCurrentOrbs();
+        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        if (gemsanityOption != GemsanityOptions.Off)
+        {
+            CalculateCurrentGems();
+        }
         CheckGoalCondition();
         byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
         AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
-        int hasDoubleJumpItem = (byte)(Client.GameState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
+        int hasDoubleJumpItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
         AbilityOptions fireballOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("permanent_fireball_ability", "0").ToString());
-        int hasFireballItem = (byte)(Client.GameState?.ReceivedItems.Where(x => x.Name == "Permanent Fireball Ability").Count() ?? 0);
+        int hasFireballItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Permanent Fireball Ability").Count() ?? 0);
 
         if (doubleJumpOption == AbilityOptions.AlwaysOff || doubleJumpOption == AbilityOptions.InPool && hasDoubleJumpItem == 0)
         {
@@ -721,7 +727,7 @@ public partial class App : Application
             if (
                 !_justDied &&
                 Helpers.IsInGame() &&
-                Client.GameState != null &&
+                Client.ItemState != null &&
                 Client.CurrentSession != null &&
                 deathLinkLevels.Contains(currentLevel) &&
                 gameStatus != GameStatus.Cutscene &&
@@ -790,7 +796,6 @@ public partial class App : Application
             }
         }
 
-        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
         if (gemsanityOption != GemsanityOptions.Off)
         {
             // Disable updating local and global gem counts on collecting a gem, loading into a level, and respawning.
@@ -926,12 +931,12 @@ public partial class App : Application
         {
             if (currentLevel == LevelInGameIDs.SummerForest)
             {
-                bool isIdolUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
-                bool isColossusUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Colossus Unlock")).Count() ?? 0) > 0;
-                bool isHurricosUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Hurricos Unlock")).Count() ?? 0) > 0;
-                bool isAquariaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
-                bool isSunnyUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
-                bool isOceanUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
+                bool isIdolUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
+                bool isColossusUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Colossus Unlock")).Count() ?? 0) > 0;
+                bool isHurricosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Hurricos Unlock")).Count() ?? 0) > 0;
+                bool isAquariaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
+                bool isSunnyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
+                bool isOceanUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
                 bool[] summerUnlocks = [
                     isIdolUnlocked,
                     isColossusUnlocked,
@@ -957,16 +962,16 @@ public partial class App : Application
             }
             else if (currentLevel == LevelInGameIDs.AutumnPlains)
             {
-                bool isSkelosUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
-                bool isCrystalUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
-                bool isBreezeUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
-                bool isZephyrUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Zephyr Unlock")).Count() ?? 0) > 0;
-                bool isMetroUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
-                bool isScorchUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Scorch Unlock")).Count() ?? 0) > 0;
-                bool isShadyUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
-                bool isMagmaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Magma Cone Unlock")).Count() ?? 0) > 0;
-                bool isFractureUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
-                bool isIcyUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
+                bool isSkelosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
+                bool isCrystalUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
+                bool isBreezeUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
+                bool isZephyrUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Zephyr Unlock")).Count() ?? 0) > 0;
+                bool isMetroUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
+                bool isScorchUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Scorch Unlock")).Count() ?? 0) > 0;
+                bool isShadyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
+                bool isMagmaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Magma Cone Unlock")).Count() ?? 0) > 0;
+                bool isFractureUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
+                bool isIcyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
                 bool[] autumnUnlocks = [
                     isSkelosUnlocked,
                     isCrystalUnlocked,
@@ -995,12 +1000,12 @@ public partial class App : Application
             }
             else if (currentLevel == LevelInGameIDs.WinterTundra)
             {
-                bool isMysticUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
-                bool isCloudUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
-                bool isCanyonUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
-                bool isRoboticaUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
-                bool isMetropolisUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
-                bool isDragonShoresUnlocked = (Client.GameState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                bool isMysticUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
+                bool isCloudUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
+                bool isCanyonUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
+                bool isRoboticaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
+                bool isMetropolisUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
+                bool isDragonShoresUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
                 // This order does not match the index order, for whatever reason.
                 bool[] winterUnlocks = [
                     isMysticUnlocked,
@@ -1029,7 +1034,7 @@ public partial class App : Application
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
+        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
         {
             return;
         }
@@ -1046,7 +1051,7 @@ public partial class App : Application
     }
     private static async void HandleCosmeticQueue(object source, ElapsedEventArgs e)
     {
-        if (Client.GameState == null || Client.CurrentSession == null) return;
+        if (Client.ItemState == null || Client.CurrentSession == null) return;
         CheckGoalCondition();
         // Avoid overwhelming the game when many cosmetic effects are received at once by processing only 1
         // every 5 seconds.  This also lets the user see effects when logging in asynchronously.
@@ -1093,7 +1098,7 @@ public partial class App : Application
             foreach (string levelName in levelNames.Keys)
             {
                 uint[] nameAddresses = levelNames[levelName];
-                if ((Client.GameState?.ReceivedItems.Where(x => x.Name == $"{levelName} Unlock").Count() ?? 0) == 0)
+                if ((Client.ItemState?.ReceivedItems.Where(x => x.Name == $"{levelName} Unlock").Count() ?? 0) == 0)
                 {
                     WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
                 }
@@ -1149,7 +1154,7 @@ public partial class App : Application
         if (
             _cosmeticEffects.Count > 0 &&
             Memory.ReadShort(Addresses.GameStatus) == (short)GameStatus.InGame &&
-            Client.GameState != null &&
+            Client.ItemState != null &&
             Client.CurrentSession != null
         )
         {
@@ -1189,7 +1194,7 @@ public partial class App : Application
     }
     private static void StartSpyroGame(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame() || Client.GameState == null || Client.CurrentSession == null)
+        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
         {
             Log.Logger.Information("Player is not yet in control of Spyro.");
             return;
@@ -1225,8 +1230,8 @@ public partial class App : Application
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
                 if (
-                    (Client.GameState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0 &&
-                    (Client.GameState?.ReceivedItems.Where(x => x.Name == "Ripto Defeated").Count() ?? 0) == 0
+                    (Client.ItemState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0 &&
+                    (Client.ItemState?.ReceivedItems.Where(x => x.Name == "Ripto Defeated").Count() ?? 0) == 0
                 )
                 {
                     Memory.Write(unlockAddress, 20001);
@@ -1242,7 +1247,7 @@ public partial class App : Application
             foreach (string unlock in moneybagsAddresses.Keys)
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
-                if ((Client.GameState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
+                if ((Client.ItemState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
                 {
                     Memory.Write(unlockAddress, 0);
                 }
@@ -1262,7 +1267,7 @@ public partial class App : Application
             Client.CurrentSession == null ||
             Client.CurrentSession.Locations == null ||
             Client.CurrentSession.Locations.AllLocationsChecked == null ||
-            Client.GameState == null ||
+            Client.ItemState == null ||
             GameLocations == null
         )
         {
@@ -1281,7 +1286,7 @@ public partial class App : Application
         int isOpenWorld = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", 0).ToString());
         if ((CompletionGoal)goal == CompletionGoal.Ripto)
         {
-            if (currentOrbs >= _requiredOrbs && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= _requiredOrbs && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1289,7 +1294,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.SixtyFourOrb)
         {
-            if (currentOrbs >= 64 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= 64 && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1297,7 +1302,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.HundredPercent)
         {
-            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1321,7 +1326,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.Epilogue)
         {
-            if (currentSkillPoints >= 16 && (Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentSkillPoints >= 16 && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1429,7 +1434,7 @@ public partial class App : Application
     }
     private static void Locations_CheckedLocationsUpdated(System.Collections.ObjectModel.ReadOnlyCollection<long> newCheckedLocations)
     {
-        if (Client.GameState == null || Client.CurrentSession == null) return;
+        if (Client.ItemState == null || Client.CurrentSession == null) return;
         if (!Helpers.IsInGame())
         {
             Log.Logger.Error("Check sent while not in game. Please report this in the Discord thread!");
@@ -1463,9 +1468,9 @@ public partial class App : Application
     }
     private static Dictionary<string, int> CalculateCurrentTalismans()
     {
-        var summerCount = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Summer Forest Talisman").Count() ?? 0;
+        var summerCount = Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Summer Forest Talisman").Count() ?? 0;
         summerCount = Math.Min(summerCount, 6);
-        var autumnCount = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Autumn Plains Talisman").Count() ?? 0;
+        var autumnCount = Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Autumn Plains Talisman").Count() ?? 0;
         autumnCount = Math.Min(autumnCount, 8);
         var currentLevel = Memory.ReadByte(Addresses.CurrentLevelAddress);
         // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
@@ -1489,7 +1494,7 @@ public partial class App : Application
     }
     private static int CalculateCurrentOrbs()
     {
-        var count = Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Orb").Count() ?? 0;
+        var count = Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Orb").Count() ?? 0;
         count = Math.Min(count, 64);
         Memory.WriteByte(Addresses.TotalOrbAddress, (byte)(count));
         return count;
@@ -1509,12 +1514,12 @@ public partial class App : Application
             if (!level.Name.Contains("Speedway"))
             {
                 string levelName = level.Name;
-                int levelGemCount = Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Red Gem").Count() ?? 0;
-                levelGemCount += 2 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Green Gem").Count() ?? 0);
-                levelGemCount += 5 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Blue Gem").Count() ?? 0);
-                levelGemCount += 10 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Gold Gem").Count() ?? 0);
-                levelGemCount += 25 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Pink Gem").Count() ?? 0);
-                levelGemCount += 50 * (Client.GameState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} 50 Gems").Count() ?? 0);
+                int levelGemCount = Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Red Gem").Count() ?? 0;
+                levelGemCount += 2 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Green Gem").Count() ?? 0);
+                levelGemCount += 5 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Blue Gem").Count() ?? 0);
+                levelGemCount += 10 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Gold Gem").Count() ?? 0);
+                levelGemCount += 25 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Pink Gem").Count() ?? 0);
+                levelGemCount += 50 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} 50 Gems").Count() ?? 0);
                 Memory.Write(levelGemCountAddress, levelGemCount);
                 totalGems += levelGemCount;
             } else
@@ -1529,11 +1534,11 @@ public partial class App : Application
     }
     private static int CalculateCurrentSkillPoints()
     {
-        return Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Skill Point").Count() ?? 0;
+        return Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Skill Point").Count() ?? 0;
     }
     private static int CalculateCurrentTokens()
     {
-        return Client.GameState?.ReceivedItems.Where(x => x != null && x.Name == "Dragon Shores Token").Count() ?? 0;
+        return Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Dragon Shores Token").Count() ?? 0;
     }
     private static void OnConnected(object sender, EventArgs args)
     {
@@ -1562,7 +1567,7 @@ public partial class App : Application
         ProgressiveSparxHealthOptions sparxOption = (ProgressiveSparxHealthOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_progressive_sparx_health", "0").ToString());
         if (sparxOption != ProgressiveSparxHealthOptions.Off)
         {
-            _sparxUpgrades = (byte)(Client.GameState?.ReceivedItems.Where(x => x.Name == "Progressive Sparx Health Upgrade").Count() ?? 0);
+            _sparxUpgrades = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Progressive Sparx Health Upgrade").Count() ?? 0);
             if (sparxOption == ProgressiveSparxHealthOptions.Blue)
             {
                 _sparxUpgrades += 2;
