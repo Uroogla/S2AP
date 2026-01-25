@@ -298,6 +298,8 @@ class Spyro2World(World):
     
     def set_rules(self) -> None:
         def is_boss_defeated(self, boss, state):
+            if self.options.enable_open_world and self.options.open_world_ability_and_warp_unlocks and boss in ["Crush", "Gulp"]:
+                return True
             return state.has(boss + " Defeated", self.player)
 
         def can_swim(self, state):
