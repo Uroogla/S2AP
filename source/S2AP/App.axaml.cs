@@ -19,6 +19,7 @@ using ReactiveUI;
 using S2AP.Models;
 using Serilog;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
@@ -41,7 +42,7 @@ public partial class App : Application
     private static string _playerName { get; set; }
     public static List<ILocation> GameLocations { get; set; }
     private static readonly object _lockObject = new object();
-    private static Queue<string> _cosmeticEffects { get; set; }
+    private static ConcurrentQueue<string> _cosmeticEffects { get; set; }
     private static byte _sparxUpgrades { get; set; }
     private static bool _hasSubmittedGoal { get; set; }
     private static bool _useQuietHints { get; set; }
@@ -270,7 +271,7 @@ public partial class App : Application
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
             return;
         }
-        _cosmeticEffects = new Queue<string>();
+        _cosmeticEffects = new ConcurrentQueue<string>();
         Client.LocationCompleted += Client_LocationCompleted;
         Client.CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
         Client.MessageReceived += Client_MessageReceived;
@@ -1174,10 +1175,10 @@ public partial class App : Application
             _cosmeticEffects.Count > 0 &&
             Memory.ReadShort(Addresses.GameStatus) == (short)GameStatus.InGame &&
             Client.ItemState != null &&
-            Client.CurrentSession != null
+            Client.CurrentSession != null &&
+            _cosmeticEffects.TryDequeue(out string effect)
         )
         {
-            string effect = _cosmeticEffects.Dequeue();
             switch (effect)
             {
                 case "Normal Spyro":
@@ -1634,7 +1635,7 @@ public partial class App : Application
             _abilitiesTimer.Enabled = false;
             _abilitiesTimer = null;
         }
-        _cosmeticEffects = new Queue<string>();
+        _cosmeticEffects = new ConcurrentQueue<string>();
         if (_cosmeticsTimer != null)
         {
             _cosmeticsTimer.Enabled = false;
