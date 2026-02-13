@@ -15,9 +15,9 @@
     <!-- App Identifier -->
     <ApplicationId>com.uroogla.s2ap</ApplicationId>
     <!-- Versions -->
-    <ApplicationDisplayVersion>1.0.1</ApplicationDisplayVersion>
-    <ApplicationVersion>1.0.1</ApplicationVersion>
-    <Version>1.0.1</Version>
+    <ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
+    <ApplicationVersion>1.0.2</ApplicationVersion>
+    <Version>1.0.2</Version>
 	  <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Single File Publishing Properties -->
     <PublishSingleFile>true</PublishSingleFile>

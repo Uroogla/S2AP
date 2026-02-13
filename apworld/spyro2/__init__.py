@@ -44,7 +44,7 @@ class Spyro2World(World):
     enabled_location_categories: Set[Spyro2LocationCategory]
     required_client_version = (0, 5, 0)
     # TODO: Remember to update this!
-    ap_world_version = "1.0.1"
+    ap_world_version = "1.0.2"
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
