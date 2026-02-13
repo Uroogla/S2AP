@@ -53,6 +53,9 @@ class Spyro2World(World):
     glitches_item_name: str = "Glitched Item"  # UT Glitched Logic Support, Not implemented yet.
     options_copy = []  # Copy of options used to support UT.
 
+    # TODO: Remember to keep this False.
+    PRINT_GEM_REQS = False  # Prints out the logic for each gem on generating a seed. Not for production use.
+
     all_levels = [
         "Summer Forest","Glimmer","Idol Springs","Colossus","Hurricos","Aquaria Towers","Sunny Beach","Ocean Speedway","Crush's Dungeon",
         "Autumn Plains","Skelos Badlands","Crystal Glacier","Breeze Harbor","Zephyr","Metro Speedway","Scorch","Shady Oasis","Magma Cone","Fracture Hills","Icy Speedway","Gulp's Overlook",
@@ -633,6 +636,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Summer Forest: Gem {gem - skipped_bits} requires swim.")
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
@@ -645,6 +650,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Summer Forest: Gem {gem - skipped_bits} requires access to the second half of SF and climb.")
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
@@ -657,6 +664,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Summer Forest: Gem {gem - skipped_bits} requires access to the second half of SF and access to beyond the Aquaria wall.")
                 if len(self.chosen_gem_locations) == 0 or f"Summer Forest: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Summer Forest: Gem {gem - skipped_bits}", self.player),
@@ -679,6 +688,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Glimmer: Gem {gem - skipped_bits} requires climb.")
                 if len(self.chosen_gem_locations) == 0 or f"Glimmer: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Glimmer: Gem {gem - skipped_bits}", self.player),
@@ -703,6 +714,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Idol Springs: Gem {gem - skipped_bits} requires swim.")
                 if len(self.chosen_gem_locations) == 0 or f"Idol Springs: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Idol Springs: Gem {gem - skipped_bits}", self.player),
@@ -788,6 +801,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Aquaria Towers: Gem {gem - skipped_bits} requires access to the Aquaria submarine.")
                 if len(self.chosen_gem_locations) == 0 or f"Aquaria Towers: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Aquaria Towers: Gem {gem - skipped_bits}", self.player),
@@ -818,6 +833,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Sunny Beach: Gem {gem - skipped_bits} requires climb.")
                 if len(self.chosen_gem_locations) == 0 or f"Sunny Beach: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Sunny Beach: Gem {gem - skipped_bits}", self.player),
@@ -908,6 +925,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Autumn Plains: Gem {gem - skipped_bits} requires access to Metro Speedway.")
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
@@ -920,6 +939,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Autumn Plains: Gem {gem - skipped_bits} requires access to the second half of AP.")
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
@@ -932,6 +953,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Autumn Plains: Gem {gem - skipped_bits} requires access to beyond the Professor's door.")
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
@@ -944,6 +967,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Autumn Plains: Gem {gem - skipped_bits} requires access to the Shady Oasis section.")
                 if len(self.chosen_gem_locations) == 0 or f"Autumn Plains: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Autumn Plains: Gem {gem - skipped_bits}", self.player),
@@ -1012,6 +1037,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Crystal Glacier: Gem {gem - skipped_bits} requires access to the area past the paid bridge.")
                 if len(self.chosen_gem_locations) == 0 or f"Crystal Glacier: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Crystal Glacier: Gem {gem - skipped_bits}", self.player),
@@ -1059,6 +1086,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Zephyr: Gem {gem - skipped_bits} requires climb.")
                 if len(self.chosen_gem_locations) == 0 or f"Zephyr: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Zephyr: Gem {gem - skipped_bits}", self.player),
@@ -1121,6 +1150,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Shady Oasis: Gem {gem - skipped_bits} requires headbash.")
                 if len(self.chosen_gem_locations) == 0 or f"Shady Oasis: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Shady Oasis: Gem {gem - skipped_bits}", self.player),
@@ -1164,6 +1195,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Magma Cone: Gem {gem - skipped_bits} requires access past the elevator.")
                 if len(self.chosen_gem_locations) == 0 or f"Magma Cone: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Magma Cone: Gem {gem - skipped_bits}", self.player),
@@ -1264,6 +1297,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Winter Tundra: Gem {gem - skipped_bits} requires headbash.")
                 if len(self.chosen_gem_locations) == 0 or f"Winter Tundra: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Winter Tundra: Gem {gem - skipped_bits}", self.player),
@@ -1276,6 +1311,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Winter Tundra: Gem {gem - skipped_bits} requires access past the Ripto door.")
                 if len(self.chosen_gem_locations) == 0 or f"Winter Tundra: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Winter Tundra: Gem {gem - skipped_bits}", self.player),
@@ -1314,6 +1351,8 @@ class Spyro2World(World):
                         skipped_bits += 1
                     else:
                         break
+                if self.PRINT_GEM_REQS:
+                    print(f"Cloud Temples: Gem {gem - skipped_bits} requires headbash.")
                 if len(self.chosen_gem_locations) == 0 or f"Cloud Temples: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
                     set_rule(
                         self.multiworld.get_location(f"Cloud Temples: Gem {gem - skipped_bits}", self.player),
