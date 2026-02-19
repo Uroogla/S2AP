@@ -1,4 +1,5 @@
-﻿using Archipelago.Core.Models;
+﻿using Archipelago.Core;
+using Archipelago.Core.Models;
 using Archipelago.Core.Util;
 using Archipelago.MultiClient.Net.Models;
 using Avalonia.Logging;
@@ -17,6 +18,7 @@ namespace S2AP
     {
         private static GameStatus lastNonZeroStatus = GameStatus.Spawning;
         public static string gameVersion = "";
+        public static Dictionary<LevelInGameIDs, Dictionary<int, Location>> remainingGemsanityChecks = new Dictionary<LevelInGameIDs, Dictionary<int, Location>>();
         public static string OpenEmbeddedResource(string resourceName)
         {
             var assembly = Assembly.GetExecutingAssembly();
@@ -188,10 +190,11 @@ namespace S2AP
                 {
                     if (!level.GemSkipIndices.Contains(i + 1))
                     {
+                        int locationID = baseId + levelOffset * level.LevelId + locationOffset;
                         Location gemsLocation = new Location()
                         {
                             Name = $"{level.Name}: Gem {gemIndex}",
-                            Id = baseId + levelOffset * level.LevelId + locationOffset,
+                            Id = locationID,
                             Address = level.GemMaskAddress + (uint)(i / 8),
                             AddressBit = i % 8,
                             CheckType = LocationCheckType.Bit,
@@ -199,7 +202,13 @@ namespace S2AP
                         };
                         if (includeGemsanity && (gemsanityIDs.Count == 0 || gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset)))
                         {
-                            locations.Add(gemsLocation);
+                            // Handle locations through UpdateLocationList to avoid crashes when a player connects for the first time with a 100% save file.
+                            //locations.Add(gemsLocation);
+                            if (!remainingGemsanityChecks.Keys.Contains((LevelInGameIDs)level.LevelId))
+                            {
+                                remainingGemsanityChecks[(LevelInGameIDs)level.LevelId] = new Dictionary<int, Location>();
+                            }
+                            remainingGemsanityChecks[(LevelInGameIDs)level.LevelId][locationID] = gemsLocation;
                         }
                         locationOffset++;
                         gemIndex++;
@@ -342,11 +351,34 @@ namespace S2AP
             return locations;
         }
 
+        public static async void UpdateLocationList(LevelInGameIDs currentLevel, ArchipelagoClient client)
+        {
+            Log.Logger.Verbose($"Updating location list to {currentLevel}");
+            foreach (LevelInGameIDs level in remainingGemsanityChecks.Keys)
+            {
+                if (level == currentLevel)
+                {
+                    Log.Logger.Verbose($"Adding {remainingGemsanityChecks[level].Values.Count} locations");
+                    foreach (Location gemsanityCheck in remainingGemsanityChecks[level].Values)
+                    {
+                        await client.AddLocationAsync(gemsanityCheck);
+                    }
+                }
+                else
+                {
+                    foreach (Location gemsanityCheck in remainingGemsanityChecks[level].Values)
+                    {
+                        await client.RemoveLocationAsync(gemsanityCheck);
+                    }
+                }
+            }
+        }
+
         public static List<LevelData> GetLevelData()
         {
             List<LevelData> levels = new List<LevelData>()
             {
-                new LevelData("Summer Forest", (int)LevelInGameIDs.SummerForest, 4, false, false, [Addresses.SwimUnlock, Addresses.WallToAquariaUnlock], [], [Addresses.SummerLifeBottle1Address, Addresses.SummerLifeBottle2Address, Addresses.SummerLifeBottle3Address], 0, Addresses.SummerGemMask, 138, [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]),
+                new LevelData("Summer Forest", (int)LevelInGameIDs.SummerForest, 4, false, false, [Addresses.SwimUnlock, Addresses.WallToAquariaUnlock], [], [Addresses.SummerLifeBottle1Address, Addresses.SummerLifeBottle2Address, Addresses.SummerLifeBottle3Address], 0, Addresses.SummerGemMask, 138, [27, 41, 42, 43, 44, 45, 46, 47, 61, 62, 63, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]),
                 // Removed Moneybags as a location in Glimmer because it leads to an overly restrictive start.
                 new LevelData("Glimmer", (int)LevelInGameIDs.Glimmer, 3, true, false, [], [], [], 14, Addresses.GlimmerGemMask, 133, [1, 2, 3, 4, 5, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 152]),
                 new LevelData("Idol Springs", (int)LevelInGameIDs.IdolSprings, 2, true, false, [], [Addresses.IdolTikiSkillPoint], [Addresses.IdolLifeBottleAddress], 11, Addresses.IdolGemMask, 149, [63, 88, 90, 122, 127, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]),
@@ -365,7 +397,7 @@ namespace S2AP
                 new LevelData("Scorch", (int)LevelInGameIDs.Scorch, 2, true, false, [], [Addresses.ScorchTreesSkillPoint], [Addresses.ScorchLifeBottleAddress], 28, Addresses.ScorchGemMask, 125, [1, 2, 3, 4, 5, 93, 94, 95, 96, 97, 98, 99, 100, 101, 106, 115, 134, 135, 136, 137, 142, 143, 144, 148]),
                 new LevelData("Shady Oasis", (int)LevelInGameIDs.ShadyOasis, 2, true, false, [], [], [Addresses.ShadyLifeBottleAddress], 21, Addresses.ShadyGemMask, 119, [1, 2, 3, 4, 5, 6, 7, 28, 29, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 138, 140, 141, 142, 143, 148, 155, 168, 169]),
                 new LevelData("Magma Cone", (int)LevelInGameIDs.MagmaCone, 3, true, false, [Addresses.MagmaElevatorUnlock], [], [Addresses.MagmaLifeBottle1Address, Addresses.MagmaLifeBottle2Address, Addresses.MagmaLifeBottle3Address, Addresses.MagmaLifeBottle4Address], 19, Addresses.MagmaGemMask, 119, [1, 2, 48, 78, 121, 122, 123]),
-                new LevelData("Fracture Hills", (int)LevelInGameIDs.FractureHills, 3, true, false, [], [Addresses.FractureSuperchargeSkillPoint], [Addresses.FractureLifeBottleAddress], 29, Addresses.FractureGemMask, 115, [1, 2, 3, 20, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 141]),
+                new LevelData("Fracture Hills", (int)LevelInGameIDs.FractureHills, 3, true, false, [], [Addresses.FractureSuperchargeSkillPoint], [Addresses.FractureLifeBottleAddress], 29, Addresses.FractureGemMask, 115, [1, 2, 3, 20, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91]),
                 new LevelData("Icy Speedway", (int)LevelInGameIDs.IcySpeedway, 1, false, false, [], [Addresses.IcyTimeAttackSkillPoint], [], 0),
                 new LevelData("Gulp's Overlook", (int)LevelInGameIDs.GulpsOverlook, 0, false, true, [], [Addresses.GulpPerfectSkillPoint, Addresses.GulpRiptoSkillPoint], [], 0),
                 new LevelData("Winter Tundra", (int)LevelInGameIDs.WinterTundra, 3, false, false, [Addresses.CanyonPortalUnlock, Addresses.HeadbashUnlock], [], [], 0, Addresses.WinterGemMask, 101, [1, 2, 3, 4, 5, 6, 7, 13, 14, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]),

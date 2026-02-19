@@ -7,13 +7,10 @@ using Archipelago.Core.Models;
 using Archipelago.Core.Util;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
-using Archipelago.MultiClient.Net.Packets;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Platform;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
-using Avalonia.OpenGL;
 using Newtonsoft.Json;
 using ReactiveUI;
 using S2AP.Models;
@@ -34,8 +31,8 @@ namespace S2AP;
 public partial class App : Application
 {
     // TODO: Remember to set this in S2AP.Desktop as well.
-    public static string Version = "1.0.2";
-    public static List<string> SupportedVersions = ["1.0.0", "1.0.1", "1.0.2"];
+    public static string Version = "1.1.0";
+    public static List<string> SupportedVersions = ["1.1.0"];
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
@@ -61,6 +58,7 @@ public partial class App : Application
     private static DeathLinkService _deathLinkService { get; set; }
     // Avoid marking the playthrough complete or opening the Ripto door before this value is populated.
     private static int _requiredOrbs = 65;
+    private static bool _handleGemsanity = false;
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -332,287 +330,305 @@ public partial class App : Application
 
     private void Client_LocationCompleted(object? sender, LocationCompletedEventArgs e)
     {
-        if (Client.ItemState == null || Client.CurrentSession == null) return;
-        CalculateCurrentTalismans();
-        CalculateCurrentOrbs();
-        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
-        if (gemsanityOption != GemsanityOptions.Off)
+        try
         {
-            CalculateCurrentGems();
+            if (Client.ItemState == null || Client.CurrentSession == null) return;
+            CalculateCurrentTalismans();
+            CalculateCurrentOrbs();
+            GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+            if (gemsanityOption != GemsanityOptions.Off)
+            {
+                CalculateCurrentGems();
+            }
+            CheckGoalCondition();
         }
-        CheckGoalCondition();
+        catch (Exception ex)
+        {
+            Log.Logger.Warning("Encountered an error while completing a location.");
+            Log.Logger.Warning(ex.ToString());
+            Log.Logger.Warning("This is not necessarily a problem if it happens during release or collect.");
+        }
     }
 
     private async void ItemReceived(object? o, ItemReceivedEventArgs args)
     {
-        if (Client.ItemState == null || Client.CurrentSession == null) return;
-        Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
-        // Give items a moment to update before printing values.
-        await Task.Delay(200);
-        int currentHealth;
-        Dictionary<string, int> talismans;
-        switch (args.Item.Name)
+        try
         {
-            case "Summer Forest Talisman":
-                talismans = CalculateCurrentTalismans();
-                Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
-                CheckGoalCondition();
-                break;
-            case "Autumn Plains Talisman":
-                talismans = CalculateCurrentTalismans();
-                Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
-                CheckGoalCondition();
-                break;
-            case "Orb":
-                CalculateCurrentOrbs();
-                CheckGoalCondition();
-                break;
-            case "Skill Point":
-            case "Dragon Shores Token":
-            case "Ripto Defeated":
-                CheckGoalCondition();
-                break;
-            case "Extra Life":
-                var currentLives = Memory.ReadShort(Addresses.PlayerLives);
-                Memory.Write(Addresses.PlayerLives, (short)(Math.Min(99, currentLives + 1)));
-                break;
-            case "Heal Sparx":
-                // Collecting a skill point provides a full heal, so wait for that to complete first.
-                await Task.Run(async () =>
-                {
-                    await Task.Delay(3000);
-                    currentHealth = Memory.ReadByte(Addresses.PlayerHealth);
-                    Memory.WriteByte(Addresses.PlayerHealth, (byte)(Math.Min(3, currentHealth + 1)));
-                });
-                break;
-            case "Damage Sparx Trap":
-                // Collecting a skill point provides a full heal, so wait for that to complete first.
-                await Task.Run(async () =>
-                {
-                    await Task.Delay(3000);
-                    currentHealth = Memory.ReadByte(Addresses.PlayerHealth);
-                    Memory.WriteByte(Addresses.PlayerHealth, (byte)(Math.Max(currentHealth - 1, 0)));
-                });
-                break;
-            case "Sparxless Trap":
-                // Collecting a skill point provides a full heal, so wait for that to complete first.
-                await Task.Run(async () =>
-                {
-                    await Task.Delay(3000);
-                    Memory.WriteByte(Addresses.PlayerHealth, (byte)(0));
-                });
-                break;
-            case "Big Head Mode":
-            case "Flat Spyro Mode":
-            case "Turn Spyro Red":
-            case "Turn Spyro Blue":
-            case "Turn Spyro Yellow":
-            case "Turn Spyro Pink":
-            case "Turn Spyro Green":
-            case "Turn Spyro Black":
-            case "Normal Spyro":
-                _cosmeticEffects.Enqueue(args.Item.Name);
-                break;
-            case "Invisibility Trap":
-                await Task.Run(async () =>
-                {
-                    Memory.Write(Addresses.InvisibleAddress1, (short)1);
-                    Memory.Write(Addresses.InvisibleAddress2, (short)0x3402);
-                    await Task.Delay(15000);
-                    Memory.Write(Addresses.InvisibleAddress1, (short)0);
-                    Memory.Write(Addresses.InvisibleAddress2, (short)0);
-                });
-                break;
-            case "Destructive Spyro":
-                await Task.Run(async () =>
-                {
-                    // If effects overlap, this doesn't quite work, but the effect is short enough not to matter.
-                    _destructiveMode = true;
-                    await Task.Delay(15000);
-                    _destructiveMode = false;
-                });
-                break;
-            case "Remapped Controller Trap":
-                // This can crash the game, presumably due to changing lines that are being executed.
-                /*await Task.Run(async () =>
-                {
-                    Memory.Write(Addresses.AnalogReadAddressOne, 0x3c027f7f); // Set both analog sticks to 0x7f7f, which is off.
-                    Memory.Write(Addresses.AnalogReadAddressTwo, 0x34427f7f);
-                    Memory.Write(Addresses.ControllerReadLeftHalf, 0x9042a95f); // Swap the left and right half of the controller.
-                    Memory.Write(Addresses.ControllerReadRightHalf, 0x9063a95e);
-                    await Task.Delay(15000);
-                    Memory.Write(Addresses.AnalogReadAddressOne, 0x3c028007); // Correctly load analog stick data.
-                    Memory.Write(Addresses.AnalogReadAddressTwo, 0x9063a95e);
-                    Memory.Write(Addresses.ControllerReadLeftHalf, 0x9042a95e); // Load the controller halves in the right order.
-                    Memory.Write(Addresses.ControllerReadRightHalf, 0x9063a95f);
-                });*/
-                break;
-            case "Moneybags Unlock - Crystal Glacier Bridge":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.CrystalBridgeUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Aquaria Towers Submarine":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.AquariaSubUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Magma Cone Elevator":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.MagmaElevatorUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Swim":
-                if (
-                    _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
-                    int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
-                    int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
-                )
-                {
-                    UnlockMoneybags(Addresses.SwimUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Climb":
-                if (
-                    _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
-                    int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
-                    int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
-                )
-                {
-                    UnlockMoneybags(Addresses.ClimbUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Headbash":
-                if (
-                    _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
-                    int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
-                    int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
-                )
-                {
-                    UnlockMoneybags(Addresses.HeadbashUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Door to Aquaria Towers":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.WallToAquariaUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Zephyr Portal":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.ZephyrPortalUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Shady Oasis Portal":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.ShadyPortalUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Icy Speedway Portal":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.IcyPortalUnlock);
-                }
-                break;
-            case "Moneybags Unlock - Canyon Speedway Portal":
-                if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
-                {
-                    UnlockMoneybags(Addresses.CanyonPortalUnlock);
-                }
-                break;
-            case "Progressive Sparx Health Upgrade":
-                _sparxUpgrades++;
-                break;
-            case "Double Jump Ability":
-            case "Permanent Fireball Ability":
-                // Managed by HandleAbilities()
-                break;
-            default:
-                if (args.Item.Name.EndsWith(" Gem") || args.Item.Name.EndsWith(" Gems"))
-                {
-                    CalculateCurrentGems();
+            if (Client.ItemState == null || Client.CurrentSession == null) return;
+            Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
+            // Give items a moment to update before printing values.
+            await Task.Delay(200);
+            int currentHealth;
+            Dictionary<string, int> talismans;
+            switch (args.Item.Name)
+            {
+                case "Summer Forest Talisman":
+                    talismans = CalculateCurrentTalismans();
+                    Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
                     CheckGoalCondition();
-                }
-                else if (args.Item.Name.EndsWith(" Unlock"))
-                {
-                    switch (args.Item.Name)
+                    break;
+                case "Autumn Plains Talisman":
+                    talismans = CalculateCurrentTalismans();
+                    Log.Logger.Information($"Current Talisman count - Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
+                    CheckGoalCondition();
+                    break;
+                case "Orb":
+                    CalculateCurrentOrbs();
+                    CheckGoalCondition();
+                    break;
+                case "Skill Point":
+                case "Dragon Shores Token":
+                case "Ripto Defeated":
+                    CheckGoalCondition();
+                    break;
+                case "Extra Life":
+                    var currentLives = Memory.ReadShort(Addresses.PlayerLives);
+                    Memory.Write(Addresses.PlayerLives, (short)(Math.Min(99, currentLives + 1)));
+                    break;
+                case "Heal Sparx":
+                    // Collecting a skill point provides a full heal, so wait for that to complete first.
+                    await Task.Run(async () =>
                     {
-                        case "Idol Springs Unlock":
-                            WriteStringToMemory(Addresses.IdolNameAddress, Addresses.IdolNameAddress + 16, "Idol Springs", padWithSpaces: false);
-                            break;
-                        case "Colossus Unlock":
-                            WriteStringToMemory(Addresses.ColossusNameAddress, Addresses.ColossusNameAddress + 12, "Colossus", padWithSpaces: false);
-                            break;
-                        case "Hurricos Unlock":
-                            WriteStringToMemory(Addresses.HurricosNameAddress, Addresses.HurricosNameAddress + 12, "Hurricos", padWithSpaces: false);
-                            break;
-                        case "Aquaria Towers Unlock":
-                            WriteStringToMemory(Addresses.AquariaNameAddress, Addresses.AquariaNameAddress + 16, "Aquaria Towers", padWithSpaces: false);
-                            break;
-                        case "Sunny Beach Unlock":
-                            WriteStringToMemory(Addresses.SunnyNameAddress, Addresses.SunnyNameAddress + 12, "Sunny Beach", padWithSpaces: false);
-                            break;
-                        case "Ocean Speedway Unlock":
-                            WriteStringToMemory(Addresses.OceanNameAddress, Addresses.OceanNameAddress + 16, "Ocean Speedway", padWithSpaces: false);
-                            break;
-                        case "Skelos Badlands Unlock":
-                            WriteStringToMemory(Addresses.SkelosNameAddress, Addresses.SkelosNameAddress + 16, "Skelos Badlands", padWithSpaces: false);
-                            break;
-                        case "Crystal Glacier Unlock":
-                            WriteStringToMemory(Addresses.CrystalNameAddress, Addresses.CrystalNameAddress + 16, "Crystal Glacier", padWithSpaces: false);
-                            break;
-                        case "Breeze Harbor Unlock":
-                            WriteStringToMemory(Addresses.BreezeNameAddress, Addresses.BreezeNameAddress + 16, "Breeze Harbor", padWithSpaces: false);
-                            break;
-                        case "Zephyr Unlock":
-                            WriteStringToMemory(Addresses.ZephyrNameAddress, Addresses.ZephyrNameAddress + 8, "Zephyr", padWithSpaces: false);
-                            break;
-                        case "Metro Speedway Unlock":
-                            WriteStringToMemory(Addresses.MetroNameAddress, Addresses.MetroNameAddress + 16, "Metro Speedway", padWithSpaces: false);
-                            break;
-                        case "Scorch Unlock":
-                            WriteStringToMemory(Addresses.ScorchNameAddress, Addresses.ScorchNameAddress + 8, "Scorch", padWithSpaces: false);
-                            break;
-                        case "Shady Oasis Unlock":
-                            WriteStringToMemory(Addresses.ShadyNameAddress, Addresses.ShadyNameAddress + 12, "Shady Oasis", padWithSpaces: false);
-                            break;
-                        case "Magma Cone Unlock":
-                            WriteStringToMemory(Addresses.MagmaNameAddress, Addresses.MagmaNameAddress + 12, "Magma Cone", padWithSpaces: false);
-                            break;
-                        case "Fracture Hills Unlock":
-                            WriteStringToMemory(Addresses.FractureNameAddress, Addresses.FractureNameAddress + 16, "Fracture Hills", padWithSpaces: false);
-                            break;
-                        case "Icy Speedway Unlock":
-                            WriteStringToMemory(Addresses.IcyNameAddress, Addresses.IcyNameAddress + 16, "Icy Speedway", padWithSpaces: false);
-                            break;
-                        case "Mystic Marsh Unlock":
-                            WriteStringToMemory(Addresses.MysticNameAddress, Addresses.MysticNameAddress + 16, "Mystic Marsh", padWithSpaces: false);
-                            break;
-                        case "Cloud Temples Unlock":
-                            WriteStringToMemory(Addresses.CloudNameAddress, Addresses.CloudNameAddress + 16, "Cloud Temples", padWithSpaces: false);
-                            break;
-                        case "Canyon Speedway Unlock":
-                            WriteStringToMemory(Addresses.CanyonNameAddress, Addresses.CanyonNameAddress + 16, "Canyon Speedway", padWithSpaces: false);
-                            break;
-                        case "Robotica Farms Unlock":
-                            WriteStringToMemory(Addresses.RoboticaNameAddress, Addresses.RoboticaNameAddress + 16, "Robotica Farms", padWithSpaces: false);
-                            break;
-                        case "Metropolis Unlock":
-                            WriteStringToMemory(Addresses.MetropolisNameAddress, Addresses.MetropolisNameAddress + 12, "Metropolis", padWithSpaces: false);
-                            break;
-                        case "Dragon Shores Unlock":
-                            WriteStringToMemory(Addresses.ShoresNameAddress, Addresses.ShoresNameAddress + 16, "Dragon Shores", padWithSpaces: false);
-                            break;
+                        await Task.Delay(3000);
+                        currentHealth = Memory.ReadByte(Addresses.PlayerHealth);
+                        Memory.WriteByte(Addresses.PlayerHealth, (byte)(Math.Min(3, currentHealth + 1)));
+                    });
+                    break;
+                case "Damage Sparx Trap":
+                    // Collecting a skill point provides a full heal, so wait for that to complete first.
+                    await Task.Run(async () =>
+                    {
+                        await Task.Delay(3000);
+                        currentHealth = Memory.ReadByte(Addresses.PlayerHealth);
+                        Memory.WriteByte(Addresses.PlayerHealth, (byte)(Math.Max(currentHealth - 1, 0)));
+                    });
+                    break;
+                case "Sparxless Trap":
+                    // Collecting a skill point provides a full heal, so wait for that to complete first.
+                    await Task.Run(async () =>
+                    {
+                        await Task.Delay(3000);
+                        Memory.WriteByte(Addresses.PlayerHealth, (byte)(0));
+                    });
+                    break;
+                case "Big Head Mode":
+                case "Flat Spyro Mode":
+                case "Turn Spyro Red":
+                case "Turn Spyro Blue":
+                case "Turn Spyro Yellow":
+                case "Turn Spyro Pink":
+                case "Turn Spyro Green":
+                case "Turn Spyro Black":
+                case "Normal Spyro":
+                    _cosmeticEffects.Enqueue(args.Item.Name);
+                    break;
+                case "Invisibility Trap":
+                    await Task.Run(async () =>
+                    {
+                        Memory.Write(Addresses.InvisibleAddress1, (short)1);
+                        Memory.Write(Addresses.InvisibleAddress2, (short)0x3402);
+                        await Task.Delay(15000);
+                        Memory.Write(Addresses.InvisibleAddress1, (short)0);
+                        Memory.Write(Addresses.InvisibleAddress2, (short)0);
+                    });
+                    break;
+                case "Destructive Spyro":
+                    await Task.Run(async () =>
+                    {
+                        // If effects overlap, this doesn't quite work, but the effect is short enough not to matter.
+                        _destructiveMode = true;
+                        await Task.Delay(15000);
+                        _destructiveMode = false;
+                    });
+                    break;
+                case "Remapped Controller Trap":
+                    // This can crash the game, presumably due to changing lines that are being executed.
+                    /*await Task.Run(async () =>
+                    {
+                        Memory.Write(Addresses.AnalogReadAddressOne, 0x3c027f7f); // Set both analog sticks to 0x7f7f, which is off.
+                        Memory.Write(Addresses.AnalogReadAddressTwo, 0x34427f7f);
+                        Memory.Write(Addresses.ControllerReadLeftHalf, 0x9042a95f); // Swap the left and right half of the controller.
+                        Memory.Write(Addresses.ControllerReadRightHalf, 0x9063a95e);
+                        await Task.Delay(15000);
+                        Memory.Write(Addresses.AnalogReadAddressOne, 0x3c028007); // Correctly load analog stick data.
+                        Memory.Write(Addresses.AnalogReadAddressTwo, 0x9063a95e);
+                        Memory.Write(Addresses.ControllerReadLeftHalf, 0x9042a95e); // Load the controller halves in the right order.
+                        Memory.Write(Addresses.ControllerReadRightHalf, 0x9063a95f);
+                    });*/
+                    break;
+                case "Moneybags Unlock - Crystal Glacier Bridge":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.CrystalBridgeUnlock);
                     }
-                    // Other unlock effects managed by HandleAbilities().
-                    showUnlockedLevels();
-                }
-                break;
+                    break;
+                case "Moneybags Unlock - Aquaria Towers Submarine":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.AquariaSubUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Magma Cone Elevator":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.MagmaElevatorUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Swim":
+                    if (
+                        _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
+                        int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
+                        int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                    )
+                    {
+                        UnlockMoneybags(Addresses.SwimUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Climb":
+                    if (
+                        _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
+                        int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
+                        int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                    )
+                    {
+                        UnlockMoneybags(Addresses.ClimbUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Headbash":
+                    if (
+                        _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
+                        int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
+                        int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                    )
+                    {
+                        UnlockMoneybags(Addresses.HeadbashUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Door to Aquaria Towers":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.WallToAquariaUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Zephyr Portal":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.ZephyrPortalUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Shady Oasis Portal":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.ShadyPortalUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Icy Speedway Portal":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.IcyPortalUnlock);
+                    }
+                    break;
+                case "Moneybags Unlock - Canyon Speedway Portal":
+                    if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
+                    {
+                        UnlockMoneybags(Addresses.CanyonPortalUnlock);
+                    }
+                    break;
+                case "Progressive Sparx Health Upgrade":
+                    _sparxUpgrades++;
+                    break;
+                case "Double Jump Ability":
+                case "Permanent Fireball Ability":
+                    // Managed by HandleAbilities()
+                    break;
+                default:
+                    if (args.Item.Name.EndsWith(" Gem") || args.Item.Name.EndsWith(" Gems"))
+                    {
+                        CalculateCurrentGems();
+                        CheckGoalCondition();
+                    }
+                    else if (args.Item.Name.EndsWith(" Unlock"))
+                    {
+                        switch (args.Item.Name)
+                        {
+                            case "Idol Springs Unlock":
+                                WriteStringToMemory(Addresses.IdolNameAddress, Addresses.IdolNameAddress + 16, "Idol Springs", padWithSpaces: false);
+                                break;
+                            case "Colossus Unlock":
+                                WriteStringToMemory(Addresses.ColossusNameAddress, Addresses.ColossusNameAddress + 12, "Colossus", padWithSpaces: false);
+                                break;
+                            case "Hurricos Unlock":
+                                WriteStringToMemory(Addresses.HurricosNameAddress, Addresses.HurricosNameAddress + 12, "Hurricos", padWithSpaces: false);
+                                break;
+                            case "Aquaria Towers Unlock":
+                                WriteStringToMemory(Addresses.AquariaNameAddress, Addresses.AquariaNameAddress + 16, "Aquaria Towers", padWithSpaces: false);
+                                break;
+                            case "Sunny Beach Unlock":
+                                WriteStringToMemory(Addresses.SunnyNameAddress, Addresses.SunnyNameAddress + 12, "Sunny Beach", padWithSpaces: false);
+                                break;
+                            case "Ocean Speedway Unlock":
+                                WriteStringToMemory(Addresses.OceanNameAddress, Addresses.OceanNameAddress + 16, "Ocean Speedway", padWithSpaces: false);
+                                break;
+                            case "Skelos Badlands Unlock":
+                                WriteStringToMemory(Addresses.SkelosNameAddress, Addresses.SkelosNameAddress + 16, "Skelos Badlands", padWithSpaces: false);
+                                break;
+                            case "Crystal Glacier Unlock":
+                                WriteStringToMemory(Addresses.CrystalNameAddress, Addresses.CrystalNameAddress + 16, "Crystal Glacier", padWithSpaces: false);
+                                break;
+                            case "Breeze Harbor Unlock":
+                                WriteStringToMemory(Addresses.BreezeNameAddress, Addresses.BreezeNameAddress + 16, "Breeze Harbor", padWithSpaces: false);
+                                break;
+                            case "Zephyr Unlock":
+                                WriteStringToMemory(Addresses.ZephyrNameAddress, Addresses.ZephyrNameAddress + 8, "Zephyr", padWithSpaces: false);
+                                break;
+                            case "Metro Speedway Unlock":
+                                WriteStringToMemory(Addresses.MetroNameAddress, Addresses.MetroNameAddress + 16, "Metro Speedway", padWithSpaces: false);
+                                break;
+                            case "Scorch Unlock":
+                                WriteStringToMemory(Addresses.ScorchNameAddress, Addresses.ScorchNameAddress + 8, "Scorch", padWithSpaces: false);
+                                break;
+                            case "Shady Oasis Unlock":
+                                WriteStringToMemory(Addresses.ShadyNameAddress, Addresses.ShadyNameAddress + 12, "Shady Oasis", padWithSpaces: false);
+                                break;
+                            case "Magma Cone Unlock":
+                                WriteStringToMemory(Addresses.MagmaNameAddress, Addresses.MagmaNameAddress + 12, "Magma Cone", padWithSpaces: false);
+                                break;
+                            case "Fracture Hills Unlock":
+                                WriteStringToMemory(Addresses.FractureNameAddress, Addresses.FractureNameAddress + 16, "Fracture Hills", padWithSpaces: false);
+                                break;
+                            case "Icy Speedway Unlock":
+                                WriteStringToMemory(Addresses.IcyNameAddress, Addresses.IcyNameAddress + 16, "Icy Speedway", padWithSpaces: false);
+                                break;
+                            case "Mystic Marsh Unlock":
+                                WriteStringToMemory(Addresses.MysticNameAddress, Addresses.MysticNameAddress + 16, "Mystic Marsh", padWithSpaces: false);
+                                break;
+                            case "Cloud Temples Unlock":
+                                WriteStringToMemory(Addresses.CloudNameAddress, Addresses.CloudNameAddress + 16, "Cloud Temples", padWithSpaces: false);
+                                break;
+                            case "Canyon Speedway Unlock":
+                                WriteStringToMemory(Addresses.CanyonNameAddress, Addresses.CanyonNameAddress + 16, "Canyon Speedway", padWithSpaces: false);
+                                break;
+                            case "Robotica Farms Unlock":
+                                WriteStringToMemory(Addresses.RoboticaNameAddress, Addresses.RoboticaNameAddress + 16, "Robotica Farms", padWithSpaces: false);
+                                break;
+                            case "Metropolis Unlock":
+                                WriteStringToMemory(Addresses.MetropolisNameAddress, Addresses.MetropolisNameAddress + 12, "Metropolis", padWithSpaces: false);
+                                break;
+                            case "Dragon Shores Unlock":
+                                WriteStringToMemory(Addresses.ShoresNameAddress, Addresses.ShoresNameAddress + 16, "Dragon Shores", padWithSpaces: false);
+                                break;
+                        }
+                        // Other unlock effects managed by HandleAbilities().
+                        showUnlockedLevels();
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Logger.Warning("Encountered an error while receiving an item.");
+            Log.Logger.Warning(ex.ToString());
+            Log.Logger.Warning("This is not necessarily a problem if it happens during release or collect.");
         }
     }
     private void showUnlockedLevels()
@@ -659,60 +675,66 @@ public partial class App : Application
     }
     private static async void HandleAbilities(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
+        try
         {
-            return;
-        }
-        CalculateCurrentTalismans();
-        CalculateCurrentOrbs();
-        GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
-        if (gemsanityOption != GemsanityOptions.Off)
-        {
-            CalculateCurrentGems();
-        }
-        CheckGoalCondition();
-        byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
-        AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
-        int hasDoubleJumpItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
-        AbilityOptions fireballOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("permanent_fireball_ability", "0").ToString());
-        int hasFireballItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Permanent Fireball Ability").Count() ?? 0);
+            if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
+            {
+                return;
+            }
+            CalculateCurrentTalismans();
+            CalculateCurrentOrbs();
+            GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+            if (gemsanityOption != GemsanityOptions.Off)
+            {
+                CalculateCurrentGems();
+            }
+            CheckGoalCondition();
+            byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
+            AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
+            int hasDoubleJumpItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
+            AbilityOptions fireballOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("permanent_fireball_ability", "0").ToString());
+            int hasFireballItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Permanent Fireball Ability").Count() ?? 0);
 
-        if (doubleJumpOption == AbilityOptions.AlwaysOff || doubleJumpOption == AbilityOptions.InPool && hasDoubleJumpItem == 0)
-        {
-            Memory.Write(Addresses.DoubleJumpAddress1, 0x2402FE00);
-            Memory.Write(Addresses.DoubleJumpAddress2, 0xAC22A08C);
-        }
-        else
-        {
-            Memory.Write(Addresses.DoubleJumpAddress1, 0x24020800);
-            Memory.Write(Addresses.DoubleJumpAddress2, 0xAC22A0A8);
-        }
+            if (doubleJumpOption == AbilityOptions.AlwaysOff || doubleJumpOption == AbilityOptions.InPool && hasDoubleJumpItem == 0)
+            {
+                Memory.Write(Addresses.DoubleJumpAddress1, 0x2402FE00);
+                Memory.Write(Addresses.DoubleJumpAddress2, 0xAC22A08C);
+            }
+            else
+            {
+                Memory.Write(Addresses.DoubleJumpAddress1, 0x24020800);
+                Memory.Write(Addresses.DoubleJumpAddress2, 0xAC22A0A8);
+            }
 
-        if (fireballOption == AbilityOptions.AlwaysOff || fireballOption == AbilityOptions.InPool && hasFireballItem == 0)
-        {
-            Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)0);
-        }
-        else if (fireballOption == AbilityOptions.StartWith || fireballOption == AbilityOptions.InPool && hasFireballItem == 1)
-        {
-            Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)1);
-        } // else vanilla behavior, controlled by game.
+            if (fireballOption == AbilityOptions.AlwaysOff || fireballOption == AbilityOptions.InPool && hasFireballItem == 0)
+            {
+                Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)0);
+            }
+            else if (fireballOption == AbilityOptions.StartWith || fireballOption == AbilityOptions.InPool && hasFireballItem == 1)
+            {
+                Memory.WriteByte(Addresses.PermanentFireballAddress, (byte)1);
+            } // else vanilla behavior, controlled by game.
 
-        if (_destructiveMode)
-        {
-            Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
-        } // Turns off automatically on its own.
+            if (_destructiveMode)
+            {
+                Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
+            } // Turns off automatically on its own.
 
-        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
-        GameStatus gameStatus = (GameStatus)Memory.ReadByte(Addresses.GameStatus);
-        if (_deathLinkService != null && !_hasSubmittedGoal)
-        {
-            byte health = Memory.ReadByte(Addresses.PlayerHealth);
-            int zPos = Memory.ReadInt(Addresses.PlayerZPos);
-            int animationLength = Memory.ReadInt(Addresses.PlayerAnimationLength);
-            byte spyroState = Memory.ReadByte(Addresses.SpyroStateAddress);
-            byte spyroVelocityFlag = Memory.ReadByte(Addresses.PlayerVelocityStatus);
-            LevelInGameIDs[] deathLinkLevels = [
-                LevelInGameIDs.SummerForest,
+            LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+            if (currentLevel != _previousLevel && _handleGemsanity)
+            {
+                Helpers.UpdateLocationList(currentLevel, Client);
+            }
+            GameStatus gameStatus = (GameStatus)Memory.ReadByte(Addresses.GameStatus);
+            if (_deathLinkService != null && !_hasSubmittedGoal)
+            {
+                byte health = Memory.ReadByte(Addresses.PlayerHealth);
+                int zPos = Memory.ReadInt(Addresses.PlayerZPos);
+                int animationLength = Memory.ReadInt(Addresses.PlayerAnimationLength);
+                byte spyroState = Memory.ReadByte(Addresses.SpyroStateAddress);
+                byte spyroVelocityFlag = Memory.ReadByte(Addresses.PlayerVelocityStatus);
+                LevelInGameIDs[] deathLinkLevels = [
+                    LevelInGameIDs.SummerForest,
                 LevelInGameIDs.Glimmer,
                 LevelInGameIDs.Colossus,
                 LevelInGameIDs.IdolSprings,
@@ -736,261 +758,262 @@ public partial class App : Application
                 LevelInGameIDs.RoboticaFarms,
                 LevelInGameIDs.Metropolis,
                 LevelInGameIDs.RiptosArena
-            ];
+                ];
 
-            if (
-                !_justDied &&
-                Helpers.IsInGame() &&
-                Client.ItemState != null &&
-                Client.CurrentSession != null &&
-                deathLinkLevels.Contains(currentLevel) &&
-                gameStatus != GameStatus.Cutscene &&
-                gameStatus != GameStatus.Loading &&
-                gameStatus != GameStatus.TitleScreen &&
-                (
-                    health > 128 ||
-                    (zPos > 0 && zPos < 0x400) ||  // zPos is 0 on initial load into a save
-                    (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
-                    spyroState == (byte)SpyroStates.DeathBurn ||
-                    spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
-                    spyroState == (byte)SpyroStates.DeathSquash
+                if (
+                    !_justDied &&
+                    Helpers.IsInGame() &&
+                    Client.ItemState != null &&
+                    Client.CurrentSession != null &&
+                    deathLinkLevels.Contains(currentLevel) &&
+                    gameStatus != GameStatus.Cutscene &&
+                    gameStatus != GameStatus.Loading &&
+                    gameStatus != GameStatus.TitleScreen &&
+                    (
+                        health > 128 ||
+                        (zPos > 0 && zPos < 0x400) ||  // zPos is 0 on initial load into a save
+                        (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
+                        spyroState == (byte)SpyroStates.DeathBurn ||
+                        spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
+                        spyroState == (byte)SpyroStates.DeathSquash
+                    )
                 )
-            )
-            {
-                _justDied = true;
-                string deathlinkCause = "Unknown";
-                if (health > 128)
                 {
-                    deathlinkCause = "Damage";
-                }
-                else if (zPos > 0 && zPos < 0x400)
-                {
-                    deathlinkCause = "Fell below death plane";
-                }
-                else if (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)
-                {
-                    deathlinkCause = "Fell to death";
-                }
-                else if (spyroState == (byte)SpyroStates.DeathBurn)
-                {
-                    deathlinkCause = "Burned";
-                }
-                else if (spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116)
-                {
-                    deathlinkCause = "Drowned";
-                }
-                else if (spyroState == (byte)SpyroStates.DeathSquash)
-                {
-                    deathlinkCause = "Squashed";
-                }
-                Log.Logger.Information($"Sending DeathLink. Cause: {deathlinkCause}");
-                if (deathlinkCause == "Unknown")
-                {
-                    deathlinkCause = Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2.";
-                }
-                else
-                {
-                    deathlinkCause = Client.CurrentSession.Players.ActivePlayer.Name + $" died in Spyro 2: {deathlinkCause}";
-                }
+                    _justDied = true;
+                    string deathlinkCause = "Unknown";
+                    if (health > 128)
+                    {
+                        deathlinkCause = "Damage";
+                    }
+                    else if (zPos > 0 && zPos < 0x400)
+                    {
+                        deathlinkCause = "Fell below death plane";
+                    }
+                    else if (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength)
+                    {
+                        deathlinkCause = "Fell to death";
+                    }
+                    else if (spyroState == (byte)SpyroStates.DeathBurn)
+                    {
+                        deathlinkCause = "Burned";
+                    }
+                    else if (spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116)
+                    {
+                        deathlinkCause = "Drowned";
+                    }
+                    else if (spyroState == (byte)SpyroStates.DeathSquash)
+                    {
+                        deathlinkCause = "Squashed";
+                    }
+                    Log.Logger.Information($"Sending DeathLink. Cause: {deathlinkCause}");
+                    if (deathlinkCause == "Unknown")
+                    {
+                        deathlinkCause = Client.CurrentSession.Players.ActivePlayer.Name + " died in Spyro 2.";
+                    }
+                    else
+                    {
+                        deathlinkCause = Client.CurrentSession.Players.ActivePlayer.Name + $" died in Spyro 2: {deathlinkCause}";
+                    }
                     _deathLinkService.SendDeathLink(new DeathLink(Client.CurrentSession.Players.ActivePlayer.Name, cause: deathlinkCause));
-            }
-            else if (_justDied &&
-                !(
-                    health > 128 ||
-                    zPos < 0x400 ||
-                    (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
-                    spyroState == (byte)SpyroStates.DeathBurn ||
-                    spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
-                    spyroState == (byte)SpyroStates.DeathSquash
+                }
+                else if (_justDied &&
+                    !(
+                        health > 128 ||
+                        zPos < 0x400 ||
+                        (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
+                        spyroState == (byte)SpyroStates.DeathBurn ||
+                        spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
+                        spyroState == (byte)SpyroStates.DeathSquash
+                    )
                 )
-            )
-            {
-                _justDied = false;
-                _justReceivedDeathLink = false;
+                {
+                    _justDied = false;
+                    _justReceivedDeathLink = false;
+                }
             }
-        }
 
-        if (gameStatus != GameStatus.Paused)
-        {
-            if (gemsanityOption != GemsanityOptions.Off)
+            if (gameStatus != GameStatus.Paused)
             {
-                // Disable updating local and global gem counts on collecting a gem, loading into a level, and respawning.
-                Memory.Write(Addresses.localGemIncrementAddress, 0);
-                Memory.Write(Addresses.globalGemIncrementAddress, 0);
-                Memory.Write(Addresses.globalGemRespawnFixAddress, 0);
-                Memory.Write(Addresses.localGemRespawnFixAddress, 0);
-                //Memory.Write(Addresses.localGemLoadFixAddress, 0);
-                //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
-            }
-            if (currentLevel == LevelInGameIDs.Colossus)
-            {
-                int startingGoals = int.Parse(Client.Options?.GetValueOrDefault("colossus_starting_goals", "0").ToString());
-                int currentGoals = (int)Memory.ReadByte(Addresses.ColossusSpyroHockeyScore);
-                if (currentGoals < startingGoals)
+                if (gemsanityOption != GemsanityOptions.Off)
                 {
-                    Memory.WriteByte(Addresses.ColossusSpyroHockeyScore, (byte)startingGoals);
-                    Memory.WriteByte(Addresses.spyroHUDScore, (byte)startingGoals);
+                    // Disable updating local and global gem counts on collecting a gem, loading into a level, and respawning.
+                    Memory.Write(Addresses.localGemIncrementAddress, 0);
+                    Memory.Write(Addresses.globalGemIncrementAddress, 0);
+                    Memory.Write(Addresses.globalGemRespawnFixAddress, 0);
+                    Memory.Write(Addresses.localGemRespawnFixAddress, 0);
+                    Memory.Write(Addresses.playBeepAddress, 0);
+                    //Memory.Write(Addresses.localGemLoadFixAddress, 0);
+                    //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
                 }
-            }
-            else if (currentLevel == LevelInGameIDs.IdolSprings)
-            {
-                bool easyFish = int.Parse(Client.Options?.GetValueOrDefault("idol_easy_fish", "0").ToString()) > 0;
-                if (easyFish)
+                if (currentLevel == LevelInGameIDs.Colossus)
                 {
-                    Memory.Write(Addresses.IdolFishThrowUp, 0x0802080c);
-                    Memory.Write(Addresses.IdolFishIncludeReds, 0x28820006);
-                    Memory.Write(Addresses.IdolFishIncludeRedsHUD, 0x28a20006);
-                }
-            }
-            else if (currentLevel == LevelInGameIDs.Hurricos)
-            {
-                bool easyLightningOrbs = int.Parse(Client.Options?.GetValueOrDefault("hurricos_easy_lightning_orbs", "0").ToString()) > 0;
-                if (easyLightningOrbs)
-                {
-                    foreach (uint thiefStatus in Addresses.HurricosLightningThiefStatuses)
+                    int startingGoals = int.Parse(Client.Options?.GetValueOrDefault("colossus_starting_goals", "0").ToString());
+                    int currentGoals = (int)Memory.ReadByte(Addresses.ColossusSpyroHockeyScore);
+                    if (currentGoals < startingGoals)
                     {
-                        Memory.WriteByte(thiefStatus, 253);
-                    }
-                    foreach (uint thiefZCoordinate in Addresses.HurricosLightningThiefZCoordinates)
-                    {
-                        Memory.Write(thiefZCoordinate, 0);
+                        Memory.WriteByte(Addresses.ColossusSpyroHockeyScore, (byte)startingGoals);
+                        Memory.WriteByte(Addresses.spyroHUDScore, (byte)startingGoals);
                     }
                 }
-            }
-            else if (currentLevel == LevelInGameIDs.BreezeHarbor)
-            {
-                int requiredGears = int.Parse(Client.Options?.GetValueOrDefault("breeze_required_gears", "0").ToString());
-                int currentGears = (int)Memory.ReadByte(Addresses.spyroHUDScore);
-                if (currentGears > 50)
+                else if (currentLevel == LevelInGameIDs.IdolSprings)
                 {
-                    Memory.WriteByte(Addresses.spyroHUDScore, 50);
-                }
-                else if (currentGears < 50 - requiredGears)
-                {
-                    Memory.WriteByte(Addresses.spyroHUDScore, (byte)(50 - requiredGears));
-                }
-            }
-            else if (currentLevel == LevelInGameIDs.Scorch)
-            {
-                // Nothing ever goes wrong in Scorch : )
-                BomboOptions bomboSettings = (BomboOptions)int.Parse(Client.Options?.GetValueOrDefault("scorch_bombo_settings", "0").ToString());
-                if (bomboSettings == BomboOptions.FirstOnly)
-                {
-                    Memory.WriteByte(Addresses.secondBomboStatus, 11);
-                    Memory.WriteByte(Addresses.thirdBomboStatus, 11);
-                }
-                else if (bomboSettings == BomboOptions.FirstOnlyNoAttack)
-                {
-                    Memory.WriteByte(Addresses.secondBomboStatus, 11);
-                    Memory.WriteByte(Addresses.thirdBomboStatus, 11);
-                    Memory.Write(Addresses.bomboAttackAddress, 0x0801E71E);
-                }
-            }
-            else if (currentLevel == LevelInGameIDs.FractureHills)
-            {
-                bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("fracture_require_headbash", "0").ToString()) > 0;
-                bool easyEarthshapers = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", "0").ToString()) > 0;
-                if (!requireHeadbash)
-                {
-                    Memory.Write(Addresses.fractureHeadbashCheck, 0x0801E2A5);
-                }
-                if (easyEarthshapers)
-                {
-                    foreach (uint earthshaperStatus in Addresses.FractureEarthshaperStatuses)
+                    bool easyFish = int.Parse(Client.Options?.GetValueOrDefault("idol_easy_fish", "0").ToString()) > 0;
+                    if (easyFish)
                     {
-                        Memory.WriteByte(earthshaperStatus, 253);
+                        Memory.Write(Addresses.IdolFishThrowUp, 0x0802080c);
+                        Memory.Write(Addresses.IdolFishIncludeReds, 0x28820006);
+                        Memory.Write(Addresses.IdolFishIncludeRedsHUD, 0x28a20006);
                     }
-                    foreach (uint earthshaperZCoordinate in Addresses.FractureEarthshaperZCoordinates)
+                }
+                else if (currentLevel == LevelInGameIDs.Hurricos)
+                {
+                    bool easyLightningOrbs = int.Parse(Client.Options?.GetValueOrDefault("hurricos_easy_lightning_orbs", "0").ToString()) > 0;
+                    if (easyLightningOrbs)
                     {
-                        Memory.Write(earthshaperZCoordinate, 0);
+                        foreach (uint thiefStatus in Addresses.HurricosLightningThiefStatuses)
+                        {
+                            Memory.WriteByte(thiefStatus, 253);
+                        }
+                        foreach (uint thiefZCoordinate in Addresses.HurricosLightningThiefZCoordinates)
+                        {
+                            Memory.Write(thiefZCoordinate, 0);
+                        }
                     }
-                    Memory.WriteByte(Addresses.maxFractureSpiritParticles, 22);
                 }
-            }
-            else if (currentLevel == LevelInGameIDs.MagmaCone)
-            {
-                int spyroStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_spyro_starting_popcorn", "0").ToString());
-                int hunterStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_hunter_starting_popcorn", "0").ToString());
-                int spyroScore = Memory.ReadByte(Addresses.spyroHUDScore);
-                int hunterScore = Memory.ReadByte(Addresses.opponentHUDScore);
-                if (spyroScore < spyroStartingScore)
+                else if (currentLevel == LevelInGameIDs.BreezeHarbor)
                 {
-                    Memory.WriteByte(Addresses.spyroHUDScore, (byte)spyroStartingScore);
+                    int requiredGears = int.Parse(Client.Options?.GetValueOrDefault("breeze_required_gears", "0").ToString());
+                    int currentGears = (int)Memory.ReadByte(Addresses.spyroHUDScore);
+                    if (currentGears > 50)
+                    {
+                        Memory.WriteByte(Addresses.spyroHUDScore, 50);
+                    }
+                    else if (currentGears < 50 - requiredGears)
+                    {
+                        Memory.WriteByte(Addresses.spyroHUDScore, (byte)(50 - requiredGears));
+                    }
                 }
-                if (hunterScore < hunterStartingScore)
+                else if (currentLevel == LevelInGameIDs.Scorch)
                 {
-                    Memory.WriteByte(Addresses.opponentHUDScore, (byte)hunterStartingScore);
+                    // Nothing ever goes wrong in Scorch : )
+                    BomboOptions bomboSettings = (BomboOptions)int.Parse(Client.Options?.GetValueOrDefault("scorch_bombo_settings", "0").ToString());
+                    if (bomboSettings == BomboOptions.FirstOnly)
+                    {
+                        Memory.WriteByte(Addresses.secondBomboStatus, 11);
+                        Memory.WriteByte(Addresses.thirdBomboStatus, 11);
+                    }
+                    else if (bomboSettings == BomboOptions.FirstOnlyNoAttack)
+                    {
+                        Memory.WriteByte(Addresses.secondBomboStatus, 11);
+                        Memory.WriteByte(Addresses.thirdBomboStatus, 11);
+                        Memory.Write(Addresses.bomboAttackAddress, 0x0801E71E);
+                    }
                 }
-            }
-            else if (currentLevel == LevelInGameIDs.ShadyOasis)
-            {
-                bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("shady_require_headbash", "0").ToString()) > 0;
-                if (!requireHeadbash)
+                else if (currentLevel == LevelInGameIDs.FractureHills)
                 {
-                    Memory.Write(Addresses.ShadyHeadbashCheck, 0x00000000);
+                    bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("fracture_require_headbash", "0").ToString()) > 0;
+                    bool easyEarthshapers = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", "0").ToString()) > 0;
+                    if (!requireHeadbash)
+                    {
+                        Memory.Write(Addresses.fractureHeadbashCheck, 0x0801E2A5);
+                    }
+                    if (easyEarthshapers)
+                    {
+                        foreach (uint earthshaperStatus in Addresses.FractureEarthshaperStatuses)
+                        {
+                            Memory.WriteByte(earthshaperStatus, 253);
+                        }
+                        foreach (uint earthshaperZCoordinate in Addresses.FractureEarthshaperZCoordinates)
+                        {
+                            Memory.Write(earthshaperZCoordinate, 0);
+                        }
+                        Memory.WriteByte(Addresses.maxFractureSpiritParticles, 22);
+                    }
                 }
-            }
-            else if (currentLevel == LevelInGameIDs.GulpsOverlook)
-            {
-                bool easyGulp = int.Parse(Client.Options?.GetValueOrDefault("easy_gulp", "0").ToString()) > 0;
-                if (easyGulp)
+                else if (currentLevel == LevelInGameIDs.MagmaCone)
                 {
-                    Memory.WriteByte(Addresses.GulpDoubleDamage, 1);
+                    int spyroStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_spyro_starting_popcorn", "0").ToString());
+                    int hunterStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_hunter_starting_popcorn", "0").ToString());
+                    int spyroScore = Memory.ReadByte(Addresses.spyroHUDScore);
+                    int hunterScore = Memory.ReadByte(Addresses.opponentHUDScore);
+                    if (spyroScore < spyroStartingScore)
+                    {
+                        Memory.WriteByte(Addresses.spyroHUDScore, (byte)spyroStartingScore);
+                    }
+                    if (hunterScore < hunterStartingScore)
+                    {
+                        Memory.WriteByte(Addresses.opponentHUDScore, (byte)hunterStartingScore);
+                    }
                 }
-            }
-            else if (currentLevel == LevelInGameIDs.WinterTundra)
-            {
-                Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
-                Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
-            }
-            LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
-            if (levelLockOption == LevelLockOptions.Keys)
-            {
-                if (currentLevel == LevelInGameIDs.SummerForest)
+                else if (currentLevel == LevelInGameIDs.ShadyOasis)
                 {
-                    bool isIdolUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
-                    bool isColossusUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Colossus Unlock")).Count() ?? 0) > 0;
-                    bool isHurricosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Hurricos Unlock")).Count() ?? 0) > 0;
-                    bool isAquariaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
-                    bool isSunnyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
-                    bool isOceanUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
-                    bool[] summerUnlocks = [
-                        isIdolUnlocked,
+                    bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("shady_require_headbash", "0").ToString()) > 0;
+                    if (!requireHeadbash)
+                    {
+                        Memory.Write(Addresses.ShadyHeadbashCheck, 0x00000000);
+                    }
+                }
+                else if (currentLevel == LevelInGameIDs.GulpsOverlook)
+                {
+                    bool easyGulp = int.Parse(Client.Options?.GetValueOrDefault("easy_gulp", "0").ToString()) > 0;
+                    if (easyGulp)
+                    {
+                        Memory.WriteByte(Addresses.GulpDoubleDamage, 1);
+                    }
+                }
+                else if (currentLevel == LevelInGameIDs.WinterTundra)
+                {
+                    Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
+                    Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
+                }
+                LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+                if (levelLockOption == LevelLockOptions.Keys)
+                {
+                    if (currentLevel == LevelInGameIDs.SummerForest)
+                    {
+                        bool isIdolUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
+                        bool isColossusUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Colossus Unlock")).Count() ?? 0) > 0;
+                        bool isHurricosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Hurricos Unlock")).Count() ?? 0) > 0;
+                        bool isAquariaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
+                        bool isSunnyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
+                        bool isOceanUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
+                        bool[] summerUnlocks = [
+                            isIdolUnlocked,
                         isColossusUnlocked,
                         isHurricosUnlocked,
                         isAquariaUnlocked,
                         isSunnyUnlocked,
                         isOceanUnlocked
-                    ];
-                    // Glimmer is always unlocked.
-                    uint portalAddress = Addresses.SummerPortalBlock + 8;
-                    foreach (bool isUnlocked in summerUnlocks)
-                    {
-                        if (isUnlocked)
+                        ];
+                        // Glimmer is always unlocked.
+                        uint portalAddress = Addresses.SummerPortalBlock + 8;
+                        foreach (bool isUnlocked in summerUnlocks)
                         {
-                            Memory.Write(portalAddress, 6);
+                            if (isUnlocked)
+                            {
+                                Memory.Write(portalAddress, 6);
+                            }
+                            else
+                            {
+                                Memory.Write(portalAddress, 0);
+                            }
+                            portalAddress += 8;
                         }
-                        else
-                        {
-                            Memory.Write(portalAddress, 0);
-                        }
-                        portalAddress += 8;
                     }
-                }
-                else if (currentLevel == LevelInGameIDs.AutumnPlains)
-                {
-                    bool isSkelosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
-                    bool isCrystalUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
-                    bool isBreezeUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
-                    bool isZephyrUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Zephyr Unlock")).Count() ?? 0) > 0;
-                    bool isMetroUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
-                    bool isScorchUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Scorch Unlock")).Count() ?? 0) > 0;
-                    bool isShadyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
-                    bool isMagmaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Magma Cone Unlock")).Count() ?? 0) > 0;
-                    bool isFractureUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
-                    bool isIcyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
-                    bool[] autumnUnlocks = [
-                        isSkelosUnlocked,
+                    else if (currentLevel == LevelInGameIDs.AutumnPlains)
+                    {
+                        bool isSkelosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
+                        bool isCrystalUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
+                        bool isBreezeUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
+                        bool isZephyrUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Zephyr Unlock")).Count() ?? 0) > 0;
+                        bool isMetroUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
+                        bool isScorchUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Scorch Unlock")).Count() ?? 0) > 0;
+                        bool isShadyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
+                        bool isMagmaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Magma Cone Unlock")).Count() ?? 0) > 0;
+                        bool isFractureUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
+                        bool isIcyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
+                        bool[] autumnUnlocks = [
+                            isSkelosUnlocked,
                         isCrystalUnlocked,
                         isBreezeUnlocked,
                         isZephyrUnlocked,
@@ -1000,57 +1023,64 @@ public partial class App : Application
                         isMagmaUnlocked,
                         isFractureUnlocked,
                         isIcyUnlocked
-                    ];
-                    uint portalAddress = Addresses.AutumnPortalBlock;
-                    foreach (bool isUnlocked in autumnUnlocks)
-                    {
-                        if (isUnlocked)
+                        ];
+                        uint portalAddress = Addresses.AutumnPortalBlock;
+                        foreach (bool isUnlocked in autumnUnlocks)
                         {
-                            Memory.Write(portalAddress, 6);
+                            if (isUnlocked)
+                            {
+                                Memory.Write(portalAddress, 6);
+                            }
+                            else
+                            {
+                                Memory.Write(portalAddress, 0);
+                            }
+                            portalAddress += 8;
                         }
-                        else
-                        {
-                            Memory.Write(portalAddress, 0);
-                        }
-                        portalAddress += 8;
                     }
-                }
-                else if (currentLevel == LevelInGameIDs.WinterTundra)
-                {
-                    bool isMysticUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
-                    bool isCloudUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
-                    bool isCanyonUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
-                    bool isRoboticaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
-                    bool isMetropolisUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
-                    bool isDragonShoresUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
-                    // This order does not match the index order, for whatever reason.
-                    bool[] winterUnlocks = [
-                        isMysticUnlocked,
+                    else if (currentLevel == LevelInGameIDs.WinterTundra)
+                    {
+                        bool isMysticUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
+                        bool isCloudUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
+                        bool isCanyonUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
+                        bool isRoboticaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
+                        bool isMetropolisUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
+                        bool isDragonShoresUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                        // This order does not match the index order, for whatever reason.
+                        bool[] winterUnlocks = [
+                            isMysticUnlocked,
                         isCloudUnlocked,
                         isRoboticaUnlocked,
                         isMetropolisUnlocked,
                         isCanyonUnlocked,
                         isDragonShoresUnlocked
-                    ];
-                    uint portalAddress = Addresses.WinterPortalBlock;
-                    foreach (bool isUnlocked in winterUnlocks)
-                    {
-                        if (isUnlocked)
+                        ];
+                        uint portalAddress = Addresses.WinterPortalBlock;
+                        foreach (bool isUnlocked in winterUnlocks)
                         {
-                            Memory.Write(portalAddress, 6);
+                            if (isUnlocked)
+                            {
+                                Memory.Write(portalAddress, 6);
+                            }
+                            else
+                            {
+                                Memory.Write(portalAddress, 0);
+                            }
+                            portalAddress += 8;
                         }
-                        else
-                        {
-                            Memory.Write(portalAddress, 0);
-                        }
-                        portalAddress += 8;
                     }
                 }
             }
+
+            _previousLifeCount = lifeCount;
+            _previousLevel = currentLevel;
         }
-        
-        _previousLifeCount = lifeCount;
-        _previousLevel = currentLevel;
+        catch (Exception ex)
+        {
+            Log.Logger.Warning("Encountered an error while managing the game loop.");
+            Log.Logger.Warning(ex.ToString());
+            Log.Logger.Warning("This is not necessarily a problem if it happens during release or collect.");
+        }
     }
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
@@ -1212,7 +1242,7 @@ public partial class App : Application
             }
         }
     }
-    private static void StartSpyroGame(object source, ElapsedEventArgs e)
+    private static async void StartSpyroGame(object source, ElapsedEventArgs e)
     {
         if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
         {
@@ -1278,7 +1308,14 @@ public partial class App : Application
             }
         }
         CheckGoalCondition();
-        _loadGameTimer.Enabled = false;
+        await Task.Delay(5000);
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        Helpers.UpdateLocationList(currentLevel, Client);
+        _handleGemsanity = true;
+        if (_loadGameTimer != null)
+        {
+            _loadGameTimer.Enabled = false;
+        }
     }
     private static void CheckGoalCondition()
     {
@@ -1454,6 +1491,16 @@ public partial class App : Application
     }
     private static void Locations_CheckedLocationsUpdated(System.Collections.ObjectModel.ReadOnlyCollection<long> newCheckedLocations)
     {
+        foreach (long location in newCheckedLocations)
+        {
+            foreach (LevelInGameIDs levelID in Helpers.remainingGemsanityChecks.Keys)
+            {
+                if (Helpers.remainingGemsanityChecks[levelID].Keys.Contains((int)location))
+                {
+                    Helpers.remainingGemsanityChecks[levelID].Remove((int)location);
+                }
+            }
+        }
         if (Client.ItemState == null || Client.CurrentSession == null) return;
         if (!Helpers.IsInGame())
         {
@@ -1617,6 +1664,7 @@ public partial class App : Application
         _sparxUpgrades = 0;
         _hasSubmittedGoal = false;
         _useQuietHints = true;
+        _handleGemsanity = false;
         _unlockedLevels = 0;
         Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
         Log.Logger.Information("Trying to play with a different version will not work and may release all of your locations at the start.");
