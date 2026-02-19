@@ -151,6 +151,7 @@ namespace S2AP
         public const uint localGemRespawnFixAddress = 0x0001d380;
         public const uint localGemLoadFixAddress = 0x00076B98;
         public const uint globalGemLoadFixAddress = 0x00076BA0;
+        public const uint playBeepAddress = 0x5429c;
 
         public const uint SummerPortalBlock = 0x000e2d34;
         public const uint AutumnPortalBlock = 0x000f5330;

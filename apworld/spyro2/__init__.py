@@ -1,8 +1,9 @@
 # world/spyro2/__init__.py
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Union, ClassVar
 
 from BaseClasses import MultiWorld, Region, Item, Entrance, Tutorial, ItemClassification
 from Options import OptionError
+from settings import Group, Bool
 
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import set_rule, add_rule, add_item_rule, forbid_item
@@ -11,6 +12,16 @@ from .Items import Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_nam
 from .Locations import Spyro2Location, Spyro2LocationCategory, location_tables, location_dictionary
 from .Options import Spyro2Option, GoalOptions, GemsanityOptions, MoneybagsOptions, SparxUpgradeOptions, \
     AbilityOptions, RandomizeGemColorOptions, LevelLockOptions, spyro_options_groups
+
+
+class Spyro2Settings(Group):
+
+    class AllowFullGemsanity(Bool):
+        """Permits full gemsanity options for multiplayer games.
+        Full gemsanity adds 2546 locations and an equal number of progression items.
+        These items may be local-only or spread across the multiworld."""
+
+    allow_full_gemsanity: Union[AllowFullGemsanity, bool] = False
 
 
 class Spyro2Web(WebWorld):
@@ -44,7 +55,7 @@ class Spyro2World(World):
     enabled_location_categories: Set[Spyro2LocationCategory]
     required_client_version = (0, 5, 0)
     # TODO: Remember to update this!
-    ap_world_version = "1.0.2"
+    ap_world_version = "1.1.0"
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
@@ -52,6 +63,7 @@ class Spyro2World(World):
     key_locked_levels = []
     glitches_item_name: str = "Glitched Item"  # UT Glitched Logic Support, Not implemented yet.
     options_copy = []  # Copy of options used to support UT.
+    settings: ClassVar[Spyro2Settings]
 
     # TODO: Remember to keep this False.
     PRINT_GEM_REQS = False  # Prints out the logic for each gem on generating a seed. Not for production use.
@@ -131,10 +143,16 @@ class Spyro2World(World):
                 self.chosen_gem_locations = []
             else:
                 self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=200)
+        if self.options.enable_gemsanity.value in [GemsanityOptions.FULL, GemsanityOptions.FULL_GLOBAL]:
+            if not self.settings.allow_full_gemsanity and self.multiworld.players > 1:
+                raise OptionError(f"Spyro 2: Player {self.player_name} has gemsanity set to full, which adds 2546 progression "
+                                  f"items and locations to the pool and may result in long generation times. "
+                                  f"They must either switch to partial gemsanity, or the "
+                                  f"host needs to enable allow_full_gemsanity in their host.yaml settings.")
         if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
             for itemname, item in item_dictionary.items():
                 if item.category == Spyro2ItemCategory.GEM:
-                    self.options.local_items.value.add(item)
+                    self.options.local_items.value.add(itemname)
         if self.options.enable_spirit_particle_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
 
@@ -628,7 +646,7 @@ class Spyro2World(World):
             swim_gems = [1, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 49, 50, 51, 52, 53, 54, 68, 69, 74, 77, 78, 79, 80, 87, 88, 89, 90, 91, 92, 93, 116, 117, 118, 119, 120, 121, 138, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158]
             climb_gems = [83, 84, 85, 86, 94, 102, 103, 104, 105, 106]
             aquaria_gems = [2, 3, 4, 5, 13, 21, 101, 107]
-            empty_bits = [27, 39, 41, 42, 43, 44, 45, 46, 47, 61, 62, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]
+            empty_bits = [27, 41, 42, 43, 44, 45, 46, 47, 61, 62, 63, 72, 73, 81, 82, 95, 96, 97, 98, 99, 100, 108, 126, 127, 128]
             for gem in swim_gems:
                 skipped_bits = 0
                 for bit in empty_bits:
