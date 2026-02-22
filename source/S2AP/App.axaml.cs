@@ -899,13 +899,20 @@ public partial class App : Application
                     BomboOptions bomboSettings = (BomboOptions)int.Parse(Client.Options?.GetValueOrDefault("scorch_bombo_settings", "0").ToString());
                     if (bomboSettings == BomboOptions.FirstOnly)
                     {
+                        // Mark the other two bombos as complete, and move their models out of rendering range.
+                        // Otherwise, their models appear on the flagpoles.
+                        // -0x35 is the offset from status to z coordinate
                         Memory.WriteByte(Addresses.secondBomboStatus, 11);
+                        Memory.Write(Addresses.secondBomboStatus - 0x35, 100000);
                         Memory.WriteByte(Addresses.thirdBomboStatus, 11);
+                        Memory.Write(Addresses.thirdBomboStatus - 0x35, 100000);
                     }
                     else if (bomboSettings == BomboOptions.FirstOnlyNoAttack)
                     {
                         Memory.WriteByte(Addresses.secondBomboStatus, 11);
+                        Memory.Write(Addresses.secondBomboStatus - 0x35, 100000);
                         Memory.WriteByte(Addresses.thirdBomboStatus, 11);
+                        Memory.Write(Addresses.thirdBomboStatus - 0x35, 100000);
                         Memory.Write(Addresses.bomboAttackAddress, 0x0801E71E);
                     }
                 }
