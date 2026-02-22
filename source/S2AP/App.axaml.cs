@@ -832,7 +832,7 @@ public partial class App : Application
                 }
             }
 
-            if (gameStatus != GameStatus.Paused)
+            if (gameStatus != GameStatus.Paused && gameStatus != GameStatus.LoadingWorld)
             {
                 if (gemsanityOption != GemsanityOptions.Off)
                 {
