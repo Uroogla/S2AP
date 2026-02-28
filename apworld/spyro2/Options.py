@@ -2,7 +2,7 @@ import typing
 from dataclasses import dataclass
 from Options import Toggle, DefaultOnToggle, Option, Range, Choice, ItemDict, DeathLink, PerGameCommonOptions, OptionGroup
 
-class GoalOptions():
+class GoalOptions:
     RIPTO = 0
     SIXTY_FOUR_ORB = 3
     HUNDRED_PERCENT = 4
@@ -11,42 +11,48 @@ class GoalOptions():
     EPILOGUE = 7
     ORB_HUNT = 8
 
-class LevelLockOptions():
+class LevelLockOptions:
     VANILLA = 0
     KEYS = 1
     ORBS = 2
 
-class MoneybagsOptions():
+class MoneybagsOptions:
     VANILLA = 0
     PRICE_SHUFFLE = 1
     MONEYBAGSSANITY = 2
 
-class GemsanityOptions():
+class GemsanityOptions:
     OFF = 0
     PARTIAL = 1
     FULL = 2
     FULL_GLOBAL = 3
 
-class SparxUpgradeOptions():
+class SparxUpgradeOptions:
     OFF = 0
     BLUE = 1
     GREEN = 2
     SPARXLESS = 3
     TRUE_SPARXLESS = 4
 
-class AbilityOptions():
+class AbilityOptions:
     VANILLA = 0
     IN_POOL = 1
     OFF = 2
     START_WITH = 3
 
-class BomboOptions():
+class BomboOptions:
     VANILLA = 0
     THIRD_ONLY = 1
     FIRST_ONLY = 2
     FIRST_ONLY_NO_ATTACK = 3
 
-class PortalTextColorOptions():
+class TrickDifficultyOptions:
+    OFF = 0
+    EASY = 1
+    MEDIUM = 2
+    HARD = 3
+
+class PortalTextColorOptions:
     DEFAULT = 0
     RED = 1
     GREEN = 2
@@ -54,7 +60,7 @@ class PortalTextColorOptions():
     PINK = 4
     WHITE = 5
 
-class RandomizeGemColorOptions():
+class RandomizeGemColorOptions:
     DEFAULT = 0
     SHUFFLE = 1
     RANDOM = 2
@@ -326,6 +332,18 @@ class FireballAbility(Choice):
     option_off = AbilityOptions.OFF
     option_start_with = AbilityOptions.START_WITH
 
+class TrickDifficulty(Choice):
+    """Determines which tricks, if any, are in logic.
+    See https://docs.google.com/spreadsheets/d/1jLFQIIgCVBAWxlYPJLDG4EdR0Dh1_U4Rb67XrZNhwqw
+    Off: Only dev-intended strategies are expected.
+    Easy: Straightforward double jumps and fireball usage may be required.
+    Medium: Standard speedrunning tricks, including more difficult double jumps, may be required."""
+    display_name = "Trick Difficulty"
+    default = TrickDifficultyOptions.OFF
+    option_off = TrickDifficultyOptions.OFF
+    option_easy = TrickDifficultyOptions.EASY
+    option_medium = TrickDifficultyOptions.MEDIUM
+
 class ColossusStartingGoals(Range):
     """Determines how many goals you start with in both Colossus orb challenges."""
     display_name = "Colossus Starting Goals"
@@ -390,7 +408,7 @@ class MagmaHunterStartingPopcorn(Range):
 class ShadyRequireHeadbash(DefaultOnToggle):
     """Determines if Free Hippos in Shady Oasis requires headbash to start.
     Without headbash, this orb can be completed with fireball.
-    This does not change the orb's logic or change how it plays."""
+    This changes the orb's logic."""
     display_name = "Shady Require Headbash"
 
 class EasyGulp(Toggle):
@@ -461,6 +479,7 @@ class Spyro2Option(PerGameCommonOptions):
     enable_progressive_sparx_logic: ProgressiveSparxHealthLogic
     double_jump_ability: DoubleJumpAbility
     permanent_fireball_ability: FireballAbility
+    trick_difficulty: TrickDifficulty
     colossus_starting_goals: ColossusStartingGoals
     idol_easy_fish: IdolEasyFish
     hurricos_easy_lightning_orbs: HurricosEasyLightningOrbs
@@ -481,6 +500,7 @@ spyro_options_groups = [
     OptionGroup(
         "Difficulty",
         [
+            TrickDifficulty,
             ColossusStartingGoals,
             IdolEasyFish,
             HurricosEasyLightningOrbs,
