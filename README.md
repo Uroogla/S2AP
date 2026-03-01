@@ -111,3 +111,29 @@ If playing on a new save file, you will still need to get to the end of each lev
 - `useVerboseHints` Include found locations in hint lists. Due to Archipelago Server limitations, only applies to hints requested after this change.
 - `showUnlockedLevels` Show which levels the player has unlocked in open world mode.
 - `showGoal` Show what your completion goal is.
+
+## Known Issues and Tentative Roadmap
+
+As of v1.1.1, 1 Mar 2026:
+### Known Issues
+- If your goal doesn't send, restart+reconnect the client.
+- In full gemsanity, there is a small chance that a sent gem will not be received.  If this happens, send `clearSpyroGameState` as a message in your client and follow the reconnect instructions to fix it. (Likely fixed for 1.2.0)
+- Easy Bombo has odd behavior.  Interact only with the Bombo closest to the end of level. (Fixed for 1.2.0)
+- Sharks in Aquaria Towers do not trigger Death Link.
+- During Gemsanity, loading into an existing save may release some gem% checks incorrectly, based on what you've collected rather than received.
+- Connecting to the client in a homeworld may warp Spyro or unlock doors based on your vanilla completion, not what you have received.
+- If your YAML file allows Archipelago to randomly pick settings, Universal Tracker may not track correctly.
+
+Please report here if you encounter any unexpected behavior!
+
+### Current Roadmap:
+- Add trick logic
+- Sparx powerups as items (extended range, always point to nearest gem, extra hit point cheat code)
+- Add locks around powerups
+- Implement Entrance Randomizer
+- Client should inform user on disconnect
+- Support PAL and NTSC-J
+- Support Mac and Linux
+- Client performance improvements
+
+For latest list of known issues and desired features, see https://github.com/Uroogla/S2AP/issues.  Reporting issues in the Archipelago Discord thread for Spyro 2 is preferred, but reports to this link will be read as well.
