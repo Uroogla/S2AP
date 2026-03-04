@@ -7,6 +7,7 @@ using Archipelago.Core.Models;
 using Archipelago.Core.Util;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
+using Archipelago.MultiClient.Net.Models;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -633,7 +634,7 @@ public partial class App : Application
     }
     private void showUnlockedLevels()
     {
-        List<Item> unlockedLevels = (Client.ItemState?.ReceivedItems.Where(x => x.Name.EndsWith(" Unlock")).ToList() ?? new List<Item>());
+        List<ItemInfo> unlockedLevels = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName.EndsWith(" Unlock")).ToList() ?? new List<ItemInfo>());
         if (unlockedLevels.Count > _unlockedLevels)
         {
             _unlockedLevels = unlockedLevels.Count;
@@ -647,15 +648,15 @@ public partial class App : Application
             Log.Logger.Information("You have unlocked: ");
             string unlockedLevelsString = "";
             int levelCount = 0;
-            foreach (Item unlockedLevel in unlockedLevels)
+            foreach (ItemInfo unlockedLevel in unlockedLevels)
             {
-                if (unlockedLevel.Name == "Dragon Shores Unlock")
+                if (unlockedLevel.ItemName == "Dragon Shores Unlock")
                 {
                     unlockedLevelsString += ("Shores" + "; ");
                 }
                 else
                 {
-                    string newLevel = unlockedLevel.Name.Split(" Unlock")[0].Split(" ")[0];
+                    string newLevel = unlockedLevel.ItemName.Split(" Unlock")[0].Split(" ")[0];
                     unlockedLevelsString += (newLevel + "; ");
                 }
                 levelCount++;
@@ -691,9 +692,9 @@ public partial class App : Application
             CheckGoalCondition();
             byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
             AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
-            int hasDoubleJumpItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Double Jump Ability").Count() ?? 0);
+            int hasDoubleJumpItem = (byte)(Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Double Jump Ability").Count() ?? 0);
             AbilityOptions fireballOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("permanent_fireball_ability", "0").ToString());
-            int hasFireballItem = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Permanent Fireball Ability").Count() ?? 0);
+            int hasFireballItem = (byte)(Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Permanent Fireball Ability").Count() ?? 0);
 
             if (doubleJumpOption == AbilityOptions.AlwaysOff || doubleJumpOption == AbilityOptions.InPool && hasDoubleJumpItem == 0)
             {
@@ -978,12 +979,12 @@ public partial class App : Application
                 {
                     if (currentLevel == LevelInGameIDs.SummerForest)
                     {
-                        bool isIdolUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Idol Springs Unlock")).Count() ?? 0) > 0;
-                        bool isColossusUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Colossus Unlock")).Count() ?? 0) > 0;
-                        bool isHurricosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Hurricos Unlock")).Count() ?? 0) > 0;
-                        bool isAquariaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
-                        bool isSunnyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
-                        bool isOceanUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
+                        bool isIdolUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Idol Springs Unlock")).Count() ?? 0) > 0;
+                        bool isColossusUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Colossus Unlock")).Count() ?? 0) > 0;
+                        bool isHurricosUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Hurricos Unlock")).Count() ?? 0) > 0;
+                        bool isAquariaUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Aquaria Towers Unlock")).Count() ?? 0) > 0;
+                        bool isSunnyUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Sunny Beach Unlock")).Count() ?? 0) > 0;
+                        bool isOceanUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
                         bool[] summerUnlocks = [
                             isIdolUnlocked,
                         isColossusUnlocked,
@@ -1009,16 +1010,16 @@ public partial class App : Application
                     }
                     else if (currentLevel == LevelInGameIDs.AutumnPlains)
                     {
-                        bool isSkelosUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
-                        bool isCrystalUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
-                        bool isBreezeUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
-                        bool isZephyrUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Zephyr Unlock")).Count() ?? 0) > 0;
-                        bool isMetroUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
-                        bool isScorchUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Scorch Unlock")).Count() ?? 0) > 0;
-                        bool isShadyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
-                        bool isMagmaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Magma Cone Unlock")).Count() ?? 0) > 0;
-                        bool isFractureUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
-                        bool isIcyUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
+                        bool isSkelosUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Skelos Badlands Unlock")).Count() ?? 0) > 0;
+                        bool isCrystalUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Crystal Glacier Unlock")).Count() ?? 0) > 0;
+                        bool isBreezeUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Breeze Harbor Unlock")).Count() ?? 0) > 0;
+                        bool isZephyrUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Zephyr Unlock")).Count() ?? 0) > 0;
+                        bool isMetroUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Metro Speedway Unlock")).Count() ?? 0) > 0;
+                        bool isScorchUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Scorch Unlock")).Count() ?? 0) > 0;
+                        bool isShadyUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Shady Oasis Unlock")).Count() ?? 0) > 0;
+                        bool isMagmaUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Magma Cone Unlock")).Count() ?? 0) > 0;
+                        bool isFractureUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Fracture Hills Unlock")).Count() ?? 0) > 0;
+                        bool isIcyUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
                         bool[] autumnUnlocks = [
                             isSkelosUnlocked,
                         isCrystalUnlocked,
@@ -1047,12 +1048,12 @@ public partial class App : Application
                     }
                     else if (currentLevel == LevelInGameIDs.WinterTundra)
                     {
-                        bool isMysticUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
-                        bool isCloudUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
-                        bool isCanyonUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
-                        bool isRoboticaUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
-                        bool isMetropolisUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Metropolis Unlock")).Count() ?? 0) > 0;
-                        bool isDragonShoresUnlocked = (Client.ItemState?.ReceivedItems.Where(x => x.Name == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                        bool isMysticUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Mystic Marsh Unlock")).Count() ?? 0) > 0;
+                        bool isCloudUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Cloud Temples Unlock")).Count() ?? 0) > 0;
+                        bool isCanyonUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
+                        bool isRoboticaUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
+                        bool isMetropolisUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Metropolis Unlock")).Count() ?? 0) > 0;
+                        bool isDragonShoresUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
                         // This order does not match the index order, for whatever reason.
                         bool[] winterUnlocks = [
                             isMysticUnlocked,
@@ -1155,7 +1156,7 @@ public partial class App : Application
             foreach (string levelName in levelNames.Keys)
             {
                 uint[] nameAddresses = levelNames[levelName];
-                if ((Client.ItemState?.ReceivedItems.Where(x => x.Name == $"{levelName} Unlock").Count() ?? 0) == 0)
+                if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0)
                 {
                     WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
                 }
@@ -1287,8 +1288,8 @@ public partial class App : Application
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
                 if (
-                    (Client.ItemState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0 &&
-                    (Client.ItemState?.ReceivedItems.Where(x => x.Name == "Ripto Defeated").Count() ?? 0) == 0
+                    (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0 &&
+                    (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Ripto Defeated").Count() ?? 0) == 0
                 )
                 {
                     Memory.Write(unlockAddress, 20001);
@@ -1304,7 +1305,7 @@ public partial class App : Application
             foreach (string unlock in moneybagsAddresses.Keys)
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
-                if ((Client.ItemState?.ReceivedItems.Where(x => x.Name == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
+                if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
                 {
                     Memory.Write(unlockAddress, 0);
                 }
@@ -1350,7 +1351,7 @@ public partial class App : Application
         int isOpenWorld = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", 0).ToString());
         if ((CompletionGoal)goal == CompletionGoal.Ripto)
         {
-            if (currentOrbs >= _requiredOrbs && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= _requiredOrbs && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1358,7 +1359,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.SixtyFourOrb)
         {
-            if (currentOrbs >= 64 && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= 64 && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1366,7 +1367,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.HundredPercent)
         {
-            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1374,7 +1375,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.TenTokens)
         {
-            if (currentTokens >= 10)
+            if (currentTokens >= 10 && currentOrbs >= 55 && currentGems >= 8000)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1390,7 +1391,7 @@ public partial class App : Application
         }
         else if ((CompletionGoal)goal == CompletionGoal.Epilogue)
         {
-            if (currentSkillPoints >= 16 && (Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Ripto Defeated").Count() ?? 0) > 0)
+            if (currentSkillPoints >= 16 && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
                 Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
@@ -1485,7 +1486,7 @@ public partial class App : Application
         {
             RxApp.MainThreadScheduler.Schedule(() =>
             {
-                spans.Add(new TextSpan() { Text = part.Text, TextColor = new SolidColorBrush(Color.FromRgb(part.Color.R, part.Color.G, part.Color.B)) });
+                spans.Add(new TextSpan() { Text = part.Text, TextColor = new SolidColorBrush(Avalonia.Media.Color.FromRgb(part.Color.R, part.Color.G, part.Color.B)) });
             });
         }
         lock (_lockObject)
@@ -1542,9 +1543,9 @@ public partial class App : Application
     }
     private static Dictionary<string, int> CalculateCurrentTalismans()
     {
-        var summerCount = Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Summer Forest Talisman").Count() ?? 0;
+        var summerCount = Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Summer Forest Talisman").Count() ?? 0;
         summerCount = Math.Min(summerCount, 6);
-        var autumnCount = Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Autumn Plains Talisman").Count() ?? 0;
+        var autumnCount = Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Autumn Plains Talisman").Count() ?? 0;
         autumnCount = Math.Min(autumnCount, 8);
         var currentLevel = Memory.ReadByte(Addresses.CurrentLevelAddress);
         // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
@@ -1568,7 +1569,7 @@ public partial class App : Application
     }
     private static int CalculateCurrentOrbs()
     {
-        var count = Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Orb").Count() ?? 0;
+        var count = Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Orb").Count() ?? 0;
         count = Math.Min(count, 64);
         Memory.WriteByte(Addresses.TotalOrbAddress, (byte)(count));
         return count;
@@ -1588,12 +1589,12 @@ public partial class App : Application
             if (!level.Name.Contains("Speedway"))
             {
                 string levelName = level.Name;
-                int levelGemCount = Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Red Gem").Count() ?? 0;
-                levelGemCount += 2 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Green Gem").Count() ?? 0);
-                levelGemCount += 5 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Blue Gem").Count() ?? 0);
-                levelGemCount += 10 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Gold Gem").Count() ?? 0);
-                levelGemCount += 25 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} Pink Gem").Count() ?? 0);
-                levelGemCount += 50 * (Client.ItemState?.ReceivedItems?.Where(x => x != null && x.Name == $"{levelName} 50 Gems").Count() ?? 0);
+                int levelGemCount = Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Red Gem").Count() ?? 0;
+                levelGemCount += 2 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Green Gem").Count() ?? 0);
+                levelGemCount += 5 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Blue Gem").Count() ?? 0);
+                levelGemCount += 10 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Gold Gem").Count() ?? 0);
+                levelGemCount += 25 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Pink Gem").Count() ?? 0);
+                levelGemCount += 50 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} 50 Gems").Count() ?? 0);
                 Memory.Write(levelGemCountAddress, levelGemCount);
                 totalGems += levelGemCount;
             } else
@@ -1608,11 +1609,11 @@ public partial class App : Application
     }
     private static int CalculateCurrentSkillPoints()
     {
-        return Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Skill Point").Count() ?? 0;
+        return Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Skill Point").Count() ?? 0;
     }
     private static int CalculateCurrentTokens()
     {
-        return Client.ItemState?.ReceivedItems.Where(x => x != null && x.Name == "Dragon Shores Token").Count() ?? 0;
+        return Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Dragon Shores Token").Count() ?? 0;
     }
     private static void OnConnected(object sender, EventArgs args)
     {
@@ -1641,7 +1642,7 @@ public partial class App : Application
         ProgressiveSparxHealthOptions sparxOption = (ProgressiveSparxHealthOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_progressive_sparx_health", "0").ToString());
         if (sparxOption != ProgressiveSparxHealthOptions.Off)
         {
-            _sparxUpgrades = (byte)(Client.ItemState?.ReceivedItems.Where(x => x.Name == "Progressive Sparx Health Upgrade").Count() ?? 0);
+            _sparxUpgrades = (byte)(Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Progressive Sparx Health Upgrade").Count() ?? 0);
             if (sparxOption == ProgressiveSparxHealthOptions.Blue)
             {
                 _sparxUpgrades += 2;
