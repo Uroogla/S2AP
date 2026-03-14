@@ -15,6 +15,7 @@ using Avalonia.Media;
 using Newtonsoft.Json;
 using ReactiveUI;
 using S2AP.Models;
+using S2AP.Patching;
 using Serilog;
 using System;
 using System.Collections.Concurrent;
@@ -29,11 +30,14 @@ using static S2AP.Models.Enums;
 
 namespace S2AP;
 
+/**
+ * Represents the client, interactions with the AP server, any runtime game modifications.
+ */
 public partial class App : Application
 {
     // TODO: Remember to set this in S2AP.Desktop as well.
-    public static string Version = "1.1.1";
-    public static List<string> SupportedVersions = ["1.1.0", "1.1.1"];
+    public static string Version = "1.2.0";
+    public static List<string> SupportedVersions = ["1.2.0"];
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
@@ -64,6 +68,12 @@ public partial class App : Application
     {
         AvaloniaXamlLoader.Load(this);
     }
+
+    /**
+     * The client relies on having admin permissions to modify Duckstation's memory.
+     * This function would raise an exception on Unix.
+     * @return true if the user is an admin, or false otherwise.
+     */
     private static bool IsRunningAsAdministrator()
     {
         var identity = WindowsIdentity.GetCurrent();
@@ -90,16 +100,20 @@ public partial class App : Application
         }
         base.OnFrameworkInitializationCompleted();
     }
+    
+    /**
+     * Runs on starting the application.
+     * Sets up handlers and gives initial information to the user.
+     */
     public void Start()
     {
-        Context = new MainWindowViewModel("0.6.1 or later");
+        Context = new MainWindowViewModel("0.6.1 or later");  // Minimum AP Version
         Context.ClientVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
         Context.ConnectClicked += Context_ConnectClicked;
         Context.CommandReceived += (e, a) =>
         {
             if (string.IsNullOrWhiteSpace(a.Command)) return;
-            Client?.SendMessage(a.Command);
-            HandleCommand(a.Command);
+            HandleCommand(a);
         };
         Context.ConnectButtonEnabled = true;
         Context.AutoscrollEnabled = true;
@@ -110,15 +124,25 @@ public partial class App : Application
         _useQuietHints = true;
         // No level ID set
         _previousLevel = (LevelInGameIDs)255;
-        Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
-        Log.Logger.Information("Trying to play with a different version will not work and may release all of your locations at the start.");
+        Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U\r\n" +
+            "release of Spyro 2 (North America version).\r\n\r\n" +
+            "This game has an optional Archipelago patch, which fixes a few small bugs.\r\n" +
+            "If you put your vanilla game .bin and .cue files, named spyro2.bin and spyro2.cue,\r\n" +
+            "in the same folder as this S2AP.Desktop client executable,\r\n" +
+            "you can generate it using the !patch command.\r\n");
         if (!IsRunningAsAdministrator())
         {
-            Log.Logger.Warning("You do not appear to be running this client as an administrator.");
-            Log.Logger.Warning("This may result in errors or crashes when trying to connect to Duckstation.");
+            Log.Logger.Warning("You do not appear to be running this client as an administrator.\r\n" +
+                "This may result in errors or crashes when trying to connect to Duckstation.");
         }
     }
 
+    /**
+     * Potentially kills the player when a DeathLink is received.
+     * The game can softlock in some levels, so exclude those.
+     * 
+     * @param deathLink Information about the deathlink, including cause and source.
+     */
     private static void HandleDeathLink(DeathLink deathLink)
     {
         if (deathLink.Source == Client.CurrentSession.Players.ActivePlayer.Name)
@@ -159,8 +183,7 @@ public partial class App : Application
             {
                 ignoreMessage = ignoreMessage + " - " + deathLink.Cause;
             }
-            Log.Logger.Information(ignoreMessage);
-            Log.Logger.Information("Ignored the DeathLink to avoid softlock in current level.");
+            Log.Logger.Information($"{ignoreMessage}\r\nIgnored the DeathLink to avoid softlock in current level.");
             return;
         }
 
@@ -173,63 +196,191 @@ public partial class App : Application
         }
         Log.Logger.Information(message);
     }
-    private void HandleCommand(string command)
+    
+    /**
+     * Takes text the user has entered into the client and processes it as a command or sends it to the server.
+     * 
+     * @param command What the user has typed, in a wrapper class.
+     */
+    private async void HandleCommand(ArchipelagoCommandEventArgs command)
     {
-        if (Client == null || Client.ItemState == null || Client.CurrentSession == null) return;
-        switch (command)
+        string commandText = command.Command;
+        if (commandText.ToLower() == "!patch")
         {
-            case "clearSpyroGameState":
-                Log.Logger.Information("Clearing the game state.  Please reconnect to the server while in game to refresh received items.");
+            Log.Logger.Information("!patch");
+            string patchedCue = "spyro2_ap_patch.cue";
+            string patchedRom = "spyro2_ap_patch.bin";
+            if (
+                Patcher.WriteCue("spyro2.cue", patchedCue, patchedRom) &&
+                Patcher.WriteRom("spyro2.bin", patchedRom)
+            )
+            {
+                Log.Logger.Information($"Patch successful - the patched .bin can be found\r\n" +
+                    $"at {patchedRom}");
+            }
+            return;
+        }
+        if (Client == null || Client.ItemState == null || Client.CurrentSession == null) return;
+        int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
+        CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
+        Dictionary<string, int> talismans = CalculateCurrentTalismans();
+        switch (commandText.ToLower())
+        {
+            case "!help":
+                // This is also a server command, so send the message after.
+                string commandsText = "";
+                // !help is covered by the server response.
+                // commandsText += "!help\r\n\tShow available commands.\r\n";
+                commandsText += "!goal\r\n\tShows your current goal and progress towards it.\r\n";
+                commandsText += "!options\r\n\tShows important options for your slot.\r\n";
+                commandsText += "!unlockedLevels\r\n\tWhen level locks are keys, shows the levels you have unlocked.\r\n";
+                commandsText += "!talismans\r\n\tWhen open world is off, shows how many talismans you have received.\r\n";
+                commandsText += "!patch\r\n\tCreates a patched version of your vanilla ROM for Archipelago.\r\n\tThis is not seed-specific and is optional.\r\n";
+                commandsText += "!reloadItems\r\n\tIn case of a desync, sends all received AP Items again.\r\n\tRequires reconnecting.\r\n";
+                commandsText += "!quietHints\r\n\tMakes hints easier to read by hiding items you have already found.\r\n";
+                commandsText += "!verboseHints\r\n\tChanges hints to the default archipelago behavior,\r\n\tshowing items you have already found.\r\n";
+                commandsText += "!debugInfo\r\n\tPrints information about your game to the screen.\r\n\tYou may be asked to screenshot this if there is an error.\r\n";
+                Client?.SendMessage(command.Command);
+                await Task.Delay(200);
+                Log.Logger.Information(commandsText);
+                break;
+            case "!options":
+                GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+                LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+                string worldSettings = openWorldOption != 0 ? "Open World" : "Vanilla Progression";
+                string goalString = $"{goal}";
+                if (goal == CompletionGoal.Ripto)
+                {
+                    goalString += $" ({_requiredOrbs} orbs)";
+                }
+                string optionsString = $"\tGoal: {goalString} - Use !goal for more info\r\n" +
+                    $"\tWorld Settings: {worldSettings}\r\n" +
+                    $"\tLevel Locks: {levelLockOption}\r\n" +
+                    $"\tMoneybagssanity: {_moneybagsOption}\r\n" +
+                    $"\tGemsanity: {gemsanityOption}\r\n" +
+                    // TODO: Uncomment and support.
+                    // $"\tPowerup Locks: {_powerupLockOption}\r\n" +
+                    // $"\tTrick Difficulty: {_trickDifficultyOption}\r\n" +
+                    $"\tRipto's Arena Requirement: {_requiredOrbs} egg(s)\r\n";
+                Log.Logger.Information($"\r\n{command.Command}\r\n{optionsString}");
+                break;
+            case "!debuginfo":
+                int slot = Client.CurrentSession.ConnectionInfo.Slot;
+                Dictionary<string, object> slotData = await Client.CurrentSession.DataStorage.GetSlotDataAsync(slot);
+                slotData.TryGetValue("apworldVersion", out var hostVersionValue);
+                LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+                string debugString = $"\tGame Version: {Helpers.gameVersion}\r\n" +
+                    $"\tHost APWorld Version: {hostVersionValue}\r\n" +
+                    $"\tClient Version: {Version}\r\n" +
+                    $"\tCurrent Level: {currentLevel}\r\n";
+                // TODO: Add more information.
+                Log.Logger.Information($"\r\n{command.Command}\r\n{debugString}Screenshot this if requested to help debug issues.\r\n");
+                break;
+            case "clearspyrogamestate":
+            case "!reloaditems":
+                Log.Logger.Information($"\r\n{command.Command}\r\n" +
+                    "\tClearing the game state.  Please reconnect to the server while in game to refresh received items.\r\n");
                 Client.ForceReloadAllItems();
                 break;
-            case "showTalismanCount":
-                Dictionary<string, int> talismans = CalculateCurrentTalismans();
-                Log.Logger.Information($"Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}");
+            case "showtalismancount":
+            case "!talismans":
+                Log.Logger.Information($"\r\n{command.Command}");
+                if (openWorldOption != 0)
+                {
+                    Log.Logger.Information("Talismans are removed in Open World mode.\r\n");
+                    break;
+                }
+                Log.Logger.Information($"Summer Forest: {talismans.GetValueOrDefault("Summer Forest", 0)}; Autumn Plains: {talismans.GetValueOrDefault("Autumn Plains", 0)}\r\n");
                 break;
-            case "useQuietHints":
-                Log.Logger.Information("Hints for found locations will not be displayed.  Type 'useVerboseHints' to show them.");
+            case "usequiethints":
+            case "!quiethints":
+                Log.Logger.Information($"\r\n{command.Command}\r\n" +
+                    "\tHints for found locations will not be displayed.  Type 'useVerboseHints' to show them.\r\n");
                 _useQuietHints = true;
                 break;
-            case "useVerboseHints":
-                Log.Logger.Information("Hints for found locations will be displayed.  Type 'useQuietHints' to show them.");
+            case "useverbosehints":
+            case "!verbosehints":
+                Log.Logger.Information($"\r\n{command.Command}\r\n" +
+                    "\tHints for found locations will be displayed.  Type 'useQuietHints' to show them.\r\n");
                 _useQuietHints = false;
                 break;
-            case "showUnlockedLevels":
-                showUnlockedLevels();
+            case "showunlockedlevels":
+            case "!unlockedlevels":
+                Log.Logger.Information($"\r\n{command.Command}");
+                showUnlockedLevels(true);
                 break;
-            case "showGoal":
-                CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
+            case "showgoal":
+            case "!goal":
+                Log.Logger.Information($"\r\n{command.Command}");
                 string goalText = "";
+                string progressText = "";
+                int orbs = CalculateCurrentOrbs();
+                string orbsNeededText = _requiredOrbs == 1 ? $"{_requiredOrbs} orb" : $"{_requiredOrbs} orbs";
+                string orbsText = orbs == 1 ? $"{orbs} orb" : $"{orbs} orbs";
+                int gems = CalculateCurrentGems();
+                string gemsText = gems == 1 ? $"{gems} gem" : $"{gems} gems";
+                int talismanCount = talismans.GetValueOrDefault("Total", 0);
+                string talismansText = talismanCount == 1 ? $"{talismanCount} talisman" : $"{talismanCount} talismans";
+                int tokens = CalculateCurrentTokens();
+                string tokensText = tokens == 1 ? $"{tokens} token" : $"{tokens} tokens";
+                int skillPoints = CalculateCurrentSkillPoints();
+                string skillPointsText = skillPoints == 1 ? $"{skillPoints} Skill Point" : $"{skillPoints} Skill Points";
+                bool beatenRipto = Client.CurrentSession?.Items.AllItemsReceived.Any(x => x != null && x.ItemName == "Ripto Defeated") ?? false;
+                string defeatedRiptoText = beatenRipto ? "have defeated Ripto" : "have not defeated Ripto";
                 switch (goal)
                 {
                     case CompletionGoal.Ripto:
-                        goalText = "Defeat Ripto and collect " + _requiredOrbs + " orbs, the requirement to open his arena";
+                        goalText = $"Defeat Ripto and collect {orbsNeededText}, the requirement to open his arena";
+                        progressText = $"You have {orbsText} and {defeatedRiptoText}.";
                         break;
                     case CompletionGoal.SixtyFourOrb:
-                        goalText = "Defeat Ripto and collect 64 orbs";
+                        goalText = "Defeat Ripto and collect all 64 orbs";
+                        progressText = $"You have {orbsText} and {defeatedRiptoText}.";
                         break;
                     case CompletionGoal.HundredPercent:
-                        goalText = "Defeat Ripto and collect 14 talismans (if open world is off), 64 orbs, and 10000 gems";
+                        if (openWorldOption == 0)
+                        {
+                            goalText = "Defeat Ripto and collect all 14 talismans, 64 orbs, and 10000 gems";
+                            progressText = $"You have {talismansText}, {orbsText}, {gemsText},\r\nand {defeatedRiptoText}";
+                        }
+                        else
+                        {
+                            goalText = "Defeat Ripto and collect all 64 orbs and 10000 gems";
+                            progressText = $"You have {orbsText}, {gemsText}, and {defeatedRiptoText}";
+                        }
                         break;
                     case CompletionGoal.TenTokens:
-                        goalText = "Collect 55 orbs and 8000 gems to unlock the theme park and collect all 10 tokens in Dragon Shores";
+                        goalText = "Collect 55 orbs and 8000 gems to unlock the theme park\r\n" +
+                            "and collect all 10 tokens in Dragon Shores";
+                        progressText = $"You have {orbsText}, {gemsText}, and {tokensText}";
                         break;
                     case CompletionGoal.AllSkillpoints:
                         goalText = "Collect all 16 skill points";
+                        progressText = $"You have {skillPointsText}";
                         break;
                     case CompletionGoal.Epilogue:
                         goalText = "Defeat Ripto and collect all 16 skill points";
+                        progressText = $"You have {skillPointsText} and {defeatedRiptoText}";
                         break;
                     default:
-                        goalText = "Defeat Ripto and collect " + _requiredOrbs + " orbs, the requirement to open his arena";
-                        break;
+                        Log.Logger.Error("Error finding your goal\r\n");
+                        return;
                 }
-                Log.Logger.Information($"Your goal is: {goalText}");
+                Log.Logger.Information($"\tYour goal is: {goalText}\r\n\t{progressText}\r\n");
+                break;
+            default:
+                Client?.SendMessage(commandText);
                 break;
         }
     }
+    
+    /**
+     * Fires when the user clicks the client's connect button.
+     * Tries to connect to Duckstation and Archipelago, then set up the session.
+     */
     private async void Context_ConnectClicked(object? sender, ConnectClickedEventArgs e)
     {
+        // Don't double bind.
         if (Client != null)
         {
             Client.CancelMonitors();
@@ -238,9 +389,14 @@ public partial class App : Application
             Client.ItemReceived -= ItemReceived;
             Client.MessageReceived -= Client_MessageReceived;
             Client.LocationCompleted -= Client_LocationCompleted;
-            Client.CurrentSession.Locations.CheckedLocationsUpdated -= Locations_CheckedLocationsUpdated;
+            if (Client.CurrentSession != null)
+            {
+                Client.CurrentSession.Locations.CheckedLocationsUpdated -= Locations_CheckedLocationsUpdated;
+            }
             _unlockedLevels = 0;
         }
+
+        // Connect to Duckstation.
         DuckstationClient? client = null;
         try
         {
@@ -264,12 +420,14 @@ public partial class App : Application
         Client.Connected += OnConnected;
         Client.Disconnected += OnDisconnected;
 
+        // Try to connect to the AP server.
         await Client.Connect(e.Host, "Spyro 2", "save1");
         if (!Client.IsConnected)
         {
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
             return;
         }
+        // Set up handlers and variables for the session.
         _cosmeticEffects = new ConcurrentQueue<string>();
         Client.LocationCompleted += Client_LocationCompleted;
         Client.CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
@@ -291,37 +449,37 @@ public partial class App : Application
                     gemsanityIDs = System.Text.Json.JsonSerializer.Deserialize<List<int>>(value.ToString());
                 }
             }
+            // Verify compatibility between the host's version and this client.
             if (slotData.TryGetValue("apworldVersion", out var versionValue))
             {
                 if (versionValue != null && SupportedVersions.Contains(versionValue.ToString().ToLower()))
                 {
-                    Log.Logger.Information($"The host's AP world version is {versionValue.ToString()} and the client version is {Version}.");
-                    Log.Logger.Information("These versions are known to be compatible.");
+                    Log.Logger.Information($"The host's AP world version is {versionValue.ToString()} and the client version is {Version}.\r\n" +
+                        "These versions are known to be compatible.");
                 }
                 else if (versionValue != null && versionValue.ToString().ToLower() != Version.ToLower())
                 {
-                    Log.Logger.Warning($"The host's AP world version is {versionValue.ToString()} but the client version is {Version}.");
-                    Log.Logger.Warning("Please ensure these are compatible before proceeding.");
+                    Log.Logger.Warning($"The host's AP world version is {versionValue.ToString()} but the client version is {Version}.\r\n" +
+                        "Please ensure these are compatible before proceeding.");
                 }
                 else if (versionValue == null)
                 {
-                    Log.Logger.Error($"The host's AP world version predates 1.0.0, but the client version is {Version}.");
-                    Log.Logger.Error("This will almost certainly result in errors.");
+                    Log.Logger.Error($"The host's AP world version predates 1.0.0, but the client version is {Version}.\r\n" +
+                        "This will almost certainly result in errors.");
                 }
             }
             else
             {
-                Log.Logger.Error($"The host's AP world version predates 1.0.0, but the client version is {Version}.");
-                Log.Logger.Error("This will almost certainly result in errors.");
+                Log.Logger.Error($"The host's AP world version predates 1.0.0, but the client version is {Version}.\r\n" +
+                    "This will almost certainly result in errors.");
             }
             _requiredOrbs = int.Parse(Client.Options?.GetValueOrDefault("ripto_door_orbs", 0).ToString());
             bool easyFracture = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", 0).ToString()) > 0;
 
+            // Set up the list of locations based on player settings.
             GameLocations = Helpers.BuildLocationList(easyFracture: easyFracture, includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
             GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
             Client.MonitorLocations(GameLocations);
-
-            Log.Logger.Information("Warnings and errors above are okay if this is your first time connecting to this multiworld server.");
         }
         else
         {
@@ -329,6 +487,11 @@ public partial class App : Application
         }
     }
 
+    /**
+     * Fires when a location is checked.
+     * This does *not* fire if the location is not in the AP server's list of remaining checks.
+     * Therefore, do not rely on it as the only way to fire code, since collect and release can cause it not to trigger.
+     */
     private void Client_LocationCompleted(object? sender, LocationCompletedEventArgs e)
     {
         try
@@ -351,12 +514,17 @@ public partial class App : Application
         }
     }
 
+    /**
+     * Fires when an item is received.
+     * Handle items as they come in, though we largely rely on Client.CurrentSession.Items instead.
+     */
     private async void ItemReceived(object? o, ItemReceivedEventArgs args)
     {
         try
         {
             if (Client.ItemState == null || Client.CurrentSession == null) return;
             Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
+            UpdateItemLog();
             // Give items a moment to update before printing values.
             await Task.Delay(200);
             int currentHealth;
@@ -440,6 +608,7 @@ public partial class App : Application
                         _destructiveMode = true;
                         await Task.Delay(15000);
                         _destructiveMode = false;
+                        Log.Logger.Information("Destructive mode has ended.");
                     });
                     break;
                 case "Remapped Controller Trap":
@@ -506,6 +675,7 @@ public partial class App : Application
                     }
                     break;
                 case "Moneybags Unlock - Door to Aquaria Towers":
+                case "Moneybags Unlock - Wall by Aquaria Towers":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
                         UnlockMoneybags(Addresses.WallToAquariaUnlock);
@@ -627,15 +797,30 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Log.Logger.Warning("Encountered an error while receiving an item.");
-            Log.Logger.Warning(ex.ToString());
-            Log.Logger.Warning("This is not necessarily a problem if it happens during release or collect.");
+            Log.Logger.Warning("Encountered an error while receiving an item.\r\n" +
+                ex.ToString() + "\r\n");
         }
     }
-    private void showUnlockedLevels()
+    
+    /**
+     * Displays to the user the list of levels they have keys for, if applicable.
+     * 
+     * @param alwaysShow If true, will always print the list. Otherwise, only does so when a new level has been unlocked.
+     */
+    private void showUnlockedLevels(bool alwaysShow = false)
     {
-        List<ItemInfo> unlockedLevels = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName.EndsWith(" Unlock")).ToList() ?? new List<ItemInfo>());
-        if (unlockedLevels.Count > _unlockedLevels)
+        LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+        if (levelLockOption == LevelLockOptions.Vanilla)
+        {
+            Log.Logger.Information("Levels have their vanilla unlock requirements.");
+        }
+        else if (levelLockOption != LevelLockOptions.Keys)
+        {
+            // TODO: Revisit this message when orb locks are added.
+            Log.Logger.Information("Levels are not locked by keys.");
+        }
+        List<ItemInfo> unlockedLevels = (Client.CurrentSession?.Items.AllItemsReceived.Where(x => x.ItemName.EndsWith(" Unlock")).ToList() ?? new List<ItemInfo>());
+        if (alwaysShow || unlockedLevels.Count > _unlockedLevels)
         {
             _unlockedLevels = unlockedLevels.Count;
         }
@@ -645,37 +830,46 @@ public partial class App : Application
         }
         if (unlockedLevels.Count >= int.Parse(Client.Options?.GetValueOrDefault("level_unlocks", "0").ToString()))
         {
-            Log.Logger.Information("You have unlocked: ");
-            string unlockedLevelsString = "";
+            string unlockedLevelsString = "You have unlocked:";
             int levelCount = 0;
             foreach (ItemInfo unlockedLevel in unlockedLevels)
             {
+                string newLevel;
                 if (unlockedLevel.ItemName == "Dragon Shores Unlock")
                 {
-                    unlockedLevelsString += ("Shores" + "; ");
+                    newLevel = "Shores";
                 }
                 else
                 {
-                    string newLevel = unlockedLevel.ItemName.Split(" Unlock")[0].Split(" ")[0];
-                    unlockedLevelsString += (newLevel + "; ");
+                    newLevel = unlockedLevel.ItemName.Split(" Unlock")[0].Split(" ")[0];
                 }
                 levelCount++;
                 // Print 6 per line so it is easier to read.
-                if (levelCount % 6 == 0)
+                if (levelCount % 6 == 1)
                 {
-                    Log.Logger.Information(unlockedLevelsString.Substring(0, unlockedLevelsString.Length - 2));
-                    unlockedLevelsString = "";
+                    unlockedLevelsString += "\r\n";
                 }
+                unlockedLevelsString += (newLevel + "; ");
             }
-            if (unlockedLevelsString.Length > 0)
+            if (unlockedLevelsString != "You have unlocked:")
             {
                 unlockedLevelsString = unlockedLevelsString.Substring(0, unlockedLevelsString.Length - 2);
-                Log.Logger.Information(unlockedLevelsString);
             }
+            else
+            {
+                unlockedLevelsString += "\r\nNo levels yet";
+            }
+            Log.Logger.Information($"{unlockedLevelsString}\r\n");
         }
     }
+    
+    /**
+     * Function repeatedly called by a timer that affects gameplay and goaling.
+     * Despite the name, affects more than just abilities.
+     */
     private static async void HandleAbilities(object source, ElapsedEventArgs e)
     {
+        // TODO: Clean this up, like S3.
         try
         {
             if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
@@ -843,6 +1037,8 @@ public partial class App : Application
                     Memory.Write(Addresses.globalGemRespawnFixAddress, 0);
                     Memory.Write(Addresses.localGemRespawnFixAddress, 0);
                     Memory.Write(Addresses.playBeepAddress, 0);
+                    // Only apply these during the correct overlays.
+                    // Probably easier to just patch.
                     //Memory.Write(Addresses.localGemLoadFixAddress, 0);
                     //Memory.Write(Addresses.globalGemLoadFixAddress, 0);
                 }
@@ -1085,11 +1281,14 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Log.Logger.Warning("Encountered an error while managing the game loop.");
-            Log.Logger.Warning(ex.ToString());
-            Log.Logger.Warning("This is not necessarily a problem if it happens during release or collect.");
+            Log.Logger.Warning("Encountered an error while managing the game loop.\r\n" +
+                $"{ex.ToString()}");
         }
     }
+    
+    /**
+     * Handles the Sparx health upgrades within the game loop.
+     */
     private static async void HandleMaxSparxHealth(object source, ElapsedEventArgs e)
     {
         if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
@@ -1107,8 +1306,15 @@ public partial class App : Application
             _sparxTimer.Enabled = false;
         }
     }
+    
+    /**
+     * Changes Spyro's color and big head mode, if there are any queued effects.
+     * 
+     * Also handles gem cosmetics and level lock options, which would be better moved elsewhere.
+     */
     private static async void HandleCosmeticQueue(object source, ElapsedEventArgs e)
     {
+        // TODO: Reorganize this function.
         if (Client.ItemState == null || Client.CurrentSession == null) return;
         CheckGoalCondition();
         // Avoid overwhelming the game when many cosmetic effects are received at once by processing only 1
@@ -1250,6 +1456,10 @@ public partial class App : Application
             }
         }
     }
+    
+    /**
+     * Perform necessary setup for once the player is in a save file.
+     */
     private static async void StartSpyroGame(object source, ElapsedEventArgs e)
     {
         if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
@@ -1257,6 +1467,7 @@ public partial class App : Application
             Log.Logger.Information("Player is not yet in control of Spyro.");
             return;
         }
+        Log.Logger.Information("Player is in control of Spyro. Starting game!");
         bool deathLink = int.Parse(Client.Options?.GetValueOrDefault("death_link", "0").ToString()) > 0;
         if (deathLink)
         {
@@ -1276,7 +1487,7 @@ public partial class App : Application
             { "Swim", Addresses.SwimUnlock },
             { "Climb", Addresses.ClimbUnlock },
             { "Headbash", Addresses.HeadbashUnlock },
-            { "Door to Aquaria Towers", Addresses.WallToAquariaUnlock },
+            { "Wall by Aquaria Towers", Addresses.WallToAquariaUnlock },  // Name changed in 1.2.0.
             { "Zephyr Portal", Addresses.ZephyrPortalUnlock },
             { "Shady Oasis Portal", Addresses.ShadyPortalUnlock },
             { "Icy Speedway Portal", Addresses.IcyPortalUnlock },
@@ -1316,7 +1527,6 @@ public partial class App : Application
             }
         }
         CheckGoalCondition();
-        await Task.Delay(5000);
         LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
         Helpers.UpdateLocationList(currentLevel, Client);
         _handleGemsanity = true;
@@ -1325,6 +1535,10 @@ public partial class App : Application
             _loadGameTimer.Enabled = false;
         }
     }
+    
+    /**
+     * Checks if the player has completed their goal and informs the server if so.
+     */
     private static void CheckGoalCondition()
     {
         if (
@@ -1353,56 +1567,82 @@ public partial class App : Application
         {
             if (currentOrbs >= _requiredOrbs && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
-                Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
+                Task.Run(async () =>
+                {
+                    Client.SendGoalCompletion();
+                });
             }
         }
         else if ((CompletionGoal)goal == CompletionGoal.SixtyFourOrb)
         {
             if (currentOrbs >= 64 && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
-                Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
+                Task.Run(async () =>
+                {
+                    Client.SendGoalCompletion();
+                });
             }
         }
         else if ((CompletionGoal)goal == CompletionGoal.HundredPercent)
         {
             if (currentOrbs >= 64 && (isOpenWorld != 0 || currentTalismans >= 14) && currentGems == 10000 && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
-                Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
+                Task.Run(async () =>
+                {
+                    Client.SendGoalCompletion();
+                });
             }
         }
         else if ((CompletionGoal)goal == CompletionGoal.TenTokens)
         {
             if (currentTokens >= 10 && currentOrbs >= 55 && currentGems >= 8000)
             {
-                Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
+                Task.Run(async () =>
+                {
+                    Client.SendGoalCompletion();
+                });
             }
         }
         else if ((CompletionGoal)goal == CompletionGoal.AllSkillpoints)
         {
             if (currentSkillPoints >= 16)
             {
-                Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
+                Task.Run(async () =>
+                {
+                    Client.SendGoalCompletion();
+                });
             }
         }
         else if ((CompletionGoal)goal == CompletionGoal.Epilogue)
         {
             if (currentSkillPoints >= 16 && (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Ripto Defeated").Count() ?? 0) > 0)
             {
-                Client.SendGoalCompletion();
                 _hasSubmittedGoal = true;
+                Task.Run(async () =>
+                {
+                    Client.SendGoalCompletion();
+                });
             }
         }
     }
+    
+    /**
+     * Turns off big head mode and also flat Spyro mode.
+     */
     private static async void DeactivateBigHeadMode()
     {
         // Disables both big head mode and flat spyro.
         Memory.Write(Addresses.BigHeadMode, (short)0);
     }
+    
+    /**
+     * Turns on big head mode. The size of the head is customizable and needs to be explicitly set.
+     */
     private static async void ActivateBigHeadMode()
     {
         Memory.WriteByte(Addresses.SpyroHeight, (byte)(32));
@@ -1410,6 +1650,10 @@ public partial class App : Application
         Memory.WriteByte(Addresses.SpyroWidth, (byte)(32));
         Memory.Write(Addresses.BigHeadMode, (short)(1));
     }
+    
+    /**
+     * Turns on flat Spyro mode. The dimensions are customizable and need to be explicitly set.
+     */
     private static async void ActivateFlatSpyroMode()
     {
         Memory.WriteByte(Addresses.SpyroHeight, (byte)(16));
@@ -1417,33 +1661,84 @@ public partial class App : Application
         Memory.WriteByte(Addresses.SpyroWidth, (byte)(2));
         Memory.Write(Addresses.BigHeadMode, (short)0x100);
     }
+    
+    /**
+     * Sets Spyro's color to a standard color. This should be extendable to custom colors.
+     * 
+     * @param colorEnum The color to use.
+     */
     private static async void TurnSpyroColor(SpyroColor colorEnum)
     {
+        // TODO: Support arbitrary hex values.
         Memory.Write(Addresses.SpyroColorAddress, (short)colorEnum);
     }
+    
+    /**
+     * Unlocks Moneybags programmatically, setting his price to zero to avoid issues on beating Ripto.
+     * 
+     * @param address The memory address of the Moneybags flag, a full word.
+     */
     private static async void UnlockMoneybags(uint address)
     {
         // Flag the check as paid for, and set the price to 0.  Otherwise, we'll get back too many gems when beating Ripto.
         Memory.Write(address, 65536);
-        Log.Logger.Information("If you are in the same zone as Moneybags, you can talk to him to complete the unlock for free.");
+        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
     }
-    private static void LogItem(Item item)
+    
+    /**
+     * Updates the Received Items tab.  Unlike the Hints tab, rewrites the list each time.
+     */
+    private static void UpdateItemLog()
     {
-        // Not supported at this time.
-        /*var messageToLog = new LogListItem(new List<TextSpan>()
+        Dictionary<string, int> itemCount = new Dictionary<string, int>();
+        List<LogListItem> messagesToLog = new List<LogListItem>();
+        if (Client != null && Client.CurrentSession != null && Client.CurrentSession.Items != null)
+        {
+            foreach (ItemInfo item in Client.CurrentSession.Items.AllItemsReceived)
             {
-                new TextSpan(){Text = $"[{item.Id.ToString()}] -", TextColor = new SolidColorBrush(Color.FromRgb(255, 255, 255))},
-                new TextSpan(){Text = $"{item.Name}", TextColor = new SolidColorBrush(Color.FromRgb(200, 255, 200))}
+                string itemName = item.ItemName;
+                if (itemCount.ContainsKey(itemName))
+                {
+                    itemCount[itemName] = itemCount[itemName] + 1;
+                }
+                else
+                {
+                    itemCount[itemName] = 1;
+                }
+            }
+            RxApp.MainThreadScheduler.Schedule(() =>
+            {
+                List<string> sortedItems = itemCount.Keys.ToList();
+                sortedItems.Sort();
+                foreach (string item in sortedItems)
+                {
+                    messagesToLog.Add(new LogListItem(
+                        new List<TextSpan>() {
+                            new TextSpan() { Text = $"{item}: ", TextColor = new SolidColorBrush(Avalonia.Media.Color.FromRgb(200, 255, 200)) },
+                            new TextSpan() { Text = $"{itemCount[item]}", TextColor = new SolidColorBrush(Avalonia.Media.Color.FromRgb(200, 255, 200)) }
+                        }
+                    ));
+                }
             });
+        }
         lock (_lockObject)
         {
             RxApp.MainThreadScheduler.Schedule(() =>
             {
-                Context.ItemList.Add(messageToLog);
+                Context.ItemList.Clear();
+                foreach (LogListItem messageToLog in messagesToLog)
+                {
+                    Context.ItemList.Add(messageToLog);
+                }
             });
-        }*/
+        }
     }
 
+    /**
+     * Fires when a message is received from the client.
+     * 
+     * Used to handle the hint tab and to avoid showing found items in the hint list.
+     */
     private void Client_MessageReceived(object? sender, MessageReceivedEventArgs e)
     {
         // If the player requests it, don't show "found" hints in the main client.
@@ -1456,6 +1751,12 @@ public partial class App : Application
             Log.Logger.Information(JsonConvert.SerializeObject(e.Message));
         }
     }
+    
+    /**
+     * Adds a hint message to the Hints tab.
+     * 
+     * @param message The message with the hint.
+     */
     private static void LogHint(LogMessage message)
     {
         var newMessage = message.Parts.Select(x => x.Text);
@@ -1497,6 +1798,12 @@ public partial class App : Application
             });
         }
     }
+    
+    /**
+     * Fires when new locations are checked.
+     * 
+     * @param newCheckedLocations A collection of newly checked locations to process.
+     */
     private static void Locations_CheckedLocationsUpdated(System.Collections.ObjectModel.ReadOnlyCollection<long> newCheckedLocations)
     {
         foreach (long location in newCheckedLocations)
@@ -1518,6 +1825,7 @@ public partial class App : Application
         CalculateCurrentOrbs();
         CheckGoalCondition();
     }
+    
     /**
      * Writes a block of text to memory. endAddress will generally be the null terminator and will not be written to.
      */
@@ -1541,6 +1849,12 @@ public partial class App : Application
             address++;
         }
     }
+    
+    /**
+     * Returns a mapping of talisman type to count.
+     * 
+     * @return A Dictionary with keys of Summer Forest, Autumn Plains, and Total, and values representing item counts.
+     */
     private static Dictionary<string, int> CalculateCurrentTalismans()
     {
         var summerCount = Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Summer Forest Talisman").Count() ?? 0;
@@ -1549,6 +1863,7 @@ public partial class App : Application
         autumnCount = Math.Min(autumnCount, 8);
         var currentLevel = Memory.ReadByte(Addresses.CurrentLevelAddress);
         // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
+        // Note that Elora won't open the door if your count is more than 6.
         if (currentLevel == (byte)LevelInGameIDs.SummerForest)
         {
             Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)summerCount);
@@ -1567,6 +1882,12 @@ public partial class App : Application
             { "Total", summerCount + autumnCount }
          };
     }
+    
+    /**
+     * Returns the number of orbs the player has.
+     * 
+     * @return The number of AP orbs received.
+     */
     private static int CalculateCurrentOrbs()
     {
         var count = Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Orb").Count() ?? 0;
@@ -1574,6 +1895,12 @@ public partial class App : Application
         Memory.WriteByte(Addresses.TotalOrbAddress, (byte)(count));
         return count;
     }
+    
+    /**
+     * Returns the number of gems the player has. In gemsanity, also sets the value correctly.
+     *
+     * @return The total number of gems the player has.
+     */
     private static int CalculateCurrentGems()
     {
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
@@ -1607,18 +1934,33 @@ public partial class App : Application
         Memory.Write(Addresses.TotalGemAddress, totalGems);
         return totalGems;
     }
+    
+    /**
+     * Returns the number of completed skill points.
+     * 
+     * @return The total number of skill points the player has.
+     */
     private static int CalculateCurrentSkillPoints()
     {
         return Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Skill Point").Count() ?? 0;
     }
+    
+    /**
+     * Returns the number of Dragon Shores tokens the player has.
+     * 
+     * @return The total number of Dragon Shores tokens the player has.
+     */
     private static int CalculateCurrentTokens()
     {
         return Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == "Dragon Shores Token").Count() ?? 0;
     }
+    
+    /**
+     * Performs setup actions when the client connects to the server.
+     */
     private static void OnConnected(object sender, EventArgs args)
     {
-        Log.Logger.Information("Connected to Archipelago");
-        Log.Logger.Information($"Playing {Client.CurrentSession.ConnectionInfo.Game} as {Client.CurrentSession.Players.GetPlayerName(Client.CurrentSession.ConnectionInfo.Slot)}");
+        // TODO: These should probably be moved later, to match Spyro 3.
 
         // There is a tradeoff here when creating new threads.  Separate timers allow for better control over when
         // memory reads and writes will happen, but they take away threads for other client tasks.
@@ -1663,19 +2005,21 @@ public partial class App : Application
         // Repopulate hint list.  There is likely a better way to do this using the Get network protocol
         // with keys=[$"hints_{team}_{slot}"].
         Client?.SendMessage("!hint");
+        UpdateItemLog();
     }
 
+    /**
+     * Performs cleanup actions when the client disconnects from the server.
+     */
     private static void OnDisconnected(object sender, EventArgs args)
     {
-        Log.Logger.Information("Disconnected from Archipelago");
         // Avoid ongoing timers affecting a new game.
         _sparxUpgrades = 0;
         _hasSubmittedGoal = false;
         _useQuietHints = true;
         _handleGemsanity = false;
         _unlockedLevels = 0;
-        Log.Logger.Information("This Archipelago Client is compatible only with the NTSC-U release of Spyro 2 (North America version).");
-        Log.Logger.Information("Trying to play with a different version will not work and may release all of your locations at the start.");
+        _requiredOrbs = 65;
 
         if (_deathLinkService != null)
         {

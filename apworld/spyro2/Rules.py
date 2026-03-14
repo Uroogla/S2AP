@@ -69,7 +69,7 @@ def get_level_rules(logic: Logic):
             },
             {
                 "Summer Forest: Moneybags Unlock: Swim": lambda state: True,
-                "Summer Forest: Moneybags Unlock: Door to Aquaria Towers": lambda state: logic.can_access_summer_second_half(state)
+                "Summer Forest: Moneybags Unlock: Wall by Aquaria Towers": lambda state: logic.can_access_summer_second_half(state)
             },
             {
                 "Summer Forest: First Life Bottle Near Glimmer": lambda state: True,

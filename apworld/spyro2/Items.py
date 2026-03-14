@@ -81,7 +81,7 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Moneybags Unlock - Swim", 3004, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Climb", 3005, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Headbash", 3006, Spyro2ItemCategory.MONEYBAGS),
-    ("Moneybags Unlock - Door to Aquaria Towers", 3007, Spyro2ItemCategory.MONEYBAGS),
+    ("Moneybags Unlock - Wall by Aquaria Towers", 3007, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Zephyr Portal", 3008, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Shady Oasis Portal", 3009, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Icy Speedway Portal", 3010, Spyro2ItemCategory.MONEYBAGS),
@@ -298,7 +298,7 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Moneybags Unlock - Aquaria Towers Submarine"])
         item_pool.append(item_dictionary["Moneybags Unlock - Magma Cone Elevator"])
         # item_pool.append(item_dictionary["Moneybags Unlock - Glimmer Bridge"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Door to Aquaria Towers"])
+        item_pool.append(item_dictionary["Moneybags Unlock - Wall by Aquaria Towers"])
         item_pool.append(item_dictionary["Moneybags Unlock - Zephyr Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Shady Oasis Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Icy Speedway Portal"])

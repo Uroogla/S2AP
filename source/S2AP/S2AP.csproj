@@ -11,7 +11,7 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
-	<!--https://github.com/Uroogla/Archipelago.Core-->
+	<!--https://github.com/Uroogla/Archipelago.Core, branch 1.3.0-->
   <ItemGroup>
 	<ProjectReference Include="..\..\..\Archipelago.Core\Archipelago.Core.csproj" />
   </ItemGroup>

@@ -68,13 +68,16 @@ class RandomizeGemColorOptions:
 
 
 class GoalOption(Choice):
-    """Lets the user choose the completion goal.
-    Ripto - Collect enough orbs to open the arena, and beat Ripto. The game marks you as having defeated Ripto during the ensuing cutscene.
+    """Choose the completion goal.
+    Ripto - Collect enough orbs to open the arena and beat Ripto.
     64 Orb - Collect 64 orbs and beat Ripto.
-    100 Percent - Collect all talismans, orbs, and gems and beat Ripto. In Open World mode, no talismans are required.
-    10 Tokens - Collect 8000 gems and 55 orbs to unlock the theme park and collect all 10 tokens in Dragon Shores.
-    All Skillpoints - Collect all 16 skill points in the game. Excluded locations are still required for this goal.
-    Epilogue - Unlock the full epilogue by collecting all 16 skill points and defeating Ripto. Excluded locations are still required for this goal."""
+    100 Percent - Collect all talismans, orbs, and gems and beat Ripto.
+        In Open World mode, no talismans are required.
+    10 Tokens - Collect 8000 gems and 55 orbs to unlock the theme park
+        and collect all 10 tokens in Dragon Shores.
+    All Skillpoints - Collect all 16 skill points in the game.
+    Epilogue - Unlock the full epilogue by collecting all 16 skill points
+        and defeating Ripto."""
     display_name = "Completion Goal"
     default = GoalOptions.RIPTO
     option_ripto = GoalOptions.RIPTO
@@ -87,25 +90,24 @@ class GoalOption(Choice):
     # option_orb_hunt = GoalOptions.ORB_HUNT
 
 class OrbHuntRequirement(Range):
-    """Determines how many orbs are needed to complete the Orb Hunt goal.  Has no effect if any other goal is chosen."""
+    """How many orbs are needed to complete the Orb Hunt goal.
+    Has no effect if any other goal is chosen."""
     display_name = "Orbs Required for Orb Hunt"
     range_start = 2
     range_end = 64
     default = 40
 
 class RiptoDoorOrbs(Range):
-    """Determines how many orbs are required to unlock the door to Ripto.
-    NOTE: Due to limitations of Spyro 2, if you connect to Archipelago while in Winter Tundra, the game will default
-    to 40 orbs until you exit Winter Tundra and return."""
+    """How many orbs are required to unlock the door to Ripto."""
     display_name = "Orbs to Unlock Ripto"
     range_start = 0
     range_end = 64
     default = 40
 
 class TotalAvailableOrbs(Range):
-    """Determines the number of orbs available.
-    NOTE: If fewer than the amount required for the Ripto door ar an Orb Hunt goal, more will be added.
-    Other orb requirements throughout the game will be adjusted according to the number available."""
+    """The number of orbs available.
+    NOTE: Will add orbs if required to complete your goal.
+    Other orb requirements will be adjusted according to the number available."""
     display_name = "Orbs Available"
     range_start = 2
     range_end = 64
@@ -116,34 +118,38 @@ class GuaranteedItemsOption(ItemDict):
     display_name = "Guaranteed Items"
 
 class EnableOpenWorld(Toggle):
-    """If on, Crush and Gulp do not require talismans."""
+    """If on, Crush and Gulp do not require talismans.
+    Removes talisman items from the pool."""
     display_name = "Enable Open World"
 
 class LevelLockOption(Choice):
-    """Determines the rules for unlocking each level. Glimmer, Homeworlds, and bosses are bosses always have their
-    vanilla requirements.
+    """Rules for unlocking each level.
+    Glimmer, homeworlds, and bosses always have their vanilla requirements.
     Vanilla: Levels are available if you meet the vanilla requirements.
-    Keys: Levels are unlocked by finding "Unlock" items. Note: you may need to increase the number of locations (for example,
-      by adding gem checks) to add keys.
+    Keys: Levels are unlocked by finding "Unlock" items.
+        Note: you may need to increase the number of locations (for example,
+        by adding gem checks) to provide spots for the keys.
     """
     display_name = "Level Locks"
     default = LevelLockOptions.VANILLA
     option_vanilla = LevelLockOptions.VANILLA
     option_keys = LevelLockOptions.KEYS
+    # TODO: Implement.
     # option_orbs = LevelLockOptions.ORBS
 
 class StartingLevelCount(Range):
-    """Determines how many level unlocks the player starts with.
-    The player always has access to Glimmer, homeworlds, and boss fights.
-    NOTE: Only has an effect when level locks are on."""
+    """How many level unlocks the player starts with.
+    The player always has access to Glimmer, homeworlds, and bosses.
+    Only has an effect when level locks are on."""
     display_name = "Starting Level Unlocks"
     range_start = 0
     range_end = 22
     default = 8
 
 class StartWithAbilitiesAndWarps(Toggle):
-    """If on in Open World mode, the player will start with swim, climb, headbash, and access to all 3 homeworlds.
-    NOTE: Only has an effect in Open World mode."""
+    """The player will start with
+    swim, climb, headbash, and access to all 3 homeworlds.
+    Only has an effect in Open World mode."""
     display_name = "Open World Start With Abilities and Warps"
 
 class Enable25PctGemChecksOption(Toggle):
@@ -164,13 +170,15 @@ class EnableGemChecksOption(Toggle):
 
 class EnableTotalGemChecksOption(Toggle):
     """Adds checks for every 500 gems you collect total.
-    NOTE: Gems currently paid to Moneybags do not count towards your total.
-    Logic assumes you pay Moneybags everywhere you can so you cannot be locked out of checks."""
+    Gems currently paid to Moneybags do not count
+    towards your total. Logic assumes you pay Moneybags everywhere
+    you can so you cannot be locked out of checks."""
     display_name = "Enable Total Gem Count Checks"
 
 class MaxTotalGemCheckOption(Range):
-    """Sets the highest number of total gems that can be required for Total Gem Count checks.
-    This has no effect if Enable Total Gem Count Checks is disabled."""
+    """The highest number of total gems that can be required
+    for Total Gem Count checks. Has no effect if
+    Enable Total Gem Count Checks is disabled."""
     display_name = "Max for Total Gem Count Checks"
     range_start = 500
     range_end = 10000
@@ -186,20 +194,22 @@ class EnableLifeBottleChecksOption(Toggle):
 
 class EnableSpiritParticleChecksOption(Toggle):
     """Adds checks for getting all spirit particles in a level.
-    Some minigame enemies are counted as spirit particles, like Draclets in Crystal Glacier.
-    NOTE: Some enemies will only release spirit particles while the camera is on them."""
+    Some minigame enemies are counted as spirit particles,
+    like Draclets in Crystal Glacier. Some enemies only release
+    spirit particles while the camera is on them."""
     display_name = "Enable Spirit Particle Checks"
 
 class EnableGemsanityOption(Choice):
     """Adds checks for each individual gem.
-    WARNING: To avoid logic issues, this setting is meant for Moneybagssanity only.  If Moneybagssanity is off,
-        all Moneybags prices will be set to 0 in game.
-    WARNING: Both full and full global require the host to edit allow_full_gemsanity
+    If Moneybagssanity is off, all Moneybags prices will be set to 0 in game.
+    Both full and full global require the host to edit allow_full_gemsanity
         in their yaml file.
     Off: Individual gems are not checks.
-    Partial: Every gem has a chance to be a check, but only 200 will be (chosen at random).  For every level with loose
-        gems (not speedways), 8 items giving 50 gems for that level will be added to the pool.
-    Full: All gems are checks.  Gem items will be shuffled only within your world.
+    Partial: 200 randomly chosen gems become checks. For every level
+        with loose gems (not speedways), 8 items giving 50 gems for
+        that level will be added to the pool.
+    Full: All gems are checks.
+        Gem items will be shuffled only within your world.
     Full Global: All gems are checks.  Gem items can be anywhere."""
     display_name = "Enable Gemsanity"
     default = GemsanityOptions.OFF
@@ -209,11 +219,11 @@ class EnableGemsanityOption(Choice):
     option_full_global = GemsanityOptions.FULL_GLOBAL
 
 class MoneybagsSettings(Choice):
-    """Determines settings for Moneybags unlocks.
+    """Settings for Moneybags unlocks.
     Vanilla - Pay Moneybags to progress as usual
-    COMING SOON (tm): Price Shuffle - The prices Moneybags charges are randomized, while still allowing for beatable seeds.
-    Moneybagssanity - You cannot pay Moneybags at all and must find unlock items to progress. Glimmer Bridge
-    is excluded to avoid issues with early game randomization."""
+    Moneybagssanity - You cannot pay Moneybags at all and must\
+        find unlock items to progress. Glimmer Bridge
+        is excluded to avoid issues with early game randomization."""
     display_name = "Moneybags Settings"
     default = MoneybagsOptions.VANILLA
     option_vanilla = MoneybagsOptions.VANILLA
@@ -222,17 +232,19 @@ class MoneybagsSettings(Choice):
     option_moneybagssanity = MoneybagsOptions.MONEYBAGSSANITY
 
 class EnableDeathLink(DeathLink):
-    """If enabled, Spyro will die when a DeathLink is received and will send them on his death.
-    This is a beta feature and does not fully support all edge cases yet - not every death will trigger a DeathLink,
+    """Spyro will die when a DeathLink is
+    received and will send them on his death.
+    Not every death will trigger a DeathLink,
     and not every received DeathLink will kill Spyro."""
     display_name = "DeathLink"
 
 class EnableFillerExtraLives(DefaultOnToggle):
-    """Allows filler items to include extra lives"""
+    """Adds extra lives to the item pool."""
     display_name = "Enable Extra Lives Filler"
 
 class EnableFillerDestructiveSpyro(Toggle):
-    """Allows filler items to include temporarily powering up Spyro so anything destructible he touches is destroyed.
+    """Adds to the item pool an item temporarily powering up
+    Spyro so anything destructible he touches is destroyed.
     Affects enemies, strong chests, breakable walls, etc."""
     display_name = "Enable Temporary Destructive Spyro Filler"
 
@@ -242,49 +254,52 @@ class EnableFillerDestructiveSpyro(Toggle):
 #    display_name = "Enable Temporary Invincibility Filler"
 
 class EnableFillerColorChange(Toggle):
-    """Allows filler items to include changing Spyro's color"""
+    """Adds changing Spyro's color to the item pool."""
     display_name = "Enable Changing Spyro's Color Filler"
 
 class EnableFillerBigHeadMode(Toggle):
-    """Allows filler items to include turning on Big Head Mode and Flat Spyro Mode"""
+    """Adds turning on Big Head Mode and flat Spyro Mode
+    to the item pool."""
     display_name = "Enable Big Head and Flat Spyro Filler"
 
 class EnableFillerHealSparx(Toggle):
-    """Allows filler items to include healing Sparx."""
+    """Adds healing Sparx to the item pool."""
     display_name = "Enable healing Sparx Filler"
 
 class TrapFillerPercent(Range):
-    """Determines the percentage of filler items that will be traps."""
+    """The percentage of filler items that will be traps."""
     display_name = "Trap Percentage of Filler"
     range_start = 0
     range_end = 100
     default = 0
 
 class EnableTrapDamageSparx(Toggle):
-    """Allows filler items to include damaging Sparx. Cannot directly kill Spyro."""
+    """Adds damaging Sparx to the item pool.
+    Cannot directly kill Spyro."""
     display_name = "Enable Hurting Sparx Trap"
 
 class EnableTrapSparxless(Toggle):
-    """Allows filler items to include removing Sparx."""
+    """Adds an item removing Sparx to the item pool."""
     display_name = "Enable Sparxless Trap"
 
 class EnableTrapInvisible(Toggle):
-    """Allows filler items to turn Spyro invisible briefly.
-    NOTE: Duckstation must be run in Interpreter mode for this to have any effect."""
+    """Adds turning Spyro invisible briefly to the item pool.
+    Duckstation must be run in Interpreter mode for this to have any effect."""
     display_name = "Enable Invisibility Trap"
 
 class EnableTrapRemappedController(Toggle):
     """Allows filler items to "remap" your controller briefly.
-    NOTE: Duckstation must be run in Interpreter mode for this to have any effect."""
+    Duckstation must be run in Interpreter mode for this to have any effect."""
     display_name = "Enable Remapped Controller"
 
 class EnableProgressiveSparxHealth(Choice):
-    """Start the game with lower max health and add items to the pool to increase your max health.
+    """Start the game with lower max health
+    and add items to the pool to increase your max health.
     Off - The game behaves normally.
-    Blue - Your max health starts at blue Sparx, and 1 upgrade is added to the pool.
-    Green - Your max health starts at green Sparx, and 2 upgrades are added to the pool.
-    Sparxless - Your max health starts at no Sparx, and 3 upgrades are added to the pool.
-    True Sparxless - Your max health is permanently Sparxless.  No upgrades are added to the pool."""
+    Blue - Your max health starts at blue Sparx.
+    Green - Your max health starts at green Sparx.
+    Sparxless - Your max health starts at no Sparx.
+    True Sparxless - Your max health is permanently Sparxless."""
     display_name = "Enable Progressive Sparx Health Upgrades"
     default = SparxUpgradeOptions.OFF
     option_off = SparxUpgradeOptions.OFF
@@ -294,21 +309,23 @@ class EnableProgressiveSparxHealth(Choice):
     option_true_sparxless = SparxUpgradeOptions.TRUE_SPARXLESS
 
 class ProgressiveSparxHealthLogic(Toggle):
-    """Ensures that sufficient max Sparx health is in logic before various required checks.
-    Entering Aquaria Towers and Crush logically requires green Sparx.  Entering Skelos Badlands and Gulp
-    logically requires blue Sparx, and entering Ripto logically requires gold Sparx.
-    Note: This does nothing unless Enable Progressive Sparx Health Upgrades is set to blue, green, or Sparxless,"""
+    """Certain Sparx health amounts are expected before
+    you are required to enter different levels.
+    Aquaria Towers, Crush, and Autumn Plains expects green Sparx.
+    Entering Skelos Badlands, Gulp, and Winter Tundra expects blue Sparx.
+    Entering Ripto expects gold Sparx.
+    This does nothing unless Enable Progressive Sparx Health Upgrades
+    is set to blue, green, or Sparxless,"""
     display_name = "Enable Progressive Sparx Health Logic"
 
 class DoubleJumpAbility(Choice):
-    """By default, Spyro 2 supports a double jump ability, where jumping then pressing square without letting go of jump
-    gains extra height.  This allows many sequence breaks within the game.
-    Note that most skips possible with double jump can be done in other, harder ways.
-    This option affects how the game plays, but does not directly impact logic.
-    The logic impact of the tricks below may be impacted by whether you can double jump.
-    NOTE: Duckstation must be run in Interpreter mode for this to have any effect.
+    """Settings for the unintended double jump ability, where jumping
+    then pressing square without letting go of jump gains extra height.
+    May impact logic on harder trick settings.
+    Duckstation must be run in Interpreter mode for this to have any effect.
     Vanilla - Double Jump behaves normally.
-    In Pool - Adds Double Jump to the item pool.  The ability is disabled until you acquire the item.
+    In Pool - Adds Double Jump to the item pool.
+        The ability is disabled until you acquire the item.
     Off - Double Jump is disabled."""
     display_name = "Double Jump Ability"
     default = AbilityOptions.VANILLA
@@ -317,13 +334,13 @@ class DoubleJumpAbility(Choice):
     option_off = AbilityOptions.OFF
 
 class FireballAbility(Choice):
-    """Spyro 2 has a permanent fireball powerup in Dragon Shores, which makes gameplay much easier.
-    With glitches, it is possible to get here without 100% completion.
-    Exiting a 100% save file and entering a new game without resetting Duckstation also carries it over to the new save.
-    This option affects how the game plays, not game logic.
+    """Settings for the Dragon Shores permanent fireball ability.
+    May impact logic, even on the easiest trick settings.
     Vanilla - The fireball powerup in Dragon Shores behaves normally.
-    In Pool - Adds Permanent Fireball to the item pool.  The Dragon Shores powerup does not work.
-    Off - Permanent Fireball is disabled. The Dragon Shores powerup does not work.
+    In Pool - Adds Permanent Fireball to the item pool.
+        The Dragon Shores powerup does not work.
+    Off - Permanent Fireball is disabled.
+        The Dragon Shores powerup does not work.
     Start With - You begin the game with fireball, as in New Game Plus."""
     display_name = "Permanent Fireball Ability"
     default = AbilityOptions.VANILLA
@@ -337,7 +354,8 @@ class TrickDifficulty(Choice):
     See https://docs.google.com/spreadsheets/d/1jLFQIIgCVBAWxlYPJLDG4EdR0Dh1_U4Rb67XrZNhwqw
     Off: Only dev-intended strategies are expected.
     Easy: Straightforward double jumps and fireball usage may be required.
-    Medium: Standard speedrunning tricks, including more difficult double jumps, may be required."""
+    Medium: Standard speedrunning tricks, including more difficult
+        double jumps, may be required."""
     display_name = "Trick Difficulty"
     default = TrickDifficultyOptions.OFF
     option_off = TrickDifficultyOptions.OFF
@@ -345,33 +363,33 @@ class TrickDifficulty(Choice):
     option_medium = TrickDifficultyOptions.MEDIUM
 
 class ColossusStartingGoals(Range):
-    """Determines how many goals you start with in both Colossus orb challenges."""
+    """How many goals you start with in both Colossus orb challenges."""
     display_name = "Colossus Starting Goals"
     range_start = 0
     range_end = 4
     default = 0
 
 class IdolEasyFish(Toggle):
-    """Makes it so red fish behave the same as other types of fish in Idol Springs."""
+    """Red fish behave the same as other types of fish in Idol Springs."""
     display_name = "Idol Easy Fish"
 
 class HurricosEasyLightningOrbs(Toggle):
-    """Makes it so lightning thieves do not steal the orbs in Hurricos."""
+    """Lightning thieves do not steal the orbs in Hurricos."""
     display_name = "Hurricos Easy Lightning Orbs"
 
 class BreezeRequiredGears(Range):
-    """Determines how many gears you must collect to complete the trolley orb."""
+    """How many gears you must collect to complete the trolley orb."""
     display_name = "Breeze Required Gears"
     range_start = 1
     range_end = 50
     default = 50
 
 class ScorchBomboSettings(Choice):
-    """Determines how the Bombo orb works in Scorch.
-    NOTE: This is a beta option. Multiple Bombos may appear, and interacting with the wrong one may softlock Bombo.
+    """Settings for the Bombo orb in Scorch.
     Vanilla - Bombo behaves as normal.
     First Only - Complete the first (shortest) path to complete the orb.
-    Attackless First Only - Complete the first (shortest) path to complete the orb. Bombo will not attack."""
+    Attackless First Only - Complete the first (shortest) path to
+        complete the orb. Bombo will not attack."""
     display_name = "Scorch Bombo Settings"
     default = BomboOptions.VANILLA
     option_vanilla = BomboOptions.VANILLA
@@ -379,40 +397,42 @@ class ScorchBomboSettings(Choice):
     option_attackless_first_only = BomboOptions.FIRST_ONLY_NO_ATTACK
 
 class FractureRequireHeadbash(DefaultOnToggle):
-    """Determines if Hunter requires headbash to start Earthshaper Bash.
-    Without headbash, this orb can be completed with fireball or the Fracture Easy Earthshapers setting.
-    This does not change the orb's logic or change how it plays."""
+    """Whether Hunter requires headbash to start Earthshaper Bash.
+    Without headbash, this orb can be completed with fireball
+    or the Fracture Easy Earthshapers setting.
+    This changes the orb's logic."""
     display_name = "Fracture Require Headbash"
 
 class FractureEasyEarthshapers(Toggle):
-    """Removes the 7 earthshapers from the Alchemist area and reduces the maximum number of spirit particles in the level
-    accordingly.
-    Removes the headbash requirement from the Fracture Hills all spirit particles check.
-    The second orb still requires headbash, unless Fracture Require Headbash is disabled."""
+    """Removes the 7 earthshapers from the Alchemist area and
+    reduces the maximum number of spirit particles in the level.
+    Removes the headbash requirement from the Fracture Hills
+    all spirit particles check. The second orb still requires
+    headbash, unless Fracture Require Headbash is disabled."""
     display_name = "Fracture Easy Earthshapers"
 
 class MagmaSpyroStartingPopcorn(Range):
-    """Determines how many popcorn crystals you start with in each Hunter orb challenge."""
+    """How many popcorn crystals you start with in each Hunter orb challenge."""
     display_name = "Magma Spyro Starting Popcorn"
     range_start = 0
     range_end = 9
     default = 0
 
 class MagmaHunterStartingPopcorn(Range):
-    """Determines how many popcorn crystals Hunter starts with in each Hunter orb challenge."""
+    """How many popcorn crystals Hunter starts with in each Hunter orb challenge."""
     display_name = "Magma Hunter Starting Popcorn"
     range_start = 0
     range_end = 9
     default = 0
 
 class ShadyRequireHeadbash(DefaultOnToggle):
-    """Determines if Free Hippos in Shady Oasis requires headbash to start.
+    """Whether Free Hippos in Shady Oasis requires headbash to start.
     Without headbash, this orb can be completed with fireball.
     This changes the orb's logic."""
     display_name = "Shady Require Headbash"
 
 class EasyGulp(Toggle):
-    """If turned on, Spyro does double damage to Gulp."""
+    """Spyro does double damage to Gulp."""
     display_name = "Easy Gulp"
 
 class PortalAndGemCollectionColor(Choice):
@@ -498,7 +518,61 @@ class Spyro2Option(PerGameCommonOptions):
 # Group logic/trick options together, especially for the local WebHost.
 spyro_options_groups = [
     OptionGroup(
-        "Difficulty",
+        "Enabled Locations",
+        [
+            Enable25PctGemChecksOption,
+            Enable50PctGemChecksOption,
+            Enable75PctGemChecksOption,
+            EnableGemChecksOption,
+            EnableTotalGemChecksOption,
+            MaxTotalGemCheckOption,
+            EnableGemsanityOption,
+            EnableSkillpointChecksOption,
+            EnableLifeBottleChecksOption,
+            EnableSpiritParticleChecksOption
+        ],
+        False
+    ),
+    OptionGroup(
+        "Game Progression",
+        [
+            EnableOpenWorld,
+            StartWithAbilitiesAndWarps,
+            LevelLockOption,
+            StartingLevelCount,
+            RiptoDoorOrbs,
+            MoneybagsSettings,
+            # PowerupLockSettings,
+        ],
+        False
+    ),
+    OptionGroup(
+        "Item Pool",
+        [
+            DoubleJumpAbility,
+            FireballAbility,
+            EnableFillerExtraLives,
+            EnableFillerDestructiveSpyro,
+            EnableFillerColorChange,
+            EnableFillerBigHeadMode,
+            EnableFillerHealSparx,
+            TrapFillerPercent,
+            EnableTrapDamageSparx,
+            EnableTrapSparxless,
+            EnableTrapInvisible
+        ],
+        True
+    ),
+    OptionGroup(
+        "Sparx Settings",
+        [
+            EnableProgressiveSparxHealth,
+            ProgressiveSparxHealthLogic
+        ],
+        True
+    ),
+    OptionGroup(
+        "Game Difficulty",
         [
             TrickDifficulty,
             ColossusStartingGoals,

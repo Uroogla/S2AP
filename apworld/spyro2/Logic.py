@@ -315,7 +315,7 @@ class Logic(ABC):
         pass
 
     def can_access_fracture_hunter(self, state):
-        return self.can_headbash(state) or (not self.world.options.shady_require_headbash.value and self.can_fireball(state))
+        return self.can_headbash(state) or (not self.world.options.fracture_require_headbash.value and self.can_fireball(state))
 
     def can_access_fracture_enemies(self, state):
         return self.world.options.fracture_easy_earthshapers.value or self.can_fireball(state) or self.can_access_fracture_hunter(state)
@@ -385,7 +385,7 @@ class BaseLogic(Logic):
 
     def can_access_sf_past_aquaria_wall(self, state):
         return self.can_access_summer_second_half(state) and \
-            (self.can_bypass_moneybags(state) or state.has("Moneybags Unlock - Door to Aquaria Towers", self.world.player))
+            (self.can_bypass_moneybags(state) or state.has("Moneybags Unlock - Wall by Aquaria Towers", self.world.player))
 
     def can_do_glimmer_indoor_lamps(self, state):
         return self.can_climb(state)
@@ -499,7 +499,7 @@ class EasyLogic(Logic):
             (
                 self.can_swim(state) or
                 self.can_bypass_moneybags(state) or
-                state.has("Moneybags Unlock - Door to Aquaria Towers", self.world.player)
+                state.has("Moneybags Unlock - Wall by Aquaria Towers", self.world.player)
             )
 
     def can_do_glimmer_indoor_lamps(self, state):
@@ -629,7 +629,7 @@ class MediumLogic(Logic):
                 self.can_swim(state) or
                 self.can_double_jump(state) or  # Requires game over, save/quit, or credits cheat.
                 self.can_bypass_moneybags(state) or
-                state.has("Moneybags Unlock - Door to Aquaria Towers", self.world.player)
+                state.has("Moneybags Unlock - Wall by Aquaria Towers", self.world.player)
             )
 
     def can_do_glimmer_indoor_lamps(self, state):

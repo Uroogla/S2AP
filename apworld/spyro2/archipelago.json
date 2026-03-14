@@ -3,5 +3,6 @@
   "world_version": "1.1.1",
   "minimum_ap_version": "0.6.1",
   "authors": ["Uroogla"],
-  "poptracker": "github.com/routhken/Spyro_2_tracker/releases/latest"
+  "poptracker": "github.com/routhken/Spyro_2_tracker/releases/latest",
+  "result_file_ending": ".apspyro2"
 }

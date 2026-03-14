@@ -1,9 +1,11 @@
 # world/spyro2/__init__.py
 from typing import Dict, Set, List, Union, ClassVar
+#import os
 
 from BaseClasses import MultiWorld, Region, Item, Entrance, Tutorial, ItemClassification
 from Options import OptionError
-from settings import Group, Bool
+import Utils
+from settings import Group, Bool, UserFilePath
 
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import set_rule, add_rule, add_item_rule, forbid_item
@@ -14,6 +16,7 @@ from .Options import Spyro2Option, GoalOptions, GemsanityOptions, MoneybagsOptio
     RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups
 from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic
 from .Rules import get_level_rules
+#from .Rom import Spyro2ProcedurePatch, write_tokens
 
 class Spyro2Settings(Group):
 
@@ -22,7 +25,13 @@ class Spyro2Settings(Group):
         Full gemsanity adds 2546 locations and an equal number of progression items.
         These items may be local-only or spread across the multiworld."""
 
+    #class Spyro2RomFile(UserFilePath):
+    #    """File name of your US Spyro 2 PSX ROM (.bin file)"""
+    #    description = "Spyro 2 ROM .bin File"
+    #    copy_to = "Spyro 2.bin"
+
     allow_full_gemsanity: Union[AllowFullGemsanity, bool] = False
+    #rom_file: Spyro2RomFile = Spyro2RomFile(Spyro2RomFile.copy_to)
 
 
 class Spyro2Web(WebWorld):
@@ -56,7 +65,7 @@ class Spyro2World(World):
     enabled_location_categories: Set[Spyro2LocationCategory]
     required_client_version = (0, 5, 0)
     # TODO: Remember to update this!
-    ap_world_version = "1.1.1"
+    ap_world_version = "1.2.0"
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = {}
@@ -696,3 +705,22 @@ class Spyro2World(World):
         }
 
         return slot_data
+
+    def generate_output(self, output_directory: str):
+        return
+        outfilepname = f"_P{self.player}"
+        outfilepname += f"_{self.multiworld.get_file_safe_player_name(self.player).replace(' ', '_')}"
+        self.rom_name_text = f'S2{Utils.__version__.replace(".", "")[0:3]}_{self.player}_{self.multiworld.seed:11}\0'
+        self.romName = bytearray(self.rom_name_text, "utf8")[:0x20]
+        self.romName.extend([0] * (0x20 - len(self.romName)))
+        self.rom_name = self.romName
+        self.playerName = bytearray(self.multiworld.player_name[self.player], "utf8")[:0x20]
+        self.playerName.extend([0] * (0x20 - len(self.playerName)))
+        patch = Spyro2ProcedurePatch(player=self.player, player_name=self.multiworld.player_name[self.player])
+        procedure = [("apply_tokens", ["token_data.bin"])]
+        patch.procedure = procedure
+        write_tokens(self, patch)
+
+        # Write Output
+        out_file_name = self.multiworld.get_out_file_name_base(self.player)
+        patch.write(os.path.join(output_directory, f"{out_file_name}{patch.patch_file_ending}"))
