@@ -119,7 +119,9 @@ class GuaranteedItemsOption(ItemDict):
 
 class EnableOpenWorld(Toggle):
     """If on, Crush and Gulp do not require talismans.
-    Removes talisman items from the pool."""
+    Removes talisman items from the pool.
+    Effectively allows early access to each homeworld,
+    though swim and climb may logicially lock progression."""
     display_name = "Enable Open World"
 
 class LevelLockOption(Choice):
@@ -147,8 +149,8 @@ class StartingLevelCount(Range):
     default = 8
 
 class StartWithAbilitiesAndWarps(Toggle):
-    """The player will start with
-    swim, climb, headbash, and access to all 3 homeworlds.
+    """The player will start with swim, climb, headbash,
+    and immediate warp access to all 3 homeworlds.
     Only has an effect in Open World mode."""
     display_name = "Open World Start With Abilities and Warps"
 

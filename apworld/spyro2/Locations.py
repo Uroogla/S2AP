@@ -680,3 +680,12 @@ for level in location_tables.keys():
 location_dictionary: Dict[str, Spyro2LocationData] = {}
 for location_table in location_tables.values():
     location_dictionary.update({location_data.name: location_data for location_data in location_table})
+
+location_name_groups = {"Speedways": set(), "Speedway Orbs": set()}
+speedways = ["Ocean Speedway", "Metro Speedway", "Icy Speedway", "Canyon Speedway"]
+for location in location_dictionary.keys():
+    for speedway in speedways:
+        if location.startswith(speedway):
+            location_name_groups["Speedways"].add(location)
+        if location.startswith(speedway) and "Gem" not in location and "Under" not in location:
+            location_name_groups["Speedway Orbs"].add(location)

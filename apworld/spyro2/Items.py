@@ -627,3 +627,14 @@ def BuildItemPool(world, count, options, locked_levels):
     
     multiworld.random.shuffle(item_pool)
     return item_pool
+
+item_name_groups = {"Moneybags Unlocks": set(), "Level Unlocks": set(), "Gems": set(), "Powerups": set()}
+for item in item_dictionary.keys():
+    if "Moneybags Unlock" in item:
+        item_name_groups["Moneybags Unlocks"].add(item)
+    if item.endswith(" Unlock"):
+        item_name_groups["Level Unlocks"].add(item)
+    if item.endswith(" Gems") or item.endswith("Gem"):
+        item_name_groups["Gems"].add(item)
+    if item.endswith(" Powerup"):
+        item_name_groups["Powerups"].add(item)

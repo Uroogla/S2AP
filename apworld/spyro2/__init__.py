@@ -10,8 +10,10 @@ from settings import Group, Bool, UserFilePath
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import set_rule, add_rule, add_item_rule, forbid_item
 
-from .Items import Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_names, item_descriptions, BuildItemPool
-from .Locations import Spyro2Location, Spyro2LocationCategory, location_tables, location_dictionary
+from .Items import (Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_names,
+    item_descriptions, BuildItemPool, item_name_groups)
+from .Locations import (Spyro2Location, Spyro2LocationCategory, location_tables,
+    location_dictionary, location_name_groups)
 from .Options import Spyro2Option, GoalOptions, GemsanityOptions, MoneybagsOptions, SparxUpgradeOptions, \
     RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups
 from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic
@@ -68,8 +70,9 @@ class Spyro2World(World):
     ap_world_version = "1.2.0"
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
-    item_name_groups = {}
+    item_name_groups = item_name_groups
     item_descriptions = item_descriptions
+    location_name_groups = location_name_groups
     key_locked_levels = []
     glitches_item_name: str = "Glitched Item"  # UT Glitched Logic Support, Not implemented yet.
     options_copy = []  # Copy of options used to support UT.
