@@ -26,6 +26,9 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.IO;
 using static S2AP.Models.Enums;
 
 namespace S2AP;
@@ -100,7 +103,31 @@ public partial class App : Application
         }
         base.OnFrameworkInitializationCompleted();
     }
-    
+
+    /**
+     * Returns a Dictionary of details from the most recent connection.
+     * 
+     * File path is ./connection.json.
+     * 
+     * @return A Dictionary with the most recent connection, with keys of host and slot.
+     */
+    public static Dictionary<String, String> GetLastConnectionDetails()
+    {
+        string connectionDetails = File.ReadAllText(@"./connection.json");
+        return System.Text.Json.JsonSerializer.Deserialize<Dictionary<String, String>>(connectionDetails);
+    }
+
+    /**
+     * Saves a details from the most recent connection to ./connection.json.
+     * 
+     * @param A Dictionary with the most recent connection, with keys of host and slot.
+     */
+    public static void SaveLastConnectionDetails(Dictionary<String, String> lastConnectionDetails)
+    {
+        string json = System.Text.Json.JsonSerializer.Serialize(lastConnectionDetails);
+        File.WriteAllText(@"./connection.json", json);
+    }
+
     /**
      * Runs on starting the application.
      * Sets up handlers and gives initial information to the user.
@@ -117,8 +144,28 @@ public partial class App : Application
         };
         Context.ConnectButtonEnabled = true;
         Context.AutoscrollEnabled = true;
-        // TODO: Autopopulate based on last connection.
-        //Context.Host = "Hello World";
+        Dictionary<String, String> lastConnectionDetails = new Dictionary<string, string>();
+        lastConnectionDetails["slot"] = "";
+        lastConnectionDetails["host"] = "";
+        // Don't save password.
+        try
+        {
+            lastConnectionDetails = GetLastConnectionDetails();
+            if (!lastConnectionDetails.ContainsKey("slot"))
+            {
+                lastConnectionDetails["slot"] = "";
+            }
+            if (!lastConnectionDetails.ContainsKey("host"))
+            {
+                lastConnectionDetails["host"] = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Logger.Verbose($"Could not load connection details file.\r\n{ex.ToString()}");
+        }
+        Context.Host = lastConnectionDetails["host"];
+        Context.Slot = lastConnectionDetails["slot"];
         _sparxUpgrades = 0;
         _hasSubmittedGoal = false;
         _useQuietHints = true;
@@ -421,7 +468,7 @@ public partial class App : Application
         Client.Disconnected += OnDisconnected;
 
         // Try to connect to the AP server.
-        await Client.Connect(e.Host, "Spyro 2", "save1");
+        await Client.Connect(e.Host.Trim(), "Spyro 2", "save1");
         if (!Client.IsConnected)
         {
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
@@ -434,8 +481,9 @@ public partial class App : Application
         Client.MessageReceived += Client_MessageReceived;
         Client.ItemReceived += ItemReceived;
         Client.EnableLocationsCondition = () => Helpers.IsInGame();
-        _playerName = e.Slot;
-        await Client.Login(e.Slot, !string.IsNullOrWhiteSpace(e.Password) ? e.Password : null);
+        // Don't trim password, since leading and trailing whitespace is allowed.
+        _playerName = e.Slot.Trim();
+        await Client.Login(e.Slot.Trim(), !string.IsNullOrWhiteSpace(e.Password) ? e.Password : null);
         if (Client.Options?.Count > 0)
         {
             GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
@@ -2006,6 +2054,18 @@ public partial class App : Application
         // with keys=[$"hints_{team}_{slot}"].
         Client?.SendMessage("!hint");
         UpdateItemLog();
+
+        Dictionary<String, String> lastConnectionDetails = new Dictionary<string, string>();
+        lastConnectionDetails["slot"] = Context.Slot;
+        lastConnectionDetails["host"] = Context.Host;
+        try
+        {
+            SaveLastConnectionDetails(lastConnectionDetails);
+        }
+        catch (Exception ex)
+        {
+            Log.Logger.Verbose($"Failed to write connection details\r\n{ex.ToString()}");
+        }
     }
 
     /**
