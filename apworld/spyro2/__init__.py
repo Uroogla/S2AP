@@ -1,5 +1,5 @@
 # world/spyro2/__init__.py
-from typing import Dict, Set, List, Union, ClassVar
+from typing import Dict, Set, List, Union, ClassVar, Any
 
 from BaseClasses import MultiWorld, Region, Item, Entrance, Tutorial, ItemClassification
 from Options import OptionError
@@ -64,6 +64,123 @@ class Spyro2World(World):
     glitches_item_name: str = "Glitched Item"  # UT Glitched Logic Support, Not implemented yet.
     options_copy = []  # Copy of options used to support UT.
     settings: ClassVar[Spyro2Settings]
+
+    # Option presets for easier game setup
+    option_presets: Dict[str, Dict[str, Any]] = {
+        "Beginner": {
+            "goal": "ripto",
+            "ripto_door_orbs": 40,
+            "enable_open_world": False,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": False,
+            "enable_total_gem_checks": False,
+            "enable_skillpoint_checks": False,
+            "enable_life_bottle_checks": False,
+            "enable_spirit_particle_checks": False,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": False,
+            "enable_filler_extra_lives": True,
+            "easy_gulp": True,
+            "colossus_starting_goals": 2,
+            "idol_easy_fish": True,
+            "hurricos_easy_lightning_orbs": True,
+        },
+        "Standard": {
+            "goal": "ripto",
+            "ripto_door_orbs": 40,
+            "enable_open_world": False,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": True,
+            "enable_total_gem_checks": False,
+            "enable_skillpoint_checks": False,
+            "enable_life_bottle_checks": False,
+            "enable_spirit_particle_checks": False,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": False,
+            "enable_filler_extra_lives": True,
+        },
+        "100 Percent": {
+            "goal": "100_percent",
+            "ripto_door_orbs": 40,
+            "enable_open_world": False,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": True,
+            "enable_total_gem_checks": True,
+            "max_total_gem_checks": 10000,
+            "enable_skillpoint_checks": True,
+            "enable_life_bottle_checks": True,
+            "enable_spirit_particle_checks": True,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": False,
+        },
+        "Open World": {
+            "goal": "ripto",
+            "ripto_door_orbs": 40,
+            "enable_open_world": True,
+            "open_world_ability_and_warp_unlocks": True,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": True,
+            "enable_total_gem_checks": False,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": False,
+        },
+        "Tokens": {
+            "goal": "10_tokens",
+            "ripto_door_orbs": 40,
+            "enable_open_world": False,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": True,
+            "enable_total_gem_checks": True,
+            "max_total_gem_checks": 8000,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": False,
+        },
+        "Skill Points": {
+            "goal": "all_skillpoints",
+            "ripto_door_orbs": 40,
+            "enable_open_world": False,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": True,
+            "enable_skillpoint_checks": True,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": False,
+        },
+        "Moneybagssanity": {
+            "goal": "ripto",
+            "ripto_door_orbs": 40,
+            "enable_open_world": False,
+            "level_lock_options": "vanilla",
+            "enable_gem_checks": True,
+            "enable_gemsanity": "partial",
+            "moneybags_settings": "moneybagssanity",
+            "death_link": False,
+        },
+        "Hardcore": {
+            "goal": "100_percent",
+            "ripto_door_orbs": 64,
+            "enable_open_world": False,
+            "level_lock_options": "keys",
+            "level_unlocks": 0,
+            "enable_gem_checks": True,
+            "enable_total_gem_checks": True,
+            "max_total_gem_checks": 10000,
+            "enable_skillpoint_checks": True,
+            "enable_life_bottle_checks": True,
+            "enable_spirit_particle_checks": True,
+            "enable_gemsanity": "off",
+            "moneybags_settings": "vanilla",
+            "death_link": True,
+            "enable_progressive_sparx_health": "sparxless",
+            "enable_progressive_sparx_logic": True,
+            "trap_filler_percent": 50,
+        },
+    }
 
     # TODO: Remember to keep this False.
     PRINT_GEM_REQS = False  # Prints out the logic for each gem on generating a seed. Not for production use.
