@@ -1,6 +1,8 @@
 import typing
 from dataclasses import dataclass
-from Options import Toggle, DefaultOnToggle, Option, Range, Choice, ItemDict, DeathLink, PerGameCommonOptions, OptionGroup
+from Options import (Toggle, DefaultOnToggle, Option, Range, Choice, ItemDict, DeathLink, PerGameCommonOptions,
+                     OptionGroup, OptionSet)
+from .LogicTricks import normalized_name_tricks
 
 class GoalOptions:
     RIPTO = 0
@@ -51,6 +53,7 @@ class TrickDifficultyOptions:
     EASY = 1
     MEDIUM = 2
     HARD = 3
+    CUSTOM = 4
 
 class PortalTextColorOptions:
     DEFAULT = 0
@@ -229,8 +232,6 @@ class MoneybagsSettings(Choice):
     display_name = "Moneybags Settings"
     default = MoneybagsOptions.VANILLA
     option_vanilla = MoneybagsOptions.VANILLA
-    # TODO: Implement.
-    # option_price_shuffle = MoneybagsOptions.PRICE_SHUFFLE
     option_moneybagssanity = MoneybagsOptions.MONEYBAGSSANITY
 
 class EnableDeathLink(DeathLink):
@@ -357,12 +358,26 @@ class TrickDifficulty(Choice):
     Off: Only dev-intended strategies are expected.
     Easy: Straightforward double jumps and fireball usage may be required.
     Medium: Standard speedrunning tricks, including more difficult
-        double jumps, may be required."""
+        double jumps, may be required.
+    Custom: Choose exactly which tricks are in logic."""
     display_name = "Trick Difficulty"
     default = TrickDifficultyOptions.OFF
     option_off = TrickDifficultyOptions.OFF
     option_easy = TrickDifficultyOptions.EASY
     option_medium = TrickDifficultyOptions.MEDIUM
+    option_custom = TrickDifficultyOptions.CUSTOM
+
+class CustomTricks(OptionSet):
+    """Set various tricks for logic.
+    Only used if Trick Difficulty is Custom.
+    Format as a comma-separated list of "nice" names:
+    ["Sunny Beach Turtle Soup without Climb", "Crystal Glacier Bridge without Moneybags"].
+    A full list of supported tricks can be found at:
+    https://github.com/Uroogla/S2AP/blob/main/apworld/spyro2/LogicTricks.py
+    """
+    display_name = "Custom Tricks"
+    valid_keys = tuple(normalized_name_tricks.keys())
+    valid_keys_casefold = True
 
 class ColossusStartingGoals(Range):
     """How many goals you start with in both Colossus orb challenges."""
@@ -502,6 +517,7 @@ class Spyro2Option(PerGameCommonOptions):
     double_jump_ability: DoubleJumpAbility
     permanent_fireball_ability: FireballAbility
     trick_difficulty: TrickDifficulty
+    custom_tricks: CustomTricks
     colossus_starting_goals: ColossusStartingGoals
     idol_easy_fish: IdolEasyFish
     hurricos_easy_lightning_orbs: HurricosEasyLightningOrbs
@@ -577,6 +593,7 @@ spyro_options_groups = [
         "Game Difficulty",
         [
             TrickDifficulty,
+            CustomTricks,
             ColossusStartingGoals,
             IdolEasyFish,
             HurricosEasyLightningOrbs,

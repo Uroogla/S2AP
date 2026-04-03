@@ -1,6 +1,5 @@
 # world/spyro2/__init__.py
 from typing import Dict, Set, List, Union, ClassVar
-#import os
 
 from BaseClasses import MultiWorld, Region, Item, Entrance, Tutorial, ItemClassification
 from Options import OptionError
@@ -15,10 +14,9 @@ from .Items import (Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_na
 from .Locations import (Spyro2Location, Spyro2LocationCategory, location_tables,
     location_dictionary, location_name_groups)
 from .Options import Spyro2Option, GoalOptions, GemsanityOptions, MoneybagsOptions, SparxUpgradeOptions, \
-    RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups
-from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic
+    RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions
+from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic, CustomLogic
 from .Rules import get_level_rules
-#from .Rom import Spyro2ProcedurePatch, write_tokens
 
 class Spyro2Settings(Group):
 
@@ -27,13 +25,7 @@ class Spyro2Settings(Group):
         Full gemsanity adds 2546 locations and an equal number of progression items.
         These items may be local-only or spread across the multiworld."""
 
-    #class Spyro2RomFile(UserFilePath):
-    #    """File name of your US Spyro 2 PSX ROM (.bin file)"""
-    #    description = "Spyro 2 ROM .bin File"
-    #    copy_to = "Spyro 2.bin"
-
     allow_full_gemsanity: Union[AllowFullGemsanity, bool] = False
-    #rom_file: Spyro2RomFile = Spyro2RomFile(Spyro2RomFile.copy_to)
 
 
 class Spyro2Web(WebWorld):
@@ -180,9 +172,41 @@ class Spyro2World(World):
             ]
             self.key_locked_levels = self.multiworld.random.sample(possible_locked_levels, k=22 - self.options.level_unlocks.value)
 
-        # Generation struggles to place swim, which restricts too much of the seed.
-        if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY:
+        # Generation struggles to place the requirement to get to the second half of Autumn Plains.
+        # This restricts too much of the seed.
+        early_double_jump = False
+        if self.options.double_jump_ability.value != AbilityOptions.IN_POOL:
+            early_double_jump = False
+        elif self.options.trick_difficulty == TrickDifficultyOptions.EASY:
+            early_double_jump = True
+        elif self.options.trick_difficulty == TrickDifficultyOptions.CUSTOM:
+            for trick in self.options.custom_tricks.value:
+                normalized_name = trick.casefold()
+                if normalized_name == "Summer Forest Second Half with Double Jump":
+                    early_double_jump = True
+                    break
+
+        early_swim = False
+        if not early_double_jump:
+            if self.options.trick_difficulty in [TrickDifficultyOptions.OFF, TrickDifficultyOptions.EASY]:
+                early_swim = True
+            elif self.options.trick_difficulty == TrickDifficultyOptions.CUSTOM:
+                early_swim = True
+                for trick in self.options.custom_tricks.value:
+                    normalized_name = trick.casefold()
+                    if normalized_name == "Summer Forest Second Half with Nothing":
+                        early_swim = False
+                        break
+
+        if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY and \
+            not (self.options.enable_open_world.value and self.options.open_world_ability_and_warp_unlocks.value) and \
+            early_swim:
             self.multiworld.early_items[self.player]["Moneybags Unlock - Swim"] = 1
+
+        if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY and \
+            not (self.options.enable_open_world.value and self.options.open_world_ability_and_warp_unlocks.value) and \
+            early_double_jump:
+            self.multiworld.early_items[self.player]["Double Jump Ability"] = 1
 
     def create_regions(self):
         # Create Regions
@@ -340,6 +364,8 @@ class Spyro2World(World):
             logic = EasyLogic(self)
         elif self.options.trick_difficulty.value == TrickDifficultyOptions.MEDIUM:
             logic = MediumLogic(self)
+        elif self.options.trick_difficulty.value == TrickDifficultyOptions.CUSTOM:
+            logic = CustomLogic(self)
         else:
             logic = BaseLogic(self)
 
@@ -668,6 +694,7 @@ class Spyro2World(World):
                 "double_jump_ability": self.options.double_jump_ability.value,
                 "permanent_fireball_ability": self.options.permanent_fireball_ability.value,
                 "trick_difficulty": self.options.trick_difficulty.value,
+                "custom_tricks": self.options.custom_tricks.value,
                 "colossus_starting_goals": self.options.colossus_starting_goals.value,
                 "idol_easy_fish": self.options.idol_easy_fish.value,
                 "hurricos_easy_lightning_orbs": self.options.hurricos_easy_lightning_orbs.value,
@@ -693,7 +720,6 @@ class Spyro2World(World):
                 "pink_gem_color": colors[4][1],
             },
             "gemsanity_ids": gemsanity_locations,
-            # "moneybags_prices": moneybags_prices,
             "level_orb_requirements": self.level_orb_requirements,
             "key_locked_levels": self.key_locked_levels,
             "seed": self.multiworld.seed_name,  # to verify the server's multiworld
@@ -708,22 +734,3 @@ class Spyro2World(World):
         }
 
         return slot_data
-
-    def generate_output(self, output_directory: str):
-        return
-        outfilepname = f"_P{self.player}"
-        outfilepname += f"_{self.multiworld.get_file_safe_player_name(self.player).replace(' ', '_')}"
-        self.rom_name_text = f'S2{Utils.__version__.replace(".", "")[0:3]}_{self.player}_{self.multiworld.seed:11}\0'
-        self.romName = bytearray(self.rom_name_text, "utf8")[:0x20]
-        self.romName.extend([0] * (0x20 - len(self.romName)))
-        self.rom_name = self.romName
-        self.playerName = bytearray(self.multiworld.player_name[self.player], "utf8")[:0x20]
-        self.playerName.extend([0] * (0x20 - len(self.playerName)))
-        patch = Spyro2ProcedurePatch(player=self.player, player_name=self.multiworld.player_name[self.player])
-        procedure = [("apply_tokens", ["token_data.bin"])]
-        patch.procedure = procedure
-        write_tokens(self, patch)
-
-        # Write Output
-        out_file_name = self.multiworld.get_out_file_name_base(self.player)
-        patch.write(os.path.join(output_directory, f"{out_file_name}{patch.patch_file_ending}"))

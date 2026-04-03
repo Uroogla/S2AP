@@ -55,7 +55,7 @@ There is a [Poptracker](https://poptracker.github.io) package for this game, whi
 It can be found at https://github.com/routhken/Spyro_2_tracker/releases.
 
 [Universal Tracker](https://github.com/FarisTheAncient/Archipelago/releases) is partially supported as well, but you may encounter
-issues with random settings, gemsanity, and world keys.
+issues with random settings.
 
 ## What does randomization do to this game?
 

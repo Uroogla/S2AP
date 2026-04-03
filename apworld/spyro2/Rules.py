@@ -132,11 +132,10 @@ def get_level_rules(logic: Logic):
             GemRules(
                 [1, 2, 3, 4, 5, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 152],
                 [
-                    # TODO: Apply new logic
                     GemRuleRestriction(
                         [110, 111, 112, 113, 114, 115, 117, 118, 119, 151],
-                        "climb",
-                        lambda state: logic.can_climb(state),
+                        "indoor lamp access",
+                        lambda state: logic.can_do_glimmer_indoor_lamps(state),
                         47
                     )
                 ]
@@ -212,25 +211,84 @@ def get_level_rules(logic: Logic):
             "Aquaria Towers",
             None,
             lambda state: logic.can_enter_aquaria(state),
-            lambda state: logic.can_access_aquaria_second_half(state),
+            lambda state: logic.can_access_aquaria_room_three(state),
             {
-                "Aquaria Towers: Seahorse Rescue": lambda state: logic.can_access_aquaria_second_half(state),
-                "Aquaria Towers: Manta ride I": lambda state: logic.can_access_aquaria_second_half(state),
-                "Aquaria Towers: Manta ride II": lambda state: logic.can_access_aquaria_second_half(state),
+                "Aquaria Towers: Seahorse Rescue": lambda state: logic.can_complete_aquaria_children_orb(state),
+                "Aquaria Towers: Manta ride I": lambda state: logic.can_access_aquaria_room_three(state),
+                "Aquaria Towers: Manta ride II": lambda state: logic.can_access_aquaria_room_three(state),
             },
-            {"Aquaria Towers: Moneybags Unlock: Aquaria Towers Submarine": lambda state: logic.can_access_aquaria_after_first_room(state)},
-            {"Aquaria Towers: Life Bottle": lambda state: logic.can_access_aquaria_after_first_room(state)},
-            {"Aquaria Towers: All Seaweed": lambda state: logic.can_access_aquaria_after_first_room(state) and logic.can_access_aquaria_second_half(state)},
-            lambda state: logic.can_access_aquaria_after_first_room(state) and logic.can_access_aquaria_second_half(state),
+            {"Aquaria Towers: Moneybags Unlock: Aquaria Towers Submarine": lambda state: logic.can_access_aquaria_pre_moneybags_tunnel(state)},
+            {"Aquaria Towers: Life Bottle": lambda state: logic.can_access_aquaria_room_two_bottom(state)},
+            {"Aquaria Towers: All Seaweed": lambda state: logic.can_get_aquaria_spirit_particles(state)},
+            lambda state: logic.can_get_aquaria_spirit_particles(state),
             GemRules(
                 [85, 86, 87, 88, 89, 90, 91, 92, 94, 95, 96, 97, 98, 99, 100, 109, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 167],
                 [
-                    # TODO: Better handle logic.
                     GemRuleRestriction(
-                        [3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 29, 30, 31, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 93, 101, 102, 103, 104, 105, 106, 107, 108, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134],
-                        "access to the shark submarine",
-                        lambda state: logic.can_access_aquaria_second_half(state),
-                        273
+                        [168, 169, 176, 177, 178, 179, 180, 182, 183],
+                        "access to the first tunnel",
+                        lambda state: logic.can_access_aquaria_first_tunnel(state),
+                        19
+                    ),
+                    GemRuleRestriction(
+                        [1, 2, 8, 14, 15, 42, 52, 53, 54, 135, 165, 181],
+                        "access to the second button room's dry area",
+                        lambda state: logic.can_access_aquaria_room_two_bottom(state),
+                        21
+                    ),
+                    GemRuleRestriction(
+                        [9, 10, 33, 51, 55, 56, 57, 58, 63],
+                        "access to the second button room's crab pit",
+                        lambda state: logic.can_access_aquaria_room_two_crab_pit(state),
+                        27
+                    ),
+                    GemRuleRestriction(
+                        [112, 113, 114, 115, 116, 117],
+                        "access to the second button room's shark pit",
+                        lambda state: logic.can_access_aquaria_room_two_shark_pit(state),
+                        25
+                    ),
+                    GemRuleRestriction(
+                        [41, 43, 44, 45, 46, 47, 48, 49],
+                        "access to the second button room's upper area",
+                        lambda state: logic.can_access_aquaria_room_two_middle(state),
+                        13
+                    ),
+                    GemRuleRestriction(
+                        [3, 4],
+                        "access to the second button room's highest area",
+                        lambda state: logic.can_access_aquaria_room_two_top(state),
+                        10
+                    ),
+                    GemRuleRestriction(
+                        [34, 35, 36, 37, 38, 39, 40, 50, 59, 60, 61, 62, 64, 65, 66],
+                        "access to the tunnel before Moneybags",
+                        lambda state: logic.can_access_aquaria_pre_moneybags_tunnel(state),
+                        22
+                    ),
+                    GemRuleRestriction(
+                        [5, 6, 7, 16, 17, 18, 19, 20, 24, 25, 26, 29, 30, 31, 127, 128],
+                        "access to the third button room",
+                        lambda state: logic.can_access_aquaria_room_three(state),
+                        56
+                    ),
+                    GemRuleRestriction(
+                        [21, 22, 23, 67, 110, 111],
+                        "access to the talisman area",
+                        lambda state: logic.can_access_aquaria_talisman_area_gems(state),
+                        17
+                    ),
+                    GemRuleRestriction(
+                        [102, 103, 104, 105, 106, 107, 108, 118, 129, 130],
+                        "access to the shark tunnel",
+                        lambda state: logic.can_access_aquaria_shark_tunnel(state),
+                        40
+                    ),
+                    GemRuleRestriction(
+                        [68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 93, 101, 119, 120, 121, 122, 123, 124, 125, 126, 131, 132, 133, 134],
+                        "access to the upper level",
+                        lambda state: logic.can_access_aquaria_room_three(state),
+                        125
                     )
                 ]
             )
@@ -417,7 +475,14 @@ def get_level_rules(logic: Logic):
             GemRules(
                 [1, 2, 3, 4, 5, 6, 7, 15, 16, 17, 18, 19, 85, 90, 100, 111, 112],
                 # TODO: Add powerup logic.
-                []
+                [
+                    GemRuleRestriction(
+                        [29, 30, 31],
+                        "swim",
+                        lambda state: logic.can_swim(state),
+                        9
+                    )
+                ]
             )
         ),
         LevelRules(
