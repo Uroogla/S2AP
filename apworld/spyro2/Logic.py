@@ -29,9 +29,11 @@ class Logic(ABC):
     def can_double_jump(self, state):
         return self.world.options.double_jump_ability.value == AbilityOptions.VANILLA or state.has("Double Jump Ability", self.world.player)
 
-    @abstractmethod
     def can_fireball(self, state):
-        pass
+        # TODO: Need to handle logic for fireball from shores out of bounds,
+        # but this is computationally complex and almost never affects vanilla logic.
+        return self.world.options.permanent_fireball_ability.value == AbilityOptions.START_WITH or \
+            self.world.options.permanent_fireball_ability.value == AbilityOptions.IN_POOL and state.has("Permanent Fireball Ability", self.world.player)
 
     def can_break_headbash_crate(self, state):
         return self.can_headbash(state) or self.can_fireball(state)
@@ -96,13 +98,14 @@ class Logic(ABC):
     def can_enter_crush(self, state):
         has_sufficient_sparx = not self.world.options.enable_progressive_sparx_logic.value or self.has_sparx_health(1, state)
         is_open_world = self.world.options.enable_open_world.value
+        # While there are several ways to skip into Crush early,
+        # the player has chosen not to be in open world, so there's no reason
+        # to add tricks for these skips.
         return self.can_access_summer_second_half(state) and \
             has_sufficient_sparx and \
             (
                 is_open_world or
-                state.has("Summer Forest Talisman", self.world.player, 6) or
-                hasattr(self, "logic_sf_swim_in_air") and self.logic_sf_swim_in_air and self.can_swim(state) or
-                hasattr(self, "logic_enter_crush_with_double_jump") and self.logic_enter_crush_with_double_jump and self.can_double_jump(state)
+                state.has("Summer Forest Talisman", self.world.player, 6)
             )
 
 
@@ -137,7 +140,7 @@ class Logic(ABC):
             return self.can_satisfy_level_lock("Zephyr", state)
 
     def can_enter_metro(self, state):
-        return self.can_access_metro(state) and self.can_satisfy_level_lock("Metro Speedway", state)
+        return state.has("Orb", self.world.player, 6) and self.can_satisfy_level_lock("Metro Speedway", state)
 
     def can_enter_scorch(self, state):
         if not self.can_access_autumn_second_half(state):
@@ -191,13 +194,39 @@ class Logic(ABC):
         else:
             return self.can_satisfy_level_lock("Mystic Marsh", state)
 
-    @abstractmethod
     def can_enter_cloud(self, state):
-        pass
+        if not self.can_satisfy_level_lock("Cloud Temples", state):
+            return False
+        if self.world.options.enable_progressive_sparx_logic.value:
+            if not self.has_sparx_health(2, state):
+                return False
+        return state.has("Orb", self.world.player, 15) or \
+            self.can_access_winter_second_half(state) and \
+            (
+                hasattr(self, "logic_wt_oob_double_jump") and self.logic_wt_oob_double_jump and self.can_double_jump(state) or
+                hasattr(self, "logic_wt_oob_nothing") and self.logic_wt_oob_nothing
+            ) and \
+            (
+                hasattr(self, "logic_wt_swim_from_oob") and self.logic_wt_swim_from_oob and self.can_swim(state) or
+                hasattr(self, "logic_wt_glide_from_oob") and self.logic_wt_glide_from_oob
+            )
 
-    @abstractmethod
     def can_enter_canyon(self, state):
-        pass
+        return self.can_satisfy_level_lock("Canyon Speedway", state) and \
+            (
+                self.can_bypass_moneybags(state) or
+                state.has("Moneybags Unlock - Canyon Speedway Portal", self.world.player) or
+                self.can_access_winter_second_half(state) and
+                (
+                    hasattr(self, "logic_wt_oob_double_jump") and self.logic_wt_oob_double_jump and self.can_double_jump(state) or
+                    hasattr(self, "logic_wt_oob_nothing") and self.logic_wt_oob_nothing
+                ) and
+                (
+                    hasattr(self, "logic_wt_swim_from_oob") and self.logic_wt_swim_from_oob and self.can_swim(state) or
+                    hasattr(self, "logic_wt_glide_from_oob") and self.logic_wt_glide_from_oob
+                )
+            )
+
 
     def can_enter_robotica(self, state):
         if not self.can_access_winter_second_half(state):
@@ -207,9 +236,24 @@ class Logic(ABC):
         else:
             return self.can_satisfy_level_lock("Robotica Farms", state)
 
-    @abstractmethod
     def can_enter_metropolis(self, state):
-        pass
+        if not self.can_satisfy_level_lock("Metropolis", state):
+            return False
+        if self.world.options.enable_progressive_sparx_logic.value:
+            if not self.has_sparx_health(2, state):
+                return False
+        return self.can_access_winter_second_half(state) and \
+            (
+                state.has("Orb", self.world.player, 25) or
+                (
+                    hasattr(self, "logic_wt_oob_double_jump") and self.logic_wt_oob_double_jump and self.can_double_jump(state) or
+                    hasattr(self, "logic_wt_oob_nothing") and self.logic_wt_oob_nothing
+                ) and
+                (
+                    hasattr(self, "logic_wt_swim_from_oob") and self.logic_wt_swim_from_oob and self.can_swim(state) or
+                    hasattr(self, "logic_wt_glide_from_oob") and self.logic_wt_glide_from_oob
+                )
+            )
 
     def can_fight_ripto(self, state):
         return self.can_access_ripto(state) and \
@@ -377,21 +421,31 @@ class Logic(ABC):
     def can_access_sunny_turtle_soup(self, state):
         pass
 
-    def can_access_metro(self, state):
-        # TODO: Distinguish Elora turning on the portal from physical platform access
-        return state.has("Orb", self.world.player, 6)
+    def can_access_metro_platform(self, state):
+        # TODO: Or a proxy, at a later date.
+        return state.has("Orb", self.world.player, 6) or \
+            self.can_pass_autumn_door(state) or \
+            hasattr(self, "logic_ap_zephyr_double_jump") and self.logic_ap_zephyr_double_jump and self.can_double_jump(state)
 
-    @abstractmethod
     def can_access_autumn_wall(self, state):
-        pass
+        # TODO: Or a proxy, at a later date.
+        return state.has("Orb", self.world.player, 6) or \
+            self.can_pass_autumn_door(state) or \
+            hasattr(self, "logic_ap_zephyr_double_jump") and self.logic_ap_zephyr_double_jump and self.can_double_jump(state)
 
-    @abstractmethod
     def can_access_autumn_second_half(self, state):
-        pass
+        # TODO: Add double frog proxy.
+        return self.can_climb(state) or \
+            hasattr(self, "logic_ap_climb_skip") and self.logic_ap_climb_skip and self.can_double_jump(state)
 
-    @abstractmethod
     def can_pass_autumn_door(self, state):
-        pass
+        # TODO: Add double frog proxy.
+        return self.can_access_autumn_second_half(state) and \
+            (
+                state.has("Orb", self.world.player, 8) or
+                hasattr(self, "logic_ap_door_skip") and self.logic_ap_door_skip and self.can_double_jump(state) or
+                hasattr(self, "logic_ap_climb_skip") and self.logic_ap_climb_skip and self.can_double_jump(state)
+            )
 
     def can_access_autumn_shady_section(self, state):
         return self.can_pass_autumn_door(state) and \
@@ -438,9 +492,9 @@ class Logic(ABC):
         # TODO: Add powerup logic.
         return True
 
-    @abstractmethod
     def can_access_fracture_faun(self, state):
-        pass
+        # TODO: Handle powerup logic and double jump.
+        return True
 
     def can_access_fracture_hunter(self, state):
         return self.can_headbash(state) or (not self.world.options.fracture_require_headbash.value and self.can_fireball(state))
@@ -448,66 +502,50 @@ class Logic(ABC):
     def can_access_fracture_enemies(self, state):
         return self.world.options.fracture_easy_earthshapers.value or self.can_fireball(state) or self.can_access_fracture_hunter(state)
 
-    @abstractmethod
     def can_access_winter_second_half(self, state):
-        pass
+        return self.can_headbash(state) or \
+            hasattr(self, "logic_wt_castle_double_jump") and self.logic_wt_castle_double_jump and self.can_double_jump(state) or \
+            hasattr(self, "logic_wt_castle_penguin_proxy") and self.logic_wt_castle_penguin_proxy
 
-    @abstractmethod
     def can_access_winter_waterfall(self, state):
-        pass
+        return self.can_access_winter_second_half(state) and \
+            (
+                self.can_swim(state) or
+                hasattr(self, "logic_wt_oob_double_jump") and self.logic_wt_oob_double_jump and self.can_double_jump(state) or
+                hasattr(self, "logic_wt_oob_nothing") and self.logic_wt_oob_nothing
+            )
 
     def can_pass_metropolis_elevators(self, state):
         return self.can_headbash(state) or self.can_fireball(state)
 
-    @abstractmethod
     def can_access_metropolis_ox(self, state):
-        pass
+        return self.can_pass_metropolis_elevators(state) and \
+            (
+                self.can_climb(state) or
+                hasattr(self, "logic_metropolis_ox_superfly") and self.logic_metropolis_ox_superfly
+            )
 
     def can_access_ripto(self, state):
-        return self.can_access_winter_second_half(state) and state.has("Orb", self.world.player, self.world.options.ripto_door_orbs.value)
+        return self.can_access_winter_second_half(state) and \
+            (
+                state.has("Orb", self.world.player, self.world.options.ripto_door_orbs.value) or
+                (
+                        hasattr(self, "logic_wt_oob_double_jump") and self.logic_wt_oob_double_jump and self.can_double_jump(state) or
+                        hasattr(self, "logic_wt_oob_nothing") and self.logic_wt_oob_nothing
+                ) and
+                hasattr(self, "logic_wt_swim_from_oob") and self.logic_wt_swim_from_oob and self.can_swim(state)
+            )
 
 
 class BaseLogic(Logic):
     def __init__(self, world: World):
         self.world = world
 
-    def can_fireball(self, state):
-        return self.world.options.permanent_fireball_ability.value == AbilityOptions.START_WITH or \
-            self.world.options.permanent_fireball_ability.value == AbilityOptions.IN_POOL and state.has("Permanent Fireball Ability", self.world.player)
-        # TODO: Add vanilla access.
-
-    def can_enter_cloud(self, state):
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and state.has("Orb", self.world.player, 15) and self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and state.has("Orb", self.world.player, 15)
-
-    def can_enter_canyon(self, state):
-        return self.can_satisfy_level_lock("Canyon Speedway", state) and \
-            self.can_bypass_moneybags(state) or state.has("Moneybags Unlock - Canyon Speedway Portal", self.world.player)
-
-    def can_enter_metropolis(self, state):
-        if not self.can_access_winter_second_half(state):
-            return False
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Metropolis", state) and state.has("Orb", self.world.player, 25) and self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Metropolis", state) and state.has("Orb", self.world.player, 25)
-
     def can_access_sunny_middle_ladders(self, state):
         return self.can_access_sunny_underwater(state) and self.can_climb(state)
 
     def can_access_sunny_turtle_soup(self, state):
         return self.can_access_sunny_final_area(state) and self.can_climb(state)
-
-    def can_access_autumn_wall(self, state):
-        return self.can_access_metro(state) or self.can_pass_autumn_door(state)
-
-    def can_access_autumn_second_half(self, state):
-        return self.can_climb(state)
-
-    def can_pass_autumn_door(self, state):
-        return self.can_access_autumn_second_half(state) and state.has("Orb", self.world.player, 8)
 
     def can_access_zephyr_ladder(self, state):
         return self.can_climb(state)
@@ -527,18 +565,6 @@ class BaseLogic(Logic):
 
     def can_access_magma_talisman(self, state):
         return self.can_pass_magma_elevator(state) and self.can_climb(state)
-
-    def can_access_fracture_faun(self, state):
-        return self.can_access_fracture_supercharge(state)
-
-    def can_access_winter_second_half(self, state):
-        return self.can_headbash(state)
-
-    def can_access_winter_waterfall(self, state):
-        return self.can_access_winter_second_half(state) and self.can_swim(state)
-
-    def can_access_metropolis_ox(self, state):
-        return self.can_pass_metropolis_elevators(state) and self.can_climb(state)
 
 
 class EasyLogic(Logic):
@@ -549,45 +575,14 @@ class EasyLogic(Logic):
         setattr(self, "logic_indoor_lamps_double_jump", True)
         setattr(self, "logic_indoor_lamps_fireball", True)
         setattr(self, "logic_at_first_tunnel_double_jump", True)
-
-    def can_fireball(self, state):
-        return self.world.options.permanent_fireball_ability.value == AbilityOptions.START_WITH or \
-            self.world.options.permanent_fireball_ability.value == AbilityOptions.IN_POOL and state.has("Permanent Fireball Ability", self.world.player)
-        # TODO: Add vanilla access.
-
-    def can_enter_cloud(self, state):
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and state.has("Orb", self.world.player, 15) and self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and state.has("Orb", self.world.player, 15)
-
-    def can_enter_canyon(self, state):
-        return self.can_satisfy_level_lock("Canyon Speedway", state) and \
-            self.can_bypass_moneybags(state) or state.has("Moneybags Unlock - Canyon Speedway Portal", self.world.player)
-
-    def can_enter_metropolis(self, state):
-        if not self.can_access_winter_second_half(state):
-            return False
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Metropolis", state) and state.has("Orb", self.world.player, 25) and self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Metropolis", state) and state.has("Orb", self.world.player, 25)
+        setattr(self, "logic_ap_zephyr_double_jump", True)
+        setattr(self, "logic_ap_door_skip", True)
 
     def can_access_sunny_middle_ladders(self, state):
         return self.can_access_sunny_underwater(state) and (self.can_climb(state) or self.can_double_jump(state))
 
     def can_access_sunny_turtle_soup(self, state):
         return self.can_access_sunny_final_area(state) and self.can_climb(state)
-
-    def can_access_autumn_wall(self, state):
-        return True
-
-    def can_access_autumn_second_half(self, state):
-        return self.can_climb(state)
-
-    def can_pass_autumn_door(self, state):
-        return self.can_access_autumn_second_half(state) and \
-            (state.has("Orb", self.world.player, 8) or self.can_double_jump(state))
 
     def can_access_zephyr_ladder(self, state):
         return self.can_climb(state)
@@ -608,18 +603,6 @@ class EasyLogic(Logic):
     def can_access_magma_talisman(self, state):
         return self.can_pass_magma_elevator(state) and self.can_climb(state)
 
-    def can_access_fracture_faun(self, state):
-        return self.can_access_fracture_supercharge(state)
-
-    def can_access_winter_second_half(self, state):
-        return self.can_headbash(state)
-
-    def can_access_winter_waterfall(self, state):
-        return self.can_access_winter_second_half(state) and self.can_swim(state)
-
-    def can_access_metropolis_ox(self, state):
-        return self.can_pass_metropolis_elevators(state) and self.can_climb(state)
-
 
 class MediumLogic(Logic):
     def __init__(self, world: World):
@@ -628,7 +611,6 @@ class MediumLogic(Logic):
         setattr(self, "logic_sf_second_half_double_jump", True)
         setattr(self, "logic_sf_second_half_nothing", True)
         setattr(self, "logic_sf_swim_in_air", True)
-        setattr(self, "logic_enter_crush_with_double_jump", True)
         setattr(self, "logic_sf_aquaria_wall_double_jump", True)
         setattr(self, "logic_indoor_lamps_double_jump", True)
         setattr(self, "logic_indoor_lamps_fireball", True)
@@ -637,56 +619,21 @@ class MediumLogic(Logic):
         setattr(self, "logic_at_talisman_area_double_jump", True)
         setattr(self, "logic_at_button_three_fireball", True)
         setattr(self, "logic_at_royal_children_oob", True)
+        setattr(self, "logic_ap_zephyr_double_jump", True)
+        setattr(self, "logic_ap_climb_skip", True)
+        setattr(self, "logic_ap_door_skip", True)
+        setattr(self, "logic_crystal_bridge_double_jump", True)
         setattr(self, "logic_zephyr_ladder_double_jump", True)
-
-    def can_fireball(self, state):
-        return self.world.options.permanent_fireball_ability.value == AbilityOptions.START_WITH or \
-            self.world.options.permanent_fireball_ability.value == AbilityOptions.IN_POOL and state.has("Permanent Fireball Ability", self.world.player)
-        # TODO: Add vanilla access or double jump with shores.
-
-    def can_enter_cloud(self, state):
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and \
-                (state.has("Orb", self.world.player, 15) or self.can_access_winter_second_half(state) and self.can_double_jump(state)) and \
-                self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and \
-                (state.has("Orb", self.world.player, 15) or self.can_access_winter_second_half(state) and self.can_double_jump(state))
-
-    def can_enter_canyon(self, state):
-        return self.can_satisfy_level_lock("Canyon Speedway", state) and \
-            (
-                self.can_bypass_moneybags(state) or
-                state.has("Moneybags Unlock - Canyon Speedway Portal", self.world.player) or
-                self.can_access_winter_second_half(state) and self.can_double_jump(state) and self.can_swim(state)
-            )
-
-    def can_enter_metropolis(self, state):
-        if not self.can_access_winter_second_half(state):
-            return False
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Metropolis", state) and \
-                (state.has("Orb", self.world.player, 25) or self.can_double_jump(state)) and \
-                self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Metropolis", state) and \
-                (state.has("Orb", self.world.player, 25) or self.can_double_jump(state))
+        setattr(self, "logic_wt_castle_double_jump", True)
+        setattr(self, "logic_wt_oob_double_jump", True)
+        setattr(self, "logic_wt_swim_from_oob", True)
+        setattr(self, "logic_metropolis_ox_superfly", True)
 
     def can_access_sunny_middle_ladders(self, state):
         return self.can_access_sunny_underwater(state) and (self.can_climb(state) or self.can_double_jump(state))
 
     def can_access_sunny_turtle_soup(self, state):
         return self.can_access_sunny_final_area(state)
-
-    def can_access_autumn_wall(self, state):
-        return True
-
-    def can_access_autumn_second_half(self, state):
-        return self.can_climb(state) or self.can_double_jump(state)
-
-    def can_pass_autumn_door(self, state):
-        return self.can_access_autumn_second_half(state) and \
-            (state.has("Orb", self.world.player, 8) or self.can_double_jump(state))
 
     def can_pass_magma_start(self, state):
         return True
@@ -708,19 +655,6 @@ class MediumLogic(Logic):
     def can_access_magma_talisman(self, state):
         # TODO: Add powerup logic - True represents powerup unlocked.
         return self.can_pass_magma_elevator(state) and (True or self.can_climb(state))
-
-    def can_access_fracture_faun(self, state):
-        return self.can_access_fracture_supercharge(state) or self.can_double_jump(state)
-
-    def can_access_winter_second_half(self, state):
-        return self.can_headbash(state) or self.can_double_jump(state)
-
-    def can_access_winter_waterfall(self, state):
-        return self.can_access_winter_second_half(state) and (self.can_swim(state) or self.can_double_jump(state))
-
-    def can_access_metropolis_ox(self, state):
-        # TODO: Climb or double jump or powerup, I think?
-        return self.can_pass_metropolis_elevators(state)
 
 
 class CustomLogic(Logic):
@@ -735,54 +669,11 @@ class CustomLogic(Logic):
                 raise OptionError(f'Unknown Spyro 2 logic trick for player {self.player}: {trick}')
 
     # TODO: REMOVE THESE
-    def can_fireball(self, state):
-        return self.world.options.permanent_fireball_ability.value == AbilityOptions.START_WITH or \
-            self.world.options.permanent_fireball_ability.value == AbilityOptions.IN_POOL and state.has("Permanent Fireball Ability", self.world.player)
-        # TODO: Add vanilla access or double jump with shores.
-
-    def can_enter_cloud(self, state):
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and \
-                (state.has("Orb", self.world.player, 15) or self.can_access_winter_second_half(state) and self.can_double_jump(state)) and \
-                self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Cloud Temples", state) and \
-                (state.has("Orb", self.world.player, 15) or self.can_access_winter_second_half(state) and self.can_double_jump(state))
-
-    def can_enter_canyon(self, state):
-        return self.can_satisfy_level_lock("Canyon Speedway", state) and \
-            (
-                self.can_bypass_moneybags(state) or
-                state.has("Moneybags Unlock - Canyon Speedway Portal", self.world.player) or
-                self.can_access_winter_second_half(state) and self.can_double_jump(state) and self.can_swim(state)
-            )
-
-    def can_enter_metropolis(self, state):
-        if not self.can_access_winter_second_half(state):
-            return False
-        if self.world.options.enable_progressive_sparx_logic.value:
-            return self.can_satisfy_level_lock("Metropolis", state) and \
-                (state.has("Orb", self.world.player, 25) or self.can_double_jump(state)) and \
-                self.has_sparx_health(2, state)
-        else:
-            return self.can_satisfy_level_lock("Metropolis", state) and \
-                (state.has("Orb", self.world.player, 25) or self.can_double_jump(state))
-
     def can_access_sunny_middle_ladders(self, state):
         return self.can_access_sunny_underwater(state) and (self.can_climb(state) or self.can_double_jump(state))
 
     def can_access_sunny_turtle_soup(self, state):
         return self.can_access_sunny_final_area(state)
-
-    def can_access_autumn_wall(self, state):
-        return True
-
-    def can_access_autumn_second_half(self, state):
-        return self.can_climb(state) or self.can_double_jump(state)
-
-    def can_pass_autumn_door(self, state):
-        return self.can_access_autumn_second_half(state) and \
-            (state.has("Orb", self.world.player, 8) or self.can_double_jump(state))
 
     def can_pass_magma_start(self, state):
         return True
@@ -804,16 +695,3 @@ class CustomLogic(Logic):
     def can_access_magma_talisman(self, state):
         # TODO: Add powerup logic - True represents powerup unlocked.
         return self.can_pass_magma_elevator(state) and (True or self.can_climb(state))
-
-    def can_access_fracture_faun(self, state):
-        return self.can_access_fracture_supercharge(state) or self.can_double_jump(state)
-
-    def can_access_winter_second_half(self, state):
-        return self.can_headbash(state) or self.can_double_jump(state)
-
-    def can_access_winter_waterfall(self, state):
-        return self.can_access_winter_second_half(state) and (self.can_swim(state) or self.can_double_jump(state))
-
-    def can_access_metropolis_ox(self, state):
-        # TODO: Climb or double jump or powerup, I think?
-        return self.can_pass_metropolis_elevators(state)

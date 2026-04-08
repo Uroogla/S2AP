@@ -13,7 +13,7 @@ from .Items import (Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_na
     item_descriptions, BuildItemPool, item_name_groups)
 from .Locations import (Spyro2Location, Spyro2LocationCategory, location_tables,
     location_dictionary, location_name_groups)
-from .Options import Spyro2Option, GoalOptions, GemsanityOptions, MoneybagsOptions, SparxUpgradeOptions, \
+from .Options import Spyro2Option, GoalOptions, GemsanityOptions, GemsanityLocationOptions, MoneybagsOptions, \
     RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions
 from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic, CustomLogic
 from .Rules import get_level_rules
@@ -22,7 +22,7 @@ class Spyro2Settings(Group):
 
     class AllowFullGemsanity(Bool):
         """Permits full gemsanity options for multiplayer games.
-        Full gemsanity adds 2546 locations and an equal number of progression items.
+        Full gemsanity adds 2546 locations and up to that many progression items.
         These items may be local-only or spread across the multiworld."""
 
     allow_full_gemsanity: Union[AllowFullGemsanity, bool] = False
@@ -148,15 +148,15 @@ class Spyro2World(World):
                 self.chosen_gem_locations = []
             else:
                 self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=200)
-        if self.options.enable_gemsanity.value in [GemsanityOptions.FULL, GemsanityOptions.FULL_GLOBAL]:
+        if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
             if not self.settings.allow_full_gemsanity and self.multiworld.players > 1:
-                raise OptionError(f"Spyro 2: Player {self.player_name} has gemsanity set to full, which adds 2546 progression "
-                                  f"items and locations to the pool and may result in long generation times. "
+                raise OptionError(f"Spyro 2: Player {self.player_name} has gemsanity set to full, which adds 2546 locations "
+                                  f"and up to that many progression items to the pool and may result in long generation times. "
                                   f"They must either switch to partial gemsanity, or the "
                                   f"host needs to enable allow_full_gemsanity in their host.yaml settings.")
-        if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
+        if self.options.gemsanity_item_locations.value == GemsanityLocationOptions.LOCAL:
             for itemname, item in item_dictionary.items():
-                if item.category == Spyro2ItemCategory.GEM:
+                if item.category in [Spyro2ItemCategory.GEM, Spyro2ItemCategory.GEMSANITY_PARTIAL]:
                     self.options.local_items.value.add(itemname)
         if self.options.enable_spirit_particle_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.SPIRIT_PARTICLE)
@@ -385,7 +385,7 @@ class Spyro2World(World):
                         return 0
                     gems = 400
                     for gem_restriction in level_rule.gem_rules.restrictions:
-                        if not gem_restriction.restriction_lambda(state):
+                        if gem_restriction.restriction_lambda is not None and not gem_restriction.restriction_lambda(state):
                             gems -= gem_restriction.gems_restricted
                     return gems
             return 0
@@ -442,34 +442,39 @@ class Spyro2World(World):
                     level_rules.talisman_rule
                 )
             for orb_name in level_rules.orbs:
-                set_rule(
-                    self.multiworld.get_location(orb_name, self.player),
-                    level_rules.orbs[orb_name]
-                )
+                if level_rules.orbs[orb_name] is not None:
+                    set_rule(
+                        self.multiworld.get_location(orb_name, self.player),
+                        level_rules.orbs[orb_name]
+                    )
             for moneybags_name in level_rules.moneybags_locations:
-                if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories:
+                if Spyro2LocationCategory.MONEYBAGS in self.enabled_location_categories and \
+                        level_rules.moneybags_locations[moneybags_name] is not None:
                     set_rule(
                         self.multiworld.get_location(moneybags_name, self.player),
                         level_rules.moneybags_locations[moneybags_name]
                     )
             for life_bottle_name in level_rules.life_bottles:
-                if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories:
+                if Spyro2LocationCategory.LIFE_BOTTLE in self.enabled_location_categories and \
+                        level_rules.life_bottles[life_bottle_name] is not None:
                     set_rule(
                         self.multiworld.get_location(life_bottle_name, self.player),
                         level_rules.life_bottles[life_bottle_name]
                     )
             if Spyro2LocationCategory.SKILLPOINT in self.enabled_location_categories:
                 for skillpoint_name in level_rules.skill_points:
-                    set_rule(
-                        self.multiworld.get_location(f"{skillpoint_name} (Skill Point)", self.player),
-                        level_rules.skill_points[skillpoint_name]
-                    )
+                    if level_rules.skill_points[skillpoint_name] is not None:
+                        set_rule(
+                            self.multiworld.get_location(f"{skillpoint_name} (Skill Point)", self.player),
+                            level_rules.skill_points[skillpoint_name]
+                        )
             if Spyro2LocationCategory.SKILLPOINT_GOAL in self.enabled_location_categories:
                 for skillpoint_name in level_rules.skill_points:
-                    set_rule(
-                        self.multiworld.get_location(f"{skillpoint_name} (Goal)", self.player),
-                        level_rules.skill_points[skillpoint_name]
-                    )
+                    if level_rules.skill_points[skillpoint_name] is not None:
+                        set_rule(
+                            self.multiworld.get_location(f"{skillpoint_name} (Goal)", self.player),
+                            level_rules.skill_points[skillpoint_name]
+                        )
             if Spyro2LocationCategory.SPIRIT_PARTICLE in self.enabled_location_categories:
                 if level_rules.spirit_particles_rule is not None:
                     set_rule(
@@ -490,7 +495,11 @@ class Spyro2World(World):
                                 break
                         if self.PRINT_GEM_REQS:
                             print(f"{level}: Gem {gem - skipped_bits} requires {gem_restriction.restriction_text}.")
-                        if len(self.chosen_gem_locations) == 0 or f"{level}: Gem {gem - skipped_bits}" in self.chosen_gem_locations:
+                        if gem_restriction.restriction_lambda is not None and \
+                            (
+                                len(self.chosen_gem_locations) == 0 or
+                                f"{level}: Gem {gem - skipped_bits}" in self.chosen_gem_locations
+                            ):
                             set_rule(
                                 self.multiworld.get_location(f"{level}: Gem {gem - skipped_bits}", self.player),
                                 gem_restriction.restriction_lambda

@@ -317,7 +317,8 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Permanent Fireball Ability"])
         remaining_count = remaining_count - 1
 
-    if options.enable_gemsanity.value == GemsanityOptions.PARTIAL:
+    if options.enable_gemsanity.value == GemsanityOptions.PARTIAL or \
+            options.enable_gemsanity.value == GemsanityOptions.FULL and not options.full_gemsanity_individual_gems.value:
         for i in range(8):
             item_pool.append(item_dictionary["Summer Forest 50 Gems"])
             item_pool.append(item_dictionary["Glimmer 50 Gems"])
@@ -341,7 +342,7 @@ def BuildItemPool(world, count, options, locked_levels):
             item_pool.append(item_dictionary["Robotica Farms 50 Gems"])
             item_pool.append(item_dictionary["Metropolis 50 Gems"])
         remaining_count -= 168
-    elif options.enable_gemsanity.value in [GemsanityOptions.FULL, GemsanityOptions.FULL_GLOBAL]:
+    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.full_gemsanity_individual_gems.value:
         for i in range(60):
             item_pool.append(item_dictionary["Summer Forest Red Gem"])
         for i in range(40):
@@ -628,7 +629,7 @@ def BuildItemPool(world, count, options, locked_levels):
     multiworld.random.shuffle(item_pool)
     return item_pool
 
-item_name_groups = {"Moneybags Unlocks": set(), "Level Unlocks": set(), "Gems": set(), "Powerups": set()}
+item_name_groups = {"Moneybags Unlocks": set(), "Level Unlocks": set(), "Gems": set()} #, "Powerups": set()}
 for item in item_dictionary.keys():
     if "Moneybags Unlock" in item:
         item_name_groups["Moneybags Unlocks"].add(item)
@@ -636,5 +637,5 @@ for item in item_dictionary.keys():
         item_name_groups["Level Unlocks"].add(item)
     if item.endswith(" Gems") or item.endswith("Gem"):
         item_name_groups["Gems"].add(item)
-    if item.endswith(" Powerup"):
-        item_name_groups["Powerups"].add(item)
+    #if item.endswith(" Powerup"):
+    #    item_name_groups["Powerups"].add(item)

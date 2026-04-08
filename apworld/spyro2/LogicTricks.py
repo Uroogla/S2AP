@@ -29,18 +29,11 @@ known_logic_tricks = {
         'name'    : 'logic_sf_swim_in_air',
         'tags'    : ("Swim in Air", "Summer Forest",),
         'tooltip' : '''\
-                    Logic expects using swim in air in Summer Forest
-                    to climb the ladder, access gems inside the
-                    Aquaria Towers wall, and enter Ocean Speedway,
-                    Crush's Dungeon, and Aquaria Towers.
-                    '''
-    },
-    'Enter Crush with Double Jump': {
-        'name'    : 'logic_enter_crush_with_double_jump',
-        'tags'    : ("Double Jump", "Summer Forest", "Crush's Dungeon",),
-        'tooltip' : '''\
-                    Logic expects using double jump in Summer Forest
-                    enter Crush's Dungeon.
+                    Logic expects using swim in air in
+                    Summer Forest to bypass climbing the
+                    ladder, to access gems inside the
+                    Aquaria Towers wall, and to enter
+                    Ocean Speedway and Aquaria Towers.
                     '''
     },
     'Summer Forest Frog Proxy': {
@@ -139,7 +132,6 @@ known_logic_tricks = {
                     Logic expects going out of bounds
                     to rescue the final seahorse without
                     access to the full level.
-                    Only matters with sheep proxy on.
                     '''
     },
     'Aquaria Towers Gems Out of Bounds': {
@@ -152,11 +144,42 @@ known_logic_tricks = {
                     and re-enter the level.
                     '''
     },
+    'Autumn Plains Double Jumps from Zephyr': {
+        'name'    : 'logic_ap_zephyr_double_jump',
+        'tags'    : ("Double Jump", "Autumn Plains",),
+        'tooltip' : '''\
+                    Logic expects using the double jump ability
+                    from the Zephyr portal to reach the outer
+                    wall and the gems by Metro Speedway. Metro
+                    Speedway level access always requires talking
+                    to Elora.
+                    '''
+    },
+    'Autumn Plains Climb Skip': {
+        'name'    : 'logic_ap_climb_skip',
+        'tags'    : ("Double Jump", "Autumn Plains",),
+        'tooltip' : '''\
+                    Logic expects using the double jump ability
+                    on terrain in Autumn Plains to skip climb.
+                    This grants access to both sides of the
+                    Professor's door in the castle.
+                    '''
+    },
+    'Autumn Plains Skip Professor\'s Door': {
+        'name'    : 'logic_ap_door_skip',
+        'tags'    : ("Double Jump", "Autumn Plains",),
+        'tooltip' : '''\
+                    Logic expects using the double jump ability
+                    to pass the Professor's door in the castle.
+                    This normally requires 8 orbs.
+                    If Climb Skip is enabled, this option is ignored.
+                    '''
+    },
     'Crystal Glacier Skip Bridge with Double Jump': {
         'name'    : 'logic_crystal_bridge_double_jump',
         'tags'    : ("Double Jump", "Crystal Glacier",),
         'tooltip' : '''\
-                    Logic expects using a double jump or sproder
+                    Logic expects using a double jump
                     to skip the Moneybags bridge.
                     '''
     },
@@ -176,6 +199,82 @@ known_logic_tricks = {
                     to skip the ladder by the cowlek pen.
                     '''
     },
+    'Winter Tundra Inside Castle with Double Jump': {
+        'name'    : 'logic_wt_castle_double_jump',
+        'tags'    : ("Double Jump", "Winter Tundra",),
+        'tooltip' : '''\
+                    Logic expects using a double jump
+                    to skip the headbash lock in Winter
+                    Tundra.
+                    '''
+    },
+    'Winter Tundra Inside Castle with Penguin Proxy': {
+        'name'    : 'logic_wt_castle_penguin_proxy',
+        'tags'    : ("Proxy", "Winter Tundra",),
+        'tooltip' : '''\
+                    Logic expects using a proxy on the
+                    penguin fodder to skip the headbash
+                    lock in Winter Tundra.
+                    '''
+    },
+    'Winter Tundra Out of Bounds with Double Jump': {
+        'name'    : 'logic_wt_oob_double_jump',
+        'tags'    : ("Double Jump", "Winter Tundra",),
+        'tooltip' : '''\
+                    Logic expects using double jump
+                    from the top of the stairs to get
+                    out of bounds.
+                    Grants access to the waterfall orb without
+                    swim, and to other levels with additional
+                    tricks.
+                    '''
+    },
+    'Winter Tundra Out of Bounds with Nothing': {
+        'name'    : 'logic_wt_oob_nothing',
+        'tags'    : ("Winter Tundra",),
+        'tooltip' : '''\
+                    Logic expects using a careful glide
+                    from the top of the stairs to get
+                    out of bounds.
+                    Grants access to the waterfall orb without
+                    swim, and to other levels with additional
+                    tricks.
+                    '''
+    },
+    'Winter Tundra Swim from Out of Bounds': {
+        'name'    : 'logic_wt_swim_from_oob',
+        'tags'    : ("Winter Tundra",),
+        'tooltip' : '''\
+                    Logic expects using an out of bounds swim
+                    to enter all available Winter Tundra
+                    levels, if they are not locked by a key.
+                    Requires one of the tricks to get out of
+                    bounds.
+                    '''
+    },
+    'Winter Tundra Glide into Levels from Out of Bounds': {
+        'name'    : 'logic_wt_glide_from_oob',
+        'tags'    : ("Winter Tundra",),
+        'tooltip' : '''\
+                    Logic expects using an out of bounds glide
+                    to enter Dragon Shores, Metropolis, Canyon
+                    Speedway, and Cloud Temples, if the level
+                    is not locked by a key.
+                    Requires one of the tricks to get out of
+                    bounds.
+                    '''
+    },
+    'Metropolis Ox Orb without Climb': {
+        'name'    : 'logic_metropolis_ox_superfly',
+        'tags'    : ("Metropolis",),
+        'tooltip' : '''\
+                    Logic expects using superfly and breaking
+                    the height cap to reach the ox area without
+                    climb. This uses double jump inputs but is
+                    possible without double jump unlocked.
+                    '''
+    },
+
 }
 
 normalized_name_tricks = {trick.casefold(): info for (trick, info) in known_logic_tricks.items()}

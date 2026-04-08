@@ -27,7 +27,10 @@ class GemsanityOptions:
     OFF = 0
     PARTIAL = 1
     FULL = 2
-    FULL_GLOBAL = 3
+
+class GemsanityLocationOptions:
+    LOCAL = 0
+    GLOBAL = 1
 
 class SparxUpgradeOptions:
     OFF = 0
@@ -207,21 +210,32 @@ class EnableSpiritParticleChecksOption(Toggle):
 class EnableGemsanityOption(Choice):
     """Adds checks for each individual gem.
     If Moneybagssanity is off, all Moneybags prices will be set to 0 in game.
-    Both full and full global require the host to edit allow_full_gemsanity
+    Full requires the host to edit allow_full_gemsanity
         in their yaml file.
     Off: Individual gems are not checks.
     Partial: 200 randomly chosen gems become checks. For every level
         with loose gems (not speedways), 8 items giving 50 gems for
         that level will be added to the pool.
-    Full: All gems are checks.
-        Gem items will be shuffled only within your world.
-    Full Global: All gems are checks.  Gem items can be anywhere."""
+    Full: All gems are checks."""
     display_name = "Enable Gemsanity"
     default = GemsanityOptions.OFF
     option_off = GemsanityOptions.OFF
     option_partial = GemsanityOptions.PARTIAL
     option_full = GemsanityOptions.FULL
-    option_full_global = GemsanityOptions.FULL_GLOBAL
+
+class GemsanityItemLocations(Choice):
+    """Should gem items be shuffled only
+    in your world, or spread across the entire multiworld.
+    Global is more disruptive to other players."""
+    display_name = "Gemsanity Item Locations"
+    default = GemsanityLocationOptions.LOCAL
+    option_local = GemsanityLocationOptions.LOCAL
+    option_global = GemsanityLocationOptions.GLOBAL
+
+class FullGemsanityUseIndividualGems(Toggle):
+    """Should gem items be bundles of 50 gems each,
+     or individual gems. Applies only to full gemsanity."""
+    display_name = "Full Gemsanity Use Individual Gem Items"
 
 class MoneybagsSettings(Choice):
     """Settings for Moneybags unlocks.
@@ -501,6 +515,8 @@ class Spyro2Option(PerGameCommonOptions):
     enable_life_bottle_checks: EnableLifeBottleChecksOption
     enable_spirit_particle_checks: EnableSpiritParticleChecksOption
     enable_gemsanity: EnableGemsanityOption
+    gemsanity_item_locations: GemsanityItemLocations
+    full_gemsanity_individual_gems: FullGemsanityUseIndividualGems
     moneybags_settings: MoneybagsSettings
     death_link: EnableDeathLink
     enable_filler_extra_lives: EnableFillerExtraLives
@@ -545,6 +561,8 @@ spyro_options_groups = [
             EnableTotalGemChecksOption,
             MaxTotalGemCheckOption,
             EnableGemsanityOption,
+            GemsanityItemLocations,
+            FullGemsanityUseIndividualGems,
             EnableSkillpointChecksOption,
             EnableLifeBottleChecksOption,
             EnableSpiritParticleChecksOption
