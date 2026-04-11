@@ -81,7 +81,7 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Moneybags Unlock - Swim", 3004, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Climb", 3005, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Headbash", 3006, Spyro2ItemCategory.MONEYBAGS),
-    ("Moneybags Unlock - Door to Aquaria Towers", 3007, Spyro2ItemCategory.MONEYBAGS),
+    ("Moneybags Unlock - Wall by Aquaria Towers", 3007, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Zephyr Portal", 3008, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Shady Oasis Portal", 3009, Spyro2ItemCategory.MONEYBAGS),
     ("Moneybags Unlock - Icy Speedway Portal", 3010, Spyro2ItemCategory.MONEYBAGS),
@@ -288,7 +288,7 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Orb"])
     remaining_count = remaining_count - orb_count
 
-    if world.options.enable_open_world.value and world.options.open_world_ability_and_warp_unlocks.value:
+    if world.options.start_with_abilities.value:
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Swim"))
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Climb"))
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Headbash"))
@@ -298,13 +298,13 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Moneybags Unlock - Aquaria Towers Submarine"])
         item_pool.append(item_dictionary["Moneybags Unlock - Magma Cone Elevator"])
         # item_pool.append(item_dictionary["Moneybags Unlock - Glimmer Bridge"])
-        item_pool.append(item_dictionary["Moneybags Unlock - Door to Aquaria Towers"])
+        item_pool.append(item_dictionary["Moneybags Unlock - Wall by Aquaria Towers"])
         item_pool.append(item_dictionary["Moneybags Unlock - Zephyr Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Shady Oasis Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Icy Speedway Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Canyon Speedway Portal"])
         remaining_count = remaining_count - 8
-        if not world.options.enable_open_world.value or not world.options.open_world_ability_and_warp_unlocks.value:
+        if not world.options.start_with_abilities.value:
             item_pool.append(item_dictionary["Moneybags Unlock - Swim"])
             item_pool.append(item_dictionary["Moneybags Unlock - Climb"])
             item_pool.append(item_dictionary["Moneybags Unlock - Headbash"])
@@ -317,7 +317,8 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Permanent Fireball Ability"])
         remaining_count = remaining_count - 1
 
-    if options.enable_gemsanity.value == GemsanityOptions.PARTIAL:
+    if options.enable_gemsanity.value == GemsanityOptions.PARTIAL or \
+            options.enable_gemsanity.value == GemsanityOptions.FULL and not options.full_gemsanity_individual_gems.value:
         for i in range(8):
             item_pool.append(item_dictionary["Summer Forest 50 Gems"])
             item_pool.append(item_dictionary["Glimmer 50 Gems"])
@@ -341,7 +342,7 @@ def BuildItemPool(world, count, options, locked_levels):
             item_pool.append(item_dictionary["Robotica Farms 50 Gems"])
             item_pool.append(item_dictionary["Metropolis 50 Gems"])
         remaining_count -= 168
-    elif options.enable_gemsanity.value in [GemsanityOptions.FULL, GemsanityOptions.FULL_GLOBAL]:
+    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.full_gemsanity_individual_gems.value:
         for i in range(60):
             item_pool.append(item_dictionary["Summer Forest Red Gem"])
         for i in range(40):
@@ -627,3 +628,14 @@ def BuildItemPool(world, count, options, locked_levels):
     
     multiworld.random.shuffle(item_pool)
     return item_pool
+
+item_name_groups = {"Moneybags Unlocks": set(), "Level Unlocks": set(), "Gems": set()} #, "Powerups": set()}
+for item in item_dictionary.keys():
+    if "Moneybags Unlock" in item:
+        item_name_groups["Moneybags Unlocks"].add(item)
+    if item.endswith(" Unlock"):
+        item_name_groups["Level Unlocks"].add(item)
+    if item.endswith(" Gems") or item.endswith("Gem"):
+        item_name_groups["Gems"].add(item)
+    #if item.endswith(" Powerup"):
+    #    item_name_groups["Powerups"].add(item)

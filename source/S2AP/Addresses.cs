@@ -256,5 +256,24 @@ namespace S2AP
         public const uint AnalogReadAddressTwo = 0x12324;
         public const uint ControllerReadLeftHalf = 0x122fc;
         public const uint ControllerReadRightHalf = 0x12304;
+
+        public const uint WTWallOrbAddress = 0x69fe5;
+        public const int WTWallOrbBit = 0;
+        public const uint WTDoorGemAddress = 0x6af25;
+        public const int WTDoorGemBit = 7;
+        public const uint WTWarpAddress = 0x6470a;
+
+        // ROM patching
+        public const uint RomDialogueOrbCount = 0x3ec0c;
+        public static readonly byte[] OrbCountCode = [0x2c, 0x70, 0x22, 0xac];
+        public const uint RomSFEloraWarp = 0x1057960;
+        public static readonly byte[] EloraWarpCode = [0x49, 0x7d, 0x00, 0x0c];
+        public const uint RomAPEloraWarp = 0x24f6a20;
+        public const uint RomLoadOrbCount = 0x152540;
+        public const uint RomSFOrbCount = 0x1050700;
+        public const uint RomAPOrbCount = 0x24f0040;
+        public const uint RomWTOrbCount = 0x405e1a4;
+        public const uint RomPlayBeep = 0x5c9e4;
+        public static readonly byte[] PlayBeepCode = [0xc8, 0x41, 0x01, 0x0c];
     }
 }

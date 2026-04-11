@@ -84,7 +84,7 @@ location_tables = {
         Spyro2LocationData("Summer Forest: Atop a ladder", "Orb", Spyro2LocationCategory.ORB),
         Spyro2LocationData("Summer Forest: Behind the door", "Orb", Spyro2LocationCategory.ORB),
         Spyro2LocationData("Summer Forest: Moneybags Unlock: Swim", "Moneybags Unlock - Swim", Spyro2LocationCategory.MONEYBAGS),
-        Spyro2LocationData("Summer Forest: Moneybags Unlock: Door to Aquaria Towers", "Moneybags Unlock - Door to Aquaria Towers", Spyro2LocationCategory.MONEYBAGS),
+        Spyro2LocationData("Summer Forest: Moneybags Unlock: Wall by Aquaria Towers", "Moneybags Unlock - Wall by Aquaria Towers", Spyro2LocationCategory.MONEYBAGS),
         Spyro2LocationData("Summer Forest: First Life Bottle Near Glimmer", "Filler", Spyro2LocationCategory.LIFE_BOTTLE),
         Spyro2LocationData("Summer Forest: Second Life Bottle Near Glimmer", "Filler", Spyro2LocationCategory.LIFE_BOTTLE),
         Spyro2LocationData("Summer Forest: Life Bottle Near Sunny Beach", "Filler", Spyro2LocationCategory.LIFE_BOTTLE),
@@ -680,3 +680,12 @@ for level in location_tables.keys():
 location_dictionary: Dict[str, Spyro2LocationData] = {}
 for location_table in location_tables.values():
     location_dictionary.update({location_data.name: location_data for location_data in location_table})
+
+location_name_groups = {"Speedways": set(), "Speedway Orbs": set()}
+speedways = ["Ocean Speedway", "Metro Speedway", "Icy Speedway", "Canyon Speedway"]
+for location in location_dictionary.keys():
+    for speedway in speedways:
+        if location.startswith(speedway):
+            location_name_groups["Speedways"].add(location)
+        if location.startswith(speedway) and "Gem" not in location and "Under" not in location:
+            location_name_groups["Speedway Orbs"].add(location)
