@@ -69,6 +69,13 @@
             StartWith = 3
         }
 
+        public enum WTWarpOptions
+        {
+            Vanilla = 0,
+            Door = 1,
+            WallOrb = 2
+        }
+
         public enum BomboOptions
         {
             Vanilla = 0,

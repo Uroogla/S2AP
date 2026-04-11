@@ -257,6 +257,12 @@ namespace S2AP
         public const uint ControllerReadLeftHalf = 0x122fc;
         public const uint ControllerReadRightHalf = 0x12304;
 
+        public const uint WTWallOrbAddress = 0x69fe5;
+        public const int WTWallOrbBit = 0;
+        public const uint WTDoorGemAddress = 0x6af25;
+        public const int WTDoorGemBit = 7;
+        public const uint WTWarpAddress = 0x6470a;
+
         // ROM patching
         public const uint RomDialogueOrbCount = 0x3ec0c;
         public static readonly byte[] OrbCountCode = [0x2c, 0x70, 0x22, 0xac];

@@ -59,7 +59,7 @@ class Spyro2World(World):
     enabled_location_categories: Set[Spyro2LocationCategory]
     required_client_version = (0, 5, 0)
     # TODO: Remember to update this!
-    ap_world_version = "1.2.0"
+    ap_world_version = "1.2.0-rc"
     item_name_to_id = Spyro2Item.get_name_to_id()
     location_name_to_id = Spyro2Location.get_name_to_id()
     item_name_groups = item_name_groups
@@ -114,6 +114,7 @@ class Spyro2World(World):
         self.enabled_location_categories.add(Spyro2LocationCategory.TALISMAN)
         self.enabled_location_categories.add(Spyro2LocationCategory.ORB)
         self.enabled_location_categories.add(Spyro2LocationCategory.EVENT)
+        self.enabled_location_categories.add(Spyro2LocationCategory.SHORES_TOKEN)
         if self.options.enable_25_pct_gem_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.GEM_25)
         if self.options.enable_50_pct_gem_checks.value:
@@ -128,8 +129,6 @@ class Spyro2World(World):
             self.enabled_location_categories.add(Spyro2LocationCategory.SKILLPOINT_GOAL)
         if self.options.enable_total_gem_checks.value:
             self.enabled_location_categories.add(Spyro2LocationCategory.TOTAL_GEM)
-        if self.options.goal.value == GoalOptions.TEN_TOKENS:
-            self.enabled_location_categories.add(Spyro2LocationCategory.SHORES_TOKEN)
         # Use the Moneybags unlocks for logic if they are in place.  The checks themselves will not be randomized.
         if self.options.moneybags_settings.value != MoneybagsOptions.MONEYBAGSSANITY:
             self.enabled_location_categories.add(Spyro2LocationCategory.MONEYBAGS)
@@ -182,7 +181,7 @@ class Spyro2World(World):
         elif self.options.trick_difficulty == TrickDifficultyOptions.CUSTOM:
             for trick in self.options.custom_tricks.value:
                 normalized_name = trick.casefold()
-                if normalized_name == "Summer Forest Second Half with Double Jump":
+                if normalized_name == "summer forest second half with double jump":
                     early_double_jump = True
                     break
 
@@ -194,17 +193,23 @@ class Spyro2World(World):
                 early_swim = True
                 for trick in self.options.custom_tricks.value:
                     normalized_name = trick.casefold()
-                    if normalized_name == "Summer Forest Second Half with Nothing":
+                    if normalized_name == "summer forest second half with nothing":
                         early_swim = False
                         break
 
         if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY and \
-            not (self.options.enable_open_world.value and self.options.open_world_ability_and_warp_unlocks.value) and \
+            not (
+                self.options.start_with_abilities.value or
+                self.options.enable_open_world.value and self.options.open_world_warp_unlocks
+            ) and \
             early_swim:
             self.multiworld.early_items[self.player]["Moneybags Unlock - Swim"] = 1
 
         if self.options.moneybags_settings.value == MoneybagsOptions.MONEYBAGSSANITY and \
-            not (self.options.enable_open_world.value and self.options.open_world_ability_and_warp_unlocks.value) and \
+            not (
+                self.options.start_with_abilities.value or
+                self.options.enable_open_world.value and self.options.open_world_warp_unlocks
+            ) and \
             early_double_jump:
             self.multiworld.early_items[self.player]["Double Jump Ability"] = 1
 
@@ -338,9 +343,10 @@ class Spyro2World(World):
         if name in key_item_names or \
                 name == "Glitched Item" or \
                 name == "Permanent Fireball Ability" or \
-                item_dictionary[name].category in [Spyro2ItemCategory.LEVEL_UNLOCK, Spyro2ItemCategory.TALISMAN, Spyro2ItemCategory.ORB, Spyro2ItemCategory.EVENT, Spyro2ItemCategory.MONEYBAGS, Spyro2ItemCategory.SKILLPOINT_GOAL, Spyro2ItemCategory.TOKEN, Spyro2ItemCategory.GEM, Spyro2ItemCategory.GEMSANITY_PARTIAL] or \
+                item_dictionary[name].category in [Spyro2ItemCategory.LEVEL_UNLOCK, Spyro2ItemCategory.TALISMAN, Spyro2ItemCategory.ORB, Spyro2ItemCategory.EVENT, Spyro2ItemCategory.MONEYBAGS, Spyro2ItemCategory.SKILLPOINT_GOAL, Spyro2ItemCategory.GEM, Spyro2ItemCategory.GEMSANITY_PARTIAL] or \
                 self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade' or \
-                name in ["Double Jump Ability"] and self.options.trick_difficulty.value != TrickDifficultyOptions.OFF:
+                name in ["Double Jump Ability"] and self.options.trick_difficulty.value != TrickDifficultyOptions.OFF or \
+                name == "Dragon Shores Token" and self.options.goal.value == GoalOptions.TEN_TOKENS:
             item_classification = ItemClassification.progression
         elif item_dictionary[name].category in useful_categories or \
                 not self.options.enable_progressive_sparx_logic.value and name == 'Progressive Sparx Health Upgrade' or \
@@ -400,9 +406,11 @@ class Spyro2World(World):
                 # Remove gems for possible Moneybags payments.  To avoid a player locking themselves out of progression,
                 # we have to assume every possible payment is made, including where the player can skip into the level
                 # out of logic and then pay Moneybags.
-                # Moneybags for Glimmer is free, as well as when gemsanity is on and moneybagssanity is not.
+                # Moneybags for Glimmer is free, as well as when gemsanity or level locks is on and moneybagssanity is not.
                 # TODO: Add Dragon Shores theater logic.
-                if self.options.moneybags_settings == MoneybagsOptions.VANILLA and self.options.enable_gemsanity.value == GemsanityOptions.OFF:
+                if self.options.moneybags_settings == MoneybagsOptions.VANILLA and \
+                    self.options.enable_gemsanity.value == GemsanityOptions.OFF and \
+                    self.options.level_lock_options.value == LevelLockOptions.VANILLA:
                     # Total gem checks probably don't make sense under these settings.
                     accessible_gems -= 4000
             return accessible_gems >= max_gems
@@ -506,11 +514,7 @@ class Spyro2World(World):
                             )
 
         # Dragon Shores rules
-        if self.options.level_lock_options.value == LevelLockOptions.KEYS:
-            # TODO: Change this
-            set_indirect_rule(self, "Dragon Shores", lambda state: state.has("Dragon Shores Unlock", self.player) and logic.is_boss_defeated("Ripto", state))
-        else:
-            set_indirect_rule(self, "Dragon Shores", lambda state: logic.is_boss_defeated("Ripto", state))
+        set_indirect_rule(self, "Dragon Shores", lambda state: logic.can_enter_shores(state))
         if Spyro2LocationCategory.SHORES_TOKEN in self.enabled_location_categories:
             set_rule(
                 self.multiworld.get_location("Dragon Shores: Tunnel o' Love", self.player),
@@ -674,9 +678,11 @@ class Spyro2World(World):
                 "guaranteed_items": self.options.guaranteed_items.value,
                 "ripto_door_orbs": self.options.ripto_door_orbs.value,
                 "enable_open_world": self.options.enable_open_world.value,
+                "open_world_warp_unlocks": self.options.open_world_warp_unlocks.value,
+                "start_with_abilities": self.options.start_with_abilities.value,
+                "wt_warp_options": self.options.wt_warp_options.value,
                 "level_lock_options": self.options.level_lock_options.value,
                 "level_unlocks": self.options.level_unlocks.value,
-                "open_world_ability_and_warp_unlocks": self.options.open_world_ability_and_warp_unlocks.value,
                 "enable_25_pct_gem_checks": self.options.enable_25_pct_gem_checks.value,
                 "enable_50_pct_gem_checks": self.options.enable_50_pct_gem_checks.value,
                 "enable_75_pct_gem_checks": self.options.enable_75_pct_gem_checks.value,

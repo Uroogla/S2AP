@@ -39,6 +39,11 @@ class SparxUpgradeOptions:
     SPARXLESS = 3
     TRUE_SPARXLESS = 4
 
+class WTWarpOptions:
+    VANILLA = 0
+    DOOR = 1
+    WALL_ORB = 2
+
 class AbilityOptions:
     VANILLA = 0
     IN_POOL = 1
@@ -133,6 +138,7 @@ class EnableOpenWorld(Toggle):
 class LevelLockOption(Choice):
     """Rules for unlocking each level.
     Glimmer, homeworlds, and bosses always have their vanilla requirements.
+    If Moneybagssanity is off, sets prices to 0 to ensure beatable seeds.
     Vanilla: Levels are available if you meet the vanilla requirements.
     Keys: Levels are unlocked by finding "Unlock" items.
         Note: you may need to increase the number of locations (for example,
@@ -154,11 +160,29 @@ class StartingLevelCount(Range):
     range_end = 22
     default = 8
 
-class StartWithAbilitiesAndWarps(Toggle):
-    """The player will start with swim, climb, headbash,
-    and immediate warp access to all 3 homeworlds.
-    Only has an effect in Open World mode."""
-    display_name = "Open World Start With Abilities and Warps"
+class StartWithAbilities(Toggle):
+    """The player will start with swim, climb, headbash."""
+    display_name = "Start With Abilities"
+
+class StartWithWarps(Toggle):
+    """The player will start with warps to all 3 worlds.
+    Only has an effect in open world mode."""
+    display_name = "Open World Start With Warps"
+
+class WTWarpOption(Choice):
+    """When warping to Winter Tundra from outside Crush or Gulp,
+    reroutes the warp to inside the castle. No logic is changed.
+    Represents planned vanilla functionality that was cut.
+    Vanilla: Warps always go to outside the castle.
+    Door: Warps inside the castle if you have unlocked the
+        door with headbash.
+    Wall Orb: Warps inside the castle if you have the WT wall orb.
+    """
+    display_name = "Winter Tundra Inner Warp"
+    default = WTWarpOptions.VANILLA
+    option_vanilla = WTWarpOptions.VANILLA
+    option_door = WTWarpOptions.DOOR
+    option_wall_orb = WTWarpOptions.WALL_ORB
 
 class Enable25PctGemChecksOption(Toggle):
     """Adds checks for getting 25% of the gems in a level"""
@@ -211,7 +235,7 @@ class EnableGemsanityOption(Choice):
     """Adds checks for each individual gem.
     If Moneybagssanity is off, all Moneybags prices will be set to 0 in game.
     Full requires the host to edit allow_full_gemsanity
-        in their yaml file.
+        in their yaml file, as it is very disruptive.
     Off: Individual gems are not checks.
     Partial: 200 randomly chosen gems become checks. For every level
         with loose gems (not speedways), 8 items giving 50 gems for
@@ -234,7 +258,8 @@ class GemsanityItemLocations(Choice):
 
 class FullGemsanityUseIndividualGems(Toggle):
     """Should gem items be bundles of 50 gems each,
-     or individual gems. Applies only to full gemsanity."""
+     or individual gems. Applies only to full gemsanity.
+     Turning this on slows down generation significantly."""
     display_name = "Full Gemsanity Use Individual Gem Items"
 
 class MoneybagsSettings(Choice):
@@ -281,7 +306,7 @@ class EnableFillerBigHeadMode(Toggle):
 
 class EnableFillerHealSparx(Toggle):
     """Adds healing Sparx to the item pool."""
-    display_name = "Enable healing Sparx Filler"
+    display_name = "Enable Healing Sparx Filler"
 
 class TrapFillerPercent(Range):
     """The percentage of filler items that will be traps."""
@@ -368,17 +393,17 @@ class FireballAbility(Choice):
 
 class TrickDifficulty(Choice):
     """Determines which tricks, if any, are in logic.
-    See https://docs.google.com/spreadsheets/d/1jLFQIIgCVBAWxlYPJLDG4EdR0Dh1_U4Rb67XrZNhwqw
+    See https://github.com/Uroogla/S2AP/wiki/Tricks-and-Presets
     Off: Only dev-intended strategies are expected.
-    Easy: Straightforward double jumps and fireball usage may be required.
-    Medium: Standard speedrunning tricks, including more difficult
+    Easy Tricks: Straightforward double jumps and fireball usage may be required.
+    Medium Tricks: Standard speedrunning tricks, including more difficult
         double jumps, may be required.
     Custom: Choose exactly which tricks are in logic."""
     display_name = "Trick Difficulty"
     default = TrickDifficultyOptions.OFF
     option_off = TrickDifficultyOptions.OFF
-    option_easy = TrickDifficultyOptions.EASY
-    option_medium = TrickDifficultyOptions.MEDIUM
+    option_easy_tricks = TrickDifficultyOptions.EASY
+    option_medium_tricks = TrickDifficultyOptions.MEDIUM
     option_custom = TrickDifficultyOptions.CUSTOM
 
 class CustomTricks(OptionSet):
@@ -502,7 +527,9 @@ class Spyro2Option(PerGameCommonOptions):
     # TODO: Handle edge cases and enable.
     # available_orbs: TotalAvailableOrbs
     enable_open_world: EnableOpenWorld
-    open_world_ability_and_warp_unlocks: StartWithAbilitiesAndWarps
+    open_world_warp_unlocks: StartWithWarps
+    start_with_abilities: StartWithAbilities
+    wt_warp_options: WTWarpOption
     level_lock_options: LevelLockOption
     level_unlocks: StartingLevelCount
     enable_25_pct_gem_checks: Enable25PctGemChecksOption
@@ -573,11 +600,13 @@ spyro_options_groups = [
         "Game Progression",
         [
             EnableOpenWorld,
-            StartWithAbilitiesAndWarps,
+            StartWithAbilities,
+            StartWithWarps,
             LevelLockOption,
             StartingLevelCount,
             RiptoDoorOrbs,
             MoneybagsSettings,
+            WTWarpOption,
             # PowerupLockSettings,
         ],
         False

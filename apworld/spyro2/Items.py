@@ -288,7 +288,7 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Orb"])
     remaining_count = remaining_count - orb_count
 
-    if world.options.enable_open_world.value and world.options.open_world_ability_and_warp_unlocks.value:
+    if world.options.start_with_abilities.value:
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Swim"))
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Climb"))
         multiworld.push_precollected(world.create_item("Moneybags Unlock - Headbash"))
@@ -304,7 +304,7 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Moneybags Unlock - Icy Speedway Portal"])
         item_pool.append(item_dictionary["Moneybags Unlock - Canyon Speedway Portal"])
         remaining_count = remaining_count - 8
-        if not world.options.enable_open_world.value or not world.options.open_world_ability_and_warp_unlocks.value:
+        if not world.options.start_with_abilities.value:
             item_pool.append(item_dictionary["Moneybags Unlock - Swim"])
             item_pool.append(item_dictionary["Moneybags Unlock - Climb"])
             item_pool.append(item_dictionary["Moneybags Unlock - Headbash"])

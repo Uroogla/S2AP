@@ -9,7 +9,7 @@ class Logic(ABC):
 
     # General Logic/Abilities
     def is_boss_defeated(self, boss, state):
-        if self.world.options.enable_open_world and self.world.options.open_world_ability_and_warp_unlocks and boss in ["Crush", "Gulp"]:
+        if self.world.options.enable_open_world and self.world.options.open_world_warp_unlocks and boss in ["Crush", "Gulp"]:
             return True
         return state.has(boss + " Defeated", self.world.player)
 
@@ -110,7 +110,7 @@ class Logic(ABC):
 
 
     def can_enter_autumn(self, state):
-        return self.world.options.enable_open_world and self.world.options.open_world_ability_and_warp_unlocks or \
+        return self.world.options.enable_open_world and self.world.options.open_world_warp_unlocks or \
             self.is_boss_defeated("Crush", state)
 
     def can_enter_skelos(self, state):
@@ -185,7 +185,7 @@ class Logic(ABC):
             (is_open_world or (state.has("Summer Forest Talisman", self.world.player, 6) and state.has("Autumn Plains Talisman", self.world.player, 8)))
 
     def can_enter_winter(self, state):
-        return self.world.options.enable_open_world and self.world.options.open_world_ability_and_warp_unlocks or \
+        return self.world.options.enable_open_world and self.world.options.open_world_warp_unlocks or \
             self.is_boss_defeated("Gulp", state)
 
     def can_enter_mystic(self, state):
@@ -227,7 +227,6 @@ class Logic(ABC):
                 )
             )
 
-
     def can_enter_robotica(self, state):
         if not self.can_access_winter_second_half(state):
             return False
@@ -259,6 +258,24 @@ class Logic(ABC):
         return self.can_access_ripto(state) and \
             (not self.world.options.enable_progressive_sparx_logic.value or self.has_sparx_health(3, state))
 
+    def can_enter_shores(self, state):
+        if self.is_boss_defeated("Ripto", state):
+            return True
+
+        if not self.can_satisfy_level_lock("Dragon Shores", state):
+            return False
+        return self.can_access_winter_second_half(state) and \
+            (
+                (
+                    hasattr(self, "logic_wt_oob_double_jump") and self.logic_wt_oob_double_jump and self.can_double_jump(state) or
+                    hasattr(self, "logic_wt_oob_nothing") and self.logic_wt_oob_nothing
+                ) and
+                (
+                    hasattr(self, "logic_wt_swim_from_oob") and self.logic_wt_swim_from_oob and self.can_swim(state) or
+                    hasattr(self, "logic_wt_glide_from_oob") and self.logic_wt_glide_from_oob
+                )
+            )
+
     # Level-specific logic
     def can_access_sf_secret_ledge(self, state):
         return self.can_swim(state) or \
@@ -288,7 +305,6 @@ class Logic(ABC):
             )
 
     def can_do_glimmer_outdoor_lamps(self, state):
-        # TODO: Add logic for powerup locks.
         return True
 
     def can_do_glimmer_indoor_lamps(self, state):
@@ -406,40 +422,49 @@ class Logic(ABC):
                 state.has("Moneybags Unlock - Aquaria Towers Submarine", self.world.player)
             )
 
-    def can_access_sunny_underwater(self, state):
-        return self.can_swim(state)
+    def can_access_sunny_middle_room(self, state):
+        return self.can_swim(state) or \
+            hasattr(self, "logic_sb_first_turtle") and self.logic_sb_first_turtle
 
-    @abstractmethod
     def can_access_sunny_middle_ladders(self, state):
-        pass
+        return self.can_access_sunny_middle_room(state) and \
+            (
+                self.can_climb(state) or
+                hasattr(self, "logic_sb_double_jump_ladder_skip") and self.logic_sb_double_jump_ladder_skip and self.can_double_jump(state) or
+                hasattr(self, "logic_sb_nothing_ladder_skip") and self.logic_sb_nothing_ladder_skip
+            )
 
     def can_access_sunny_final_area(self, state):
-        # TODO: Handle Turtle Proxy
-        return self.can_access_sunny_underwater(state)
+        return self.can_swim(state) or \
+            hasattr(self, "logic_sb_first_turtle") and self.logic_sb_first_turtle
 
-    @abstractmethod
     def can_access_sunny_turtle_soup(self, state):
-        pass
+        return hasattr(self, "logic_sb_first_turtle") and self.logic_sb_first_turtle or \
+            self.can_swim(state) and \
+            (
+                hasattr(self, "logic_sb_final_turtle") and self.logic_sb_final_turtle or
+                self.can_climb(state)
+            )
 
     def can_access_metro_platform(self, state):
-        # TODO: Or a proxy, at a later date.
+        # Or a proxy, at a later date.
         return state.has("Orb", self.world.player, 6) or \
             self.can_pass_autumn_door(state) or \
             hasattr(self, "logic_ap_zephyr_double_jump") and self.logic_ap_zephyr_double_jump and self.can_double_jump(state)
 
     def can_access_autumn_wall(self, state):
-        # TODO: Or a proxy, at a later date.
+        # Or a proxy, at a later date.
         return state.has("Orb", self.world.player, 6) or \
             self.can_pass_autumn_door(state) or \
             hasattr(self, "logic_ap_zephyr_double_jump") and self.logic_ap_zephyr_double_jump and self.can_double_jump(state)
 
     def can_access_autumn_second_half(self, state):
-        # TODO: Add double frog proxy.
+        # Or double frog proxy.
         return self.can_climb(state) or \
             hasattr(self, "logic_ap_climb_skip") and self.logic_ap_climb_skip and self.can_double_jump(state)
 
     def can_pass_autumn_door(self, state):
-        # TODO: Add double frog proxy.
+        # Or double frog proxy.
         return self.can_access_autumn_second_half(state) and \
             (
                 state.has("Orb", self.world.player, 8) or
@@ -464,36 +489,54 @@ class Logic(ABC):
     def can_access_shady_hippos(self, state):
         return self.can_headbash(state) or (not self.world.options.shady_require_headbash.value and self.can_fireball(state))
 
-    @abstractmethod
     def can_pass_magma_start(self, state):
-        pass
+        return self.can_climb(state) or \
+            hasattr(self, "logic_mc_start_double_jump") and self.logic_mc_start_double_jump and self.can_double_jump(state) or \
+            hasattr(self, "logic_mc_start_nothing") and self.logic_mc_start_nothing
 
-    @abstractmethod
+    def can_reach_magma_second_level(self, state):
+        return self.can_pass_magma_start(state) and \
+            (
+                self.can_climb(state) or
+                hasattr(self, "logic_mc_second_level_double_jump") and self.logic_mc_second_level_double_jump and self.can_double_jump(state)
+            )
+
     def can_access_magma_popcorn(self, state):
-        pass
+        return self.can_pass_magma_start(state) and \
+            (
+                self.can_climb(state) or
+                hasattr(self, "logic_mc_popcorn_double_jump") and self.logic_mc_popcorn_double_jump and self.can_double_jump(state)
+            )
 
-    @abstractmethod
     def can_access_magma_moneybags(self, state):
-        pass
+        return self.can_reach_magma_second_level(state) and \
+        (
+            self.can_climb(state) or
+            hasattr(self, "logic_mc_moneybags_double_jump") and self.logic_mc_moneybags_double_jump and self.can_double_jump(state)
+        )
 
-    @abstractmethod
     def can_pass_magma_elevator(self, state):
-        pass
+        return self.can_access_magma_moneybags(state) and \
+            (
+                state.has("Moneybags Unlock - Magma Cone Elevator", self.world.player) or
+                self.can_bypass_moneybags(state) or
+                hasattr(self, "logic_mc_elevator_double_jump") and self.logic_mc_elevator_double_jump and self.can_double_jump(state)
+            )
 
-    @abstractmethod
     def can_access_magma_talisman(self, state):
-        pass
+        return self.can_pass_magma_elevator(state) and self.can_climb(state) or \
+            self.can_access_magma_moneybags(state) and hasattr(self, "logic_mc_elevator_double_jump") and self.logic_mc_elevator_double_jump and self.can_double_jump(state)
 
     def can_access_magma_party_crashers(self, state):
-        # TODO: Add powerup logic.
         return self.can_access_magma_talisman(state)
 
+    def can_access_magma_fireball_balloons(self, state):
+        return self.can_access_magma_party_crashers(state) or self.can_pass_magma_elevator(state) and self.can_fireball(state)
+
     def can_access_fracture_supercharge(self, state):
-        # TODO: Add powerup logic.
         return True
 
     def can_access_fracture_faun(self, state):
-        # TODO: Handle powerup logic and double jump.
         return True
 
     def can_access_fracture_hunter(self, state):
@@ -541,24 +584,6 @@ class BaseLogic(Logic):
     def __init__(self, world: World):
         self.world = world
 
-    def can_access_sunny_middle_ladders(self, state):
-        return self.can_access_sunny_underwater(state) and self.can_climb(state)
-
-    def can_access_sunny_turtle_soup(self, state):
-        return self.can_access_sunny_final_area(state) and self.can_climb(state)
-
-    def can_access_zephyr_ladder(self, state):
-        return self.can_climb(state)
-
-    def can_pass_magma_start(self, state):
-        return self.can_climb(state)
-
-    def can_access_magma_popcorn(self, state):
-        return self.can_pass_magma_start(state) and self.can_climb(state)
-
-    def can_access_magma_moneybags(self, state):
-        return self.can_pass_magma_start(state) and self.can_climb(state)
-
     def can_pass_magma_elevator(self, state):
         return self.can_access_magma_moneybags(state) and \
             (self.can_bypass_moneybags(state) or state.has("Moneybags Unlock - Magma Cone Elevator", self.world.player))
@@ -574,34 +599,12 @@ class EasyLogic(Logic):
         setattr(self, "logic_sf_swim_in_air", True)
         setattr(self, "logic_indoor_lamps_double_jump", True)
         setattr(self, "logic_indoor_lamps_fireball", True)
+        setattr(self, "logic_sb_double_jump_ladder_skip", True)
         setattr(self, "logic_at_first_tunnel_double_jump", True)
         setattr(self, "logic_ap_zephyr_double_jump", True)
         setattr(self, "logic_ap_door_skip", True)
-
-    def can_access_sunny_middle_ladders(self, state):
-        return self.can_access_sunny_underwater(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_access_sunny_turtle_soup(self, state):
-        return self.can_access_sunny_final_area(state) and self.can_climb(state)
-
-    def can_access_zephyr_ladder(self, state):
-        return self.can_climb(state)
-
-    def can_pass_magma_start(self, state):
-        return True
-
-    def can_access_magma_popcorn(self, state):
-        return self.can_pass_magma_start(state) and self.can_climb(state)
-
-    def can_access_magma_moneybags(self, state):
-        return self.can_pass_magma_start(state) and self.can_climb(state)
-
-    def can_pass_magma_elevator(self, state):
-        return self.can_access_magma_moneybags(state) and \
-            (self.can_bypass_moneybags(state) or state.has("Moneybags Unlock - Magma Cone Elevator", self.world.player))
-
-    def can_access_magma_talisman(self, state):
-        return self.can_pass_magma_elevator(state) and self.can_climb(state)
+        setattr(self, "logic_mc_start_double_jump", True)
+        setattr(self, "logic_mc_second_level_double_jump", True)
 
 
 class MediumLogic(Logic):
@@ -615,6 +618,8 @@ class MediumLogic(Logic):
         setattr(self, "logic_indoor_lamps_double_jump", True)
         setattr(self, "logic_indoor_lamps_fireball", True)
         setattr(self, "logic_indoor_lamps_superfly", True)
+        setattr(self, "logic_sb_double_jump_ladder_skip", True)
+        setattr(self, "logic_sb_nothing_ladder_skip", True)
         setattr(self, "logic_at_first_tunnel_double_jump", True)
         setattr(self, "logic_at_talisman_area_double_jump", True)
         setattr(self, "logic_at_button_three_fireball", True)
@@ -624,37 +629,16 @@ class MediumLogic(Logic):
         setattr(self, "logic_ap_door_skip", True)
         setattr(self, "logic_crystal_bridge_double_jump", True)
         setattr(self, "logic_zephyr_ladder_double_jump", True)
+        setattr(self, "logic_mc_start_double_jump", True)
+        setattr(self, "logic_mc_start_nothing", True)
+        setattr(self, "logic_mc_second_level_double_jump", True)
+        setattr(self, "logic_mc_popcorn_double_jump", True)
+        setattr(self, "logic_mc_moneybags_double_jump", True)
+        setattr(self, "logic_mc_elevator_double_jump", True)
         setattr(self, "logic_wt_castle_double_jump", True)
         setattr(self, "logic_wt_oob_double_jump", True)
         setattr(self, "logic_wt_swim_from_oob", True)
         setattr(self, "logic_metropolis_ox_superfly", True)
-
-    def can_access_sunny_middle_ladders(self, state):
-        return self.can_access_sunny_underwater(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_access_sunny_turtle_soup(self, state):
-        return self.can_access_sunny_final_area(state)
-
-    def can_pass_magma_start(self, state):
-        return True
-
-    def can_access_magma_popcorn(self, state):
-        return self.can_pass_magma_start(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_access_magma_moneybags(self, state):
-        return self.can_pass_magma_start(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_pass_magma_elevator(self, state):
-        return self.can_access_magma_moneybags(state) and \
-            (
-                self.can_bypass_moneybags(state) or
-                state.has("Moneybags Unlock - Magma Cone Elevator", self.world.player) or
-                self.can_double_jump(state)
-            )
-
-    def can_access_magma_talisman(self, state):
-        # TODO: Add powerup logic - True represents powerup unlocked.
-        return self.can_pass_magma_elevator(state) and (True or self.can_climb(state))
 
 
 class CustomLogic(Logic):
@@ -667,31 +651,3 @@ class CustomLogic(Logic):
                 setattr(self, normalized_name_tricks[normalized_name]['name'], True)
             else:
                 raise OptionError(f'Unknown Spyro 2 logic trick for player {self.player}: {trick}')
-
-    # TODO: REMOVE THESE
-    def can_access_sunny_middle_ladders(self, state):
-        return self.can_access_sunny_underwater(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_access_sunny_turtle_soup(self, state):
-        return self.can_access_sunny_final_area(state)
-
-    def can_pass_magma_start(self, state):
-        return True
-
-    def can_access_magma_popcorn(self, state):
-        return self.can_pass_magma_start(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_access_magma_moneybags(self, state):
-        return self.can_pass_magma_start(state) and (self.can_climb(state) or self.can_double_jump(state))
-
-    def can_pass_magma_elevator(self, state):
-        return self.can_access_magma_moneybags(state) and \
-            (
-                self.can_bypass_moneybags(state) or
-                state.has("Moneybags Unlock - Magma Cone Elevator", self.world.player) or
-                self.can_double_jump(state)
-            )
-
-    def can_access_magma_talisman(self, state):
-        # TODO: Add powerup logic - True represents powerup unlocked.
-        return self.can_pass_magma_elevator(state) and (True or self.can_climb(state))

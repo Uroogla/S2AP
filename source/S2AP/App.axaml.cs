@@ -39,8 +39,8 @@ namespace S2AP;
 public partial class App : Application
 {
     // TODO: Remember to set this in S2AP.Desktop as well.
-    public static string Version = "1.2.0";
-    public static List<string> SupportedVersions = ["1.2.0"];
+    public static string Version = "1.2.0-rc";
+    public static List<string> SupportedVersions = ["1.2.0-rc"];
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
@@ -677,80 +677,77 @@ public partial class App : Application
                 case "Moneybags Unlock - Crystal Glacier Bridge":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.CrystalBridgeUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Aquaria Towers Submarine":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.AquariaSubUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Magma Cone Elevator":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.MagmaElevatorUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Swim":
                     if (
                         _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
-                        int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
-                        int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                        int.Parse(Client.Options?.GetValueOrDefault("start_with_abilities", "0").ToString()) == 1
                     )
                     {
-                        UnlockMoneybags(Addresses.SwimUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Climb":
                     if (
                         _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
-                        int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
-                        int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                        int.Parse(Client.Options?.GetValueOrDefault("start_with_abilities", "0").ToString()) == 1
                     )
                     {
-                        UnlockMoneybags(Addresses.ClimbUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Headbash":
                     if (
                         _moneybagsOption == MoneybagsOptions.Moneybagssanity ||
-                        int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString()) == 1 &&
-                        int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) == 1
+                        int.Parse(Client.Options?.GetValueOrDefault("start_with_abilities", "0").ToString()) == 1
                     )
                     {
-                        UnlockMoneybags(Addresses.HeadbashUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Door to Aquaria Towers":
                 case "Moneybags Unlock - Wall by Aquaria Towers":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.WallToAquariaUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Zephyr Portal":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.ZephyrPortalUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Shady Oasis Portal":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.ShadyPortalUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Icy Speedway Portal":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.IcyPortalUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Moneybags Unlock - Canyon Speedway Portal":
                     if (_moneybagsOption == MoneybagsOptions.Moneybagssanity)
                     {
-                        UnlockMoneybags(Addresses.CanyonPortalUnlock);
+                        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
                     }
                     break;
                 case "Progressive Sparx Health Upgrade":
@@ -931,6 +928,8 @@ public partial class App : Application
             {
                 CalculateCurrentGems();
             }
+            HandleMoneybagsUnlocks();
+            HandleInnerWTWarpAccess();
             CheckGoalCondition();
             byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
             AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
@@ -1373,7 +1372,7 @@ public partial class App : Application
         {
             Memory.WriteByte(Addresses.CrushGuidebookUnlock, 1);
             Memory.WriteByte(Addresses.GulpGuidebookUnlock, 1);
-            if (int.Parse(Client.Options?.GetValueOrDefault("open_world_ability_and_warp_unlocks", "0").ToString()) != 0)
+            if (int.Parse(Client.Options?.GetValueOrDefault("open_world_warp_unlocks", "0").ToString()) != 0)
             {
                 Memory.WriteByte(Addresses.AutumnGuidebookUnlock, 1);
                 Memory.WriteByte(Addresses.WinterGuidebookUnlock, 1);
@@ -1522,11 +1521,29 @@ public partial class App : Application
             _deathLinkService = Client.EnableDeathLink();
             _deathLinkService.OnDeathLinkReceived += new DeathLinkService.DeathLinkReceivedHandler(HandleDeathLink);
         }
+        CheckGoalCondition();
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        Helpers.UpdateLocationList(currentLevel, Client);
+        _handleGemsanity = true;
+        if (_loadGameTimer != null)
+        {
+            _loadGameTimer.Enabled = false;
+        }
+    }
+
+    /**
+     * Handles Moneybags unlocks as part of the game loop.
+     * Ensures there's no desync due to items coming in on another save.
+     */
+    private static void HandleMoneybagsUnlocks()
+    {
         // Make Glimmer bridge free.  In normal settings, this cannot be an item or the start is too restrictive.
         // It's not worth making this payment an item for Gemsanity alone.
         Memory.Write(Addresses.GlimmerBridgeUnlock, 0);
         MoneybagsOptions moneybagsOption = (MoneybagsOptions)int.Parse(Client.Options?.GetValueOrDefault("moneybags_settings", "0").ToString());
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
+        LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+        int startWithAbilities = int.Parse(Client.Options?.GetValueOrDefault("start_with_abilities", "0").ToString());
         Dictionary<string, uint> moneybagsAddresses = new Dictionary<string, uint>()
         {
             { "Crystal Glacier Bridge", Addresses.CrystalBridgeUnlock },
@@ -1559,7 +1576,13 @@ public partial class App : Application
                 }
             }
         }
-        else if (moneybagsOption == MoneybagsOptions.Vanilla && gemsanityOption != GemsanityOptions.Off)
+        else if (
+            moneybagsOption == MoneybagsOptions.Vanilla &&
+            (
+                gemsanityOption != GemsanityOptions.Off ||
+                levelLockOption != LevelLockOptions.Vanilla
+            )
+        )
         {
             foreach (string unlock in moneybagsAddresses.Keys)
             {
@@ -1574,14 +1597,45 @@ public partial class App : Application
                 }
             }
         }
-        CheckGoalCondition();
-        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
-        Helpers.UpdateLocationList(currentLevel, Client);
-        _handleGemsanity = true;
-        if (_loadGameTimer != null)
+        else if (
+            moneybagsOption == MoneybagsOptions.Vanilla &&
+            startWithAbilities == 1
+        )
         {
-            _loadGameTimer.Enabled = false;
+            foreach (string unlock in moneybagsAddresses.Keys)
+            {
+                if (unlock != "Swim" && unlock != "Climb" && unlock != "Headbash")
+                {
+                    continue;
+                }
+                uint unlockAddress = moneybagsAddresses[unlock];
+                Memory.Write(unlockAddress, 65536);
+            }
         }
+    }
+
+    /**
+     * Based on player settings, restore unused game functionality that lets the player warp to the inner castle area from other worlds.
+     */
+    private static void HandleInnerWTWarpAccess()
+    {
+        WTWarpOptions warpOption = (WTWarpOptions)int.Parse(Client.Options?.GetValueOrDefault("wt_warp_options", "0").ToString());
+        bool rerouteWarp = false;
+        if (warpOption == WTWarpOptions.Door)
+        {
+            if (Memory.ReadBit(Addresses.WTDoorGemAddress, Addresses.WTDoorGemBit))
+            {
+                rerouteWarp = true;
+            }
+        }
+        if (warpOption == WTWarpOptions.WallOrb)
+        {
+            if (Memory.ReadBit(Addresses.WTWallOrbAddress, Addresses.WTWallOrbBit))
+            {
+                rerouteWarp = true;
+            }
+        }
+        Memory.Write(Addresses.WTWarpAddress, (short)(rerouteWarp ? 1 : 0));
     }
     
     /**
@@ -1719,18 +1773,6 @@ public partial class App : Application
     {
         // TODO: Support arbitrary hex values.
         Memory.Write(Addresses.SpyroColorAddress, (short)colorEnum);
-    }
-    
-    /**
-     * Unlocks Moneybags programmatically, setting his price to zero to avoid issues on beating Ripto.
-     * 
-     * @param address The memory address of the Moneybags flag, a full word.
-     */
-    private static async void UnlockMoneybags(uint address)
-    {
-        // Flag the check as paid for, and set the price to 0.  Otherwise, we'll get back too many gems when beating Ripto.
-        Memory.Write(address, 65536);
-        Log.Logger.Information("If you are in the same zone as Moneybags,\r\nyou can talk to him to complete the unlock for free.");
     }
     
     /**

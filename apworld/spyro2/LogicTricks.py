@@ -90,6 +90,39 @@ known_logic_tricks = {
                     areas.
                     '''
     },
+    'Sunny Beach First Turtle Proxy': {
+        'name'    : 'logic_sb_first_turtle',
+        'tags'    : ("Proxy", "Sunny Beach",),
+        'tooltip' : '''\
+                    Logic expects proxying off the first turtle
+                    to skip any room without swim, including
+                    turtle soup.
+                    '''
+    },
+    'Sunny Beach Final Turtle Proxy': {
+        'name'    : 'logic_sb_final_turtle',
+        'tags'    : ("Proxy", "Sunny Beach",),
+        'tooltip' : '''\
+                    Logic expects proxying off the final turtle
+                    to skip to Turtle Soup without climb.
+                    '''
+    },
+    'Sunny Beach Middle Ladders with Double Jump': {
+        'name'    : 'logic_sb_double_jump_ladder_skip',
+        'tags'    : ("Double Jump", "Sunny Beach",),
+        'tooltip' : '''\
+                    Logic expects using double jump to skip
+                    ladders in the middle rooms.
+                    '''
+    },
+    'Sunny Beach Middle Ladders with Nothing': {
+        'name'    : 'logic_sb_nothing_ladder_skip',
+        'tags'    : ("Sunny Beach",),
+        'tooltip' : '''\
+                    Logic expects using a careful glide to
+                    skip ladders in the middle rooms.
+                    '''
+    },
     'Aquaria Towers First Tunnel with Double Jump': {
         'name'    : 'logic_at_first_tunnel_double_jump',
         'tags'    : ("Double Jump", "Aquaria Towers",),
@@ -197,6 +230,60 @@ known_logic_tricks = {
         'tooltip' : '''\
                     Logic expects using a double jump
                     to skip the ladder by the cowlek pen.
+                    '''
+    },
+    'Magma Cone Pass Start with Double Jump': {
+        'name'    : 'logic_mc_start_double_jump',
+        'tags'    : ("Double Jump", "Magma Cone",),
+        'tooltip' : '''\
+                    Logic expects using a double jump
+                    to clear the gap at the start
+                    without climb.
+                    '''
+    },
+    'Magma Cone Pass Start with Nothing': {
+        'name'    : 'logic_mc_start_nothing',
+        'tags'    : ("Magma Cone",),
+        'tooltip' : '''\
+                    Logic expects using a careful glide
+                    to clear the gap at the start
+                    without climb.
+                    '''
+    },
+    'Magma Cone Second Level with Double Jump': {
+        'name'    : 'logic_mc_second_level_double_jump',
+        'tags'    : ("Double Jump", "Magma Cone",),
+        'tooltip' : '''\
+                    Logic expects using a double jump
+                    to reach the second level
+                    without climb.
+                    '''
+    },
+    'Magma Cone Popcorn Area with Double Jump': {
+        'name'    : 'logic_mc_popcorn_double_jump',
+        'tags'    : ("Double Jump", "Magma Cone",),
+        'tooltip' : '''\
+                    Logic expects using a double jump
+                    to reach the popcorn orbs
+                    without climb.
+                    '''
+    },
+    'Magma Cone Moneybags with Double Jump': {
+        'name'    : 'logic_mc_moneybags_double_jump',
+        'tags'    : ("Double Jump", "Magma Cone",),
+        'tooltip' : '''\
+                    Logic expects using a double jump
+                    to reach the Moneybags area
+                    without climb.
+                    '''
+    },
+    'Magma Cone Skip Elevator with Double Jump': {
+        'name'    : 'logic_mc_elevator_double_jump',
+        'tags'    : ("Double Jump", "Magma Cone",),
+        'tooltip' : '''\
+                    Logic expects using a double jump
+                    to skip the elevator
+                    without climb.
                     '''
     },
     'Winter Tundra Inside Castle with Double Jump': {

@@ -174,7 +174,6 @@ def get_level_rules(logic: Logic):
             {
                 "Colossus: Hockey vs. Goalie": None,
                 "Colossus: Hockey one on one": None,
-                # TODO: Add powerup logic.
                 "Colossus: Evil spirit search": None,
             },
             {},
@@ -192,7 +191,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_hurricos(state),
             None,
             {
-                # TODO: Add powerup logic.
                 "Hurricos: Factory Glide 2": None,
                 "Hurricos: Stone thief chase": None,
                 "Hurricos: Factory Glide 1": None,
@@ -203,7 +201,6 @@ def get_level_rules(logic: Logic):
             None,
             GemRules(
                 [42, 43, 44, 45, 46, 83, 85, 86, 87, 94, 116, 123, 126, 127, 128, 129, 130, 131],
-                # TODO: Add powerup logic.
                 []
             )
         ),
@@ -299,24 +296,46 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_sunny(state),
             lambda state: logic.can_access_sunny_final_area(state),
             {
-                # TODO: Add powerup logic.
-                "Sunny Beach: Blasting boxes": lambda state: logic.can_access_sunny_underwater(state),
+                "Sunny Beach: Blasting boxes": lambda state: logic.can_swim(state),
                 "Sunny Beach: Turtle soup I": lambda state: logic.can_access_sunny_turtle_soup(state),
                 "Sunny Beach: Turtle soup II": lambda state: logic.can_access_sunny_turtle_soup(state),
             },
             {},
             {},
             {},
-            lambda state: logic.can_access_sunny_underwater(state),
+            lambda state: logic.can_swim(state),
             GemRules(
                 [1, 2, 3, 4, 5, 6, 53, 91, 105, 106, 107, 109],
                 [
-                    # TODO: Better handle logic.
                     GemRuleRestriction(
-                        [56, 57, 58, 83, 84, 85, 86, 87, 108],
-                        "climb",
-                        lambda state: logic.can_climb(state),
-                        20
+                        [83, 84, 85, 86, 87],
+                        "access to the turtle soup pool gems",
+                        lambda state: logic.can_access_sunny_turtle_soup(state) and logic.can_swim(state),
+                        10
+                    ),
+                    GemRuleRestriction(
+                        [15, 16, 17, 18, 19, 20, 21, 22, 30, 31, 32, 33, 34, 35, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 59, 68, 69, 70, 71, 72, 73, 82, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 110, 111, 112],
+                        "access to the middle room",
+                        lambda state: logic.can_access_sunny_middle_room(state),
+                        184
+                    ),
+                    GemRuleRestriction(
+                        [56, 57, 58, 108],
+                        "access to the middle ladder",
+                        lambda state: logic.can_access_sunny_middle_ladders(state),
+                        10
+                    ),
+                    GemRuleRestriction(
+                        [27, 28, 29, 36, 37, 38, 74, 75, 76],
+                        "access to the final room",
+                        lambda state: logic.can_access_sunny_final_area(state),
+                        21
+                    ),
+                    GemRuleRestriction(
+                        [7, 8, 9, 10, 11, 12, 13, 14, 23, 24, 25, 26, 39, 40, 41, 60, 61, 62, 63, 64, 65, 66, 67, 77, 78, 79, 80, 81, 130],
+                        "swim",
+                        lambda state: logic.can_swim(state),
+                        89
                     )
                 ]
             )
@@ -385,6 +404,12 @@ def get_level_rules(logic: Logic):
                         2
                     ),
                     GemRuleRestriction(
+                        [96, 97, 98, 99, 100],
+                        "swim",
+                        lambda state: logic.can_swim(state),
+                        13
+                    ),
+                    GemRuleRestriction(
                         [89, 90],
                         "access to the orb wall",
                         lambda state: logic.can_access_autumn_wall(state),
@@ -419,7 +444,6 @@ def get_level_rules(logic: Logic):
             {
                 "Skelos Badlands: Lava lizards I": None,
                 "Skelos Badlands: Lava lizards II": None,
-                # TODO: Add powerup logic.
                 "Skelos Badlands: Dem bones": None,
             },
             {},
@@ -440,7 +464,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_crystal(state),
             lambda state: logic.can_access_crystal_bridge(state),
             {
-                # TODO: Add powerup logic.
                 "Crystal Glacier: Draclet cave": lambda state: logic.can_access_crystal_bridge(state),
                 "Crystal Glacier: George the snow leopard": lambda state: logic.can_access_crystal_bridge(state)
             },
@@ -466,7 +489,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_breeze(state),
             None,
             {
-                # TODO: Add powerup logic.
                 "Breeze Harbor: Gear grab": None,
                 "Breeze Harbor: Mine blast": None
             },
@@ -479,7 +501,6 @@ def get_level_rules(logic: Logic):
             None,
             GemRules(
                 [1, 2, 3, 4, 5, 6, 7, 15, 16, 17, 18, 19, 85, 90, 100, 111, 112],
-                # TODO: Add powerup logic.
                 [
                     GemRuleRestriction(
                         [29, 30, 31],
@@ -496,7 +517,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_zephyr(state),
             None,
             {
-                # TODO: Add powerup logic.
                 "Zephyr: Cowlek corral I": None,
                 "Zephyr: Cowlek corral II": lambda state: logic.can_access_zephyr_ladder(state),
                 "Zephyr: Sowing seeds II": None,
@@ -510,7 +530,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_access_zephyr_ladder(state),
             GemRules(
                 [1, 2, 8, 9, 10, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 105, 107, 117, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 149, 150, 151, 153, 167, 168],
-                # TODO: Add powerup logic.
                 [
                     GemRuleRestriction(
                         [90, 91, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180],
@@ -546,7 +565,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_scorch(state),
             None,
             {
-                # TODO: Add powerup logic.
                 "Scorch: Barrel of Monkeys": None,
                 "Scorch: Capture the flags": None
             },
@@ -560,7 +578,6 @@ def get_level_rules(logic: Logic):
             None,
             GemRules(
                 [1, 2, 3, 4, 5, 93, 94, 95, 96, 97, 98, 99, 100, 101, 106, 115, 134, 135, 136, 137, 142, 143, 144, 148],
-                # TODO: Add powerup logic.
                 []
             )
         ),
@@ -570,7 +587,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_shady(state),
             None,
             {
-                # TODO: Add powerup logic.
                 "Shady Oasis: Catch 3 thieves": None,
                 "Shady Oasis: Free Hippos": lambda state: logic.can_access_shady_hippos(state)
             },
@@ -582,7 +598,6 @@ def get_level_rules(logic: Logic):
             None,
             GemRules(
                 [1, 2, 3, 4, 5, 6, 7, 28, 29, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 138, 140, 141, 142, 143, 148, 155, 168, 169],
-                # TODO: Add powerup logic.
                 [
                     GemRuleRestriction(
                         [144, 145, 146, 147],
@@ -599,7 +614,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_magma(state),
             lambda state: logic.can_access_magma_talisman(state),
             {
-                # TODO: Add powerup logic.
                 "Magma Cone: Crystal geysers I": lambda state: logic.can_access_magma_popcorn(state),
                 "Magma Cone: Crystal geysers II": lambda state: logic.can_access_magma_popcorn(state),
                 "Magma Cone: Party crashers": lambda state: logic.can_access_magma_party_crashers(state),
@@ -615,14 +629,49 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_access_magma_party_crashers(state),
             GemRules(
                 [1, 2, 48, 78, 121, 122, 123],
-                # TODO: Handle climb and powerup logic.
                 [
                     GemRuleRestriction(
-                        [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 92, 93, 94, 95, 96, 97, 98, 99, 100, 114, 115, 116, 117, 118, 119, 120, 124, 125, 126],
-                        "access to the magma cone elevator",
+                        [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 75, 76, 77],
+                        "access past the first gap",
+                        lambda state: logic.can_pass_magma_start(state),
+                        60
+                    ),
+                    GemRuleRestriction(
+                        [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 45, 46, 47, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91],
+                        "access to the second level",
+                        lambda state: logic.can_reach_magma_second_level(state),
+                        163
+                    ),
+                    GemRuleRestriction(
+                        [105, 106, 107, 108, 109, 110, 111, 112, 113],
+                        "access to the popcorn minigame",
+                        lambda state: logic.can_access_magma_popcorn(state),
+                        47
+                    ),
+                    GemRuleRestriction(
+                        [40, 41, 42, 43, 44, 101, 102, 103, 104],
+                        "access to Moneybags",
+                        lambda state: logic.can_access_magma_moneybags(state),
+                        11
+                    ),
+                    GemRuleRestriction(
+                        [92, 93, 94, 95, 96, 97, 98, 99, 100, 118, 119, 120],
+                        "access past the elevator",
+                        lambda state: logic.can_pass_magma_elevator(state),
+                        50
+                    ),
+                    GemRuleRestriction(
+                        [114, 115, 116, 117, 126],
+                        "access to the talisman",
                         lambda state: logic.can_access_magma_talisman(state),
-                        105
-                    )
+                        35
+                    ),
+                    GemRuleRestriction(
+                        [124, 125],
+                        "access to snipe-able balloons",
+                        lambda state: logic.can_access_magma_fireball_balloons(state),
+                        20
+                    ),
                 ]
             )
         ),
@@ -632,7 +681,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_fracture(state),
             None,
             {
-                # TODO: Add powerup logic.
                 "Fracture Hills: Earthshaper bash": lambda state: logic.can_access_fracture_hunter(state),
                 "Fracture Hills: Free the faun": lambda state: logic.can_access_fracture_faun(state),
                 "Fracture Hills: Alchemist escort": None,
@@ -647,7 +695,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_access_fracture_enemies(state),
             GemRules(
                 [1, 2, 3, 20, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91],
-                # TODO: Handle powerup logic.
                 []
             )
         ),
@@ -770,7 +817,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_cloud(state),
             None,
             {
-                # TODO: Work out powerup logic.
                 "Cloud Temples: Agent Zero's secret hideout": None,
                 "Cloud Temples: Ring tower bells": None,
                 "Cloud Temples: Break down doors": None
@@ -818,7 +864,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_robotica(state),
             None,
             {
-                # TODO: Work out powerup logic.
                 "Robotica Farms: Switch on bug light": None,
                 "Robotica Farms: Clear tractor path": None,
                 "Robotica Farms: Exterminate crow bugs": None
@@ -829,7 +874,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_fireball(state) or logic.can_headbash(state),
             GemRules(
                 [1, 2, 3, 4, 5, 6, 7, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 130, 138, 139, 147, 148, 149, 150, 151, 152, 179, 180, 181, 182, 183],
-                # TODO: Powerup logic
                 []
             )
         ),
@@ -839,7 +883,6 @@ def get_level_rules(logic: Logic):
             lambda state: logic.can_enter_metropolis(state),
             None,
             {
-                # TODO: Work out powerup logic.
                 "Metropolis: Conquer invading cows": lambda state: logic.can_pass_metropolis_elevators(state),
                 "Metropolis: Shoot down sheep saucers I": lambda state: logic.can_pass_metropolis_elevators(state),
                 "Metropolis: Shoot down sheep saucers II": lambda state: logic.can_pass_metropolis_elevators(state),
