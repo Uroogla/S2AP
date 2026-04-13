@@ -2001,6 +2001,7 @@ public partial class App : Application
         uint levelGemCountAddress = Addresses.LevelGemsAddress;
         int totalGems = 0;
         int i = 0;
+        int bundle_size = int.Parse(Client.Options?.GetValueOrDefault("gemsanity_gem_bundle_size", "0").ToString());
         foreach (LevelData level in Helpers.GetLevelData())
         {
             if (!level.Name.Contains("Speedway"))
@@ -2011,7 +2012,7 @@ public partial class App : Application
                 levelGemCount += 5 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Blue Gem").Count() ?? 0);
                 levelGemCount += 10 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Gold Gem").Count() ?? 0);
                 levelGemCount += 25 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Pink Gem").Count() ?? 0);
-                levelGemCount += 50 * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} 50 Gems").Count() ?? 0);
+                levelGemCount += bundle_size * (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x != null && x.ItemName == $"{levelName} Gem Bundle").Count() ?? 0);
                 Memory.Write(levelGemCountAddress, levelGemCount);
                 totalGems += levelGemCount;
             } else
