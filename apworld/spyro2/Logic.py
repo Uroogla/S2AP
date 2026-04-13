@@ -45,7 +45,7 @@ class Logic(ABC):
         count += state.count(f"{level} Blue Gem", self.world.player) * 5
         count += state.count(f"{level} Gold Gem", self.world.player) * 10
         count += state.count(f"{level} Pink Gem", self.world.player) * 25
-        count += state.count(f"{level} 50 Gems", self.world.player) * 50
+        count += state.count(f"{level} Gem Bundle", self.world.player) * self.world.options.gemsanity_gem_bundle_size
         return count
 
     def has_sparx_health(self, health, state):
