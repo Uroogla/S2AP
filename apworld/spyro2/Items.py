@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import NamedTuple
 from BaseClasses import Item
-from .Options import GemsanityRewardType, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
+from .Options import GemsanityRewardOptions, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
 from Options import OptionError
 
 
@@ -318,7 +318,7 @@ def BuildItemPool(world, count, options, locked_levels):
         remaining_count = remaining_count - 1
 
     if options.enable_gemsanity.value == GemsanityOptions.PARTIAL or \
-            options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardType.BUNDLES:
+            options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardOptions.BUNDLES:
         bundle_count = int(400 / options.gemsanity_gem_bundle_size)
         for i in range(bundle_count):
             item_pool.append(item_dictionary["Summer Forest Gem Bundle"])
@@ -343,7 +343,7 @@ def BuildItemPool(world, count, options, locked_levels):
             item_pool.append(item_dictionary["Robotica Farms Gem Bundle"])
             item_pool.append(item_dictionary["Metropolis Gem Bundle"])
         remaining_count -= bundle_count * 21
-    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemanity_reward_type.value == GemsanityRewardType.GEMS:
+    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemanity_reward_type.value == GemsanityRewardOptions.GEMS:
         for i in range(60):
             item_pool.append(item_dictionary["Summer Forest Red Gem"])
         for i in range(40):

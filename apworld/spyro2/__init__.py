@@ -14,7 +14,7 @@ from .Items import (Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_na
 from .Locations import (Spyro2Location, Spyro2LocationCategory, location_tables,
     location_dictionary, location_name_groups)
 from .Options import Spyro2Option, GoalOptions, GemsanityOptions, GemsanityLocationOptions, MoneybagsOptions, \
-    RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions
+    RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions, GemsanityRewardOptions
 from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic, CustomLogic
 from .Rules import get_level_rules
 
@@ -143,7 +143,7 @@ class Spyro2World(World):
                                   f"and up to that many progression items to the pool and may result in long generation times. "
                                   f"They must either switch to partial gemsanity, or the "
                                   f"host needs to enable allow_full_gemsanity in their host.yaml settings.")
-            if bundle_count > 400:
+            if bundle_count > 400 and self.options.gemsanity_reward_type.value == GemsanityRewardOptions.BUNDLES and self.options.enable_gemsanity.value != GemsanityOptions.OFF:
                  raise OptionError(f"Spyro 2: Player {self.player_name} has their gemsanity gem bundle size set to [{self.options.gemsanity_gem_bundle_size.value}] "
                                   f"which is attempting to add [{bundle_count}] progression items (and locations) to the pool and may "
                                   f"result in long generation times. They must switch to a larger bundle size (less items to place). "
