@@ -343,7 +343,7 @@ def BuildItemPool(world, count, options, locked_levels):
             item_pool.append(item_dictionary["Robotica Farms Gem Bundle"])
             item_pool.append(item_dictionary["Metropolis Gem Bundle"])
         remaining_count -= bundle_count * 21
-    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemanity_reward_type.value == GemsanityRewardOptions.GEMS:
+    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardOptions.GEMS:
         for i in range(60):
             item_pool.append(item_dictionary["Summer Forest Red Gem"])
         for i in range(40):
