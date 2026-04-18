@@ -32,6 +32,10 @@ class GemsanityLocationOptions:
     LOCAL = 0
     GLOBAL = 1
 
+class GemsanityRewardOptions:
+    BUNDLES = 0
+    GEMS = 1
+
 class SparxUpgradeOptions:
     OFF = 0
     BLUE = 1
@@ -237,9 +241,9 @@ class EnableGemsanityOption(Choice):
     Full requires the host to edit allow_full_gemsanity
         in their yaml file, as it is very disruptive.
     Off: Individual gems are not checks.
-    Partial: 200 randomly chosen gems become checks. For every level
-        with loose gems (not speedways), 8 items giving 50 gems for
-        that level will be added to the pool.
+    Partial: Only some number of randomly chosen gems become checks. For every
+        level with loose gems (not speedways), Gem Bundle items giving
+        gems for that level will be added to the pool.
     Full: All gems are checks."""
     display_name = "Enable Gemsanity"
     default = GemsanityOptions.OFF
@@ -256,11 +260,42 @@ class GemsanityItemLocations(Choice):
     option_local = GemsanityLocationOptions.LOCAL
     option_global = GemsanityLocationOptions.GLOBAL
 
-class FullGemsanityUseIndividualGems(Toggle):
-    """Should gem items be bundles of 50 gems each,
-     or individual gems. Applies only to full gemsanity.
-     Turning this on slows down generation significantly."""
-    display_name = "Full Gemsanity Use Individual Gem Items"
+class GemsanityRewardType(Choice):
+     """Adds item rewards to the pool to match the applicable gem locations.
+     Gems: If Gemsanity is set to FULL, each gem location in the game will have
+         its individual matching gem added to the item pool. Applies only to
+         full gemsanity. Choosing this slows down generation significantly.
+     Bundles: Adds items that grant a number of gems for an individual level
+         to the item pool.
+         If Gemsanity=FULL, extra gem locations may contain other/filler items.
+         If Gemsanity=PARTIAL, This option is selected automatically"""
+     display_name = "Gemsanity Item Reward Type"
+     default = GemsanityRewardOptions.BUNDLES
+     option_gems = GemsanityRewardOptions.GEMS
+     option_bundles = GemsanityRewardOptions.BUNDLES
+ 
+class GemsanityGemBundleSize(Choice):
+     """Define the amount of gems awarded by each Gem Bundle item.
+     Determines how many items are added to the item pool.
+     Determines how many gem locations are randomly selected if
+         Gemsanity is set to Partial (sdds one location per bundle item).
+     WARNING: Selecting an option smaller than 25 requires the host to
+         edit allow_full_gemsanity in their yaml file.
+     Default (50):adds 8 Gem Bundles per Level to the Item Pool (168 Total)
+     5: 80 Bundles/Level (1680 Total) ,  10: 40 Bundles/Level (840 Total)
+     16: 25 Bundles/level (525 Total) ,  25: 16 Bundles/Level (336 Total)
+     40: 10 Bundles/Level (210 Total) ,  50: 8 Bundles/Level (168 Total)
+     80: 5 Bundles/Level (105 Total)  ,  100: 4 Bundles/Level (84 Total)"""
+     display_name = "Gem Bundle Item Size"
+     default = 50
+     option_5 = 5
+     option_10 = 10
+     option_16 = 16
+     option_25 = 25
+     option_40 = 40
+     option_50 = 50
+     option_80 = 80
+     option_100 = 100
 
 class MoneybagsSettings(Choice):
     """Settings for Moneybags unlocks.
@@ -543,7 +578,8 @@ class Spyro2Option(PerGameCommonOptions):
     enable_spirit_particle_checks: EnableSpiritParticleChecksOption
     enable_gemsanity: EnableGemsanityOption
     gemsanity_item_locations: GemsanityItemLocations
-    full_gemsanity_individual_gems: FullGemsanityUseIndividualGems
+    gemsanity_reward_type: GemsanityRewardType
+    gemsanity_gem_bundle_size: GemsanityGemBundleSize
     moneybags_settings: MoneybagsSettings
     death_link: EnableDeathLink
     enable_filler_extra_lives: EnableFillerExtraLives
@@ -589,7 +625,8 @@ spyro_options_groups = [
             MaxTotalGemCheckOption,
             EnableGemsanityOption,
             GemsanityItemLocations,
-            FullGemsanityUseIndividualGems,
+            GemsanityRewardType,
+            GemsanityGemBundleSize,
             EnableSkillpointChecksOption,
             EnableLifeBottleChecksOption,
             EnableSpiritParticleChecksOption

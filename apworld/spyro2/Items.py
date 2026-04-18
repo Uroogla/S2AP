@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import NamedTuple
 from BaseClasses import Item
-from .Options import MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
+from .Options import GemsanityRewardOptions, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
 from Options import OptionError
 
 
@@ -216,27 +216,27 @@ _all_items = [Spyro2ItemData(row[0], row[1], row[2]) for row in [
     ("Metropolis Gold Gem", 4103, Spyro2ItemCategory.GEM),
     ("Metropolis Pink Gem", 4104, Spyro2ItemCategory.GEM),
 
-    ("Summer Forest 50 Gems", 4200, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Glimmer 50 Gems", 4201, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Idol Springs 50 Gems", 4202, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Colossus 50 Gems", 4203, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Hurricos 50 Gems", 4204, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Aquaria Towers 50 Gems", 4205, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Sunny Beach 50 Gems", 4206, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Autumn Plains 50 Gems", 4207, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Skelos Badlands 50 Gems", 4208, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Crystal Glacier 50 Gems", 4209, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Breeze Harbor 50 Gems", 4210, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Zephyr 50 Gems", 4211, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Scorch 50 Gems", 4212, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Shady Oasis 50 Gems", 4213, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Magma Cone 50 Gems", 4214, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Fracture Hills 50 Gems", 4215, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Winter Tundra 50 Gems", 4216, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Mystic Marsh 50 Gems", 4217, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Cloud Temples 50 Gems", 4218, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Robotica Farms 50 Gems", 4219, Spyro2ItemCategory.GEMSANITY_PARTIAL),
-    ("Metropolis 50 Gems", 4220, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Summer Forest Gem Bundle", 4200, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Glimmer Gem Bundle", 4201, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Idol Springs Gem Bundle", 4202, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Colossus Gem Bundle", 4203, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Hurricos Gem Bundle", 4204, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Aquaria Towers Gem Bundle", 4205, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Sunny Beach Gem Bundle", 4206, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Autumn Plains Gem Bundle", 4207, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Skelos Badlands Gem Bundle", 4208, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Crystal Glacier Gem Bundle", 4209, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Breeze Harbor Gem Bundle", 4210, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Zephyr Gem Bundle", 4211, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Scorch Gem Bundle", 4212, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Shady Oasis Gem Bundle", 4213, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Magma Cone Gem Bundle", 4214, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Fracture Hills Gem Bundle", 4215, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Winter Tundra Gem Bundle", 4216, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Mystic Marsh Gem Bundle", 4217, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Cloud Temples Gem Bundle", 4218, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Robotica Farms Gem Bundle", 4219, Spyro2ItemCategory.GEMSANITY_PARTIAL),
+    ("Metropolis Gem Bundle", 4220, Spyro2ItemCategory.GEMSANITY_PARTIAL),
 
     ("Glitched Item", 9000, Spyro2ItemCategory.UT_ITEM)
 ]]
@@ -318,31 +318,32 @@ def BuildItemPool(world, count, options, locked_levels):
         remaining_count = remaining_count - 1
 
     if options.enable_gemsanity.value == GemsanityOptions.PARTIAL or \
-            options.enable_gemsanity.value == GemsanityOptions.FULL and not options.full_gemsanity_individual_gems.value:
-        for i in range(8):
-            item_pool.append(item_dictionary["Summer Forest 50 Gems"])
-            item_pool.append(item_dictionary["Glimmer 50 Gems"])
-            item_pool.append(item_dictionary["Idol Springs 50 Gems"])
-            item_pool.append(item_dictionary["Colossus 50 Gems"])
-            item_pool.append(item_dictionary["Hurricos 50 Gems"])
-            item_pool.append(item_dictionary["Aquaria Towers 50 Gems"])
-            item_pool.append(item_dictionary["Sunny Beach 50 Gems"])
-            item_pool.append(item_dictionary["Autumn Plains 50 Gems"])
-            item_pool.append(item_dictionary["Skelos Badlands 50 Gems"])
-            item_pool.append(item_dictionary["Crystal Glacier 50 Gems"])
-            item_pool.append(item_dictionary["Breeze Harbor 50 Gems"])
-            item_pool.append(item_dictionary["Zephyr 50 Gems"])
-            item_pool.append(item_dictionary["Scorch 50 Gems"])
-            item_pool.append(item_dictionary["Shady Oasis 50 Gems"])
-            item_pool.append(item_dictionary["Magma Cone 50 Gems"])
-            item_pool.append(item_dictionary["Fracture Hills 50 Gems"])
-            item_pool.append(item_dictionary["Winter Tundra 50 Gems"])
-            item_pool.append(item_dictionary["Mystic Marsh 50 Gems"])
-            item_pool.append(item_dictionary["Cloud Temples 50 Gems"])
-            item_pool.append(item_dictionary["Robotica Farms 50 Gems"])
-            item_pool.append(item_dictionary["Metropolis 50 Gems"])
-        remaining_count -= 168
-    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.full_gemsanity_individual_gems.value:
+            options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardOptions.BUNDLES:
+        bundle_count = int(400 / options.gemsanity_gem_bundle_size)
+        for i in range(bundle_count):
+            item_pool.append(item_dictionary["Summer Forest Gem Bundle"])
+            item_pool.append(item_dictionary["Glimmer Gem Bundle"])
+            item_pool.append(item_dictionary["Idol Springs Gem Bundle"])
+            item_pool.append(item_dictionary["Colossus Gem Bundle"])
+            item_pool.append(item_dictionary["Hurricos Gem Bundle"])
+            item_pool.append(item_dictionary["Aquaria Towers Gem Bundle"])
+            item_pool.append(item_dictionary["Sunny Beach Gem Bundle"])
+            item_pool.append(item_dictionary["Autumn Plains Gem Bundle"])
+            item_pool.append(item_dictionary["Skelos Badlands Gem Bundle"])
+            item_pool.append(item_dictionary["Crystal Glacier Gem Bundle"])
+            item_pool.append(item_dictionary["Breeze Harbor Gem Bundle"])
+            item_pool.append(item_dictionary["Zephyr Gem Bundle"])
+            item_pool.append(item_dictionary["Scorch Gem Bundle"])
+            item_pool.append(item_dictionary["Shady Oasis Gem Bundle"])
+            item_pool.append(item_dictionary["Magma Cone Gem Bundle"])
+            item_pool.append(item_dictionary["Fracture Hills Gem Bundle"])
+            item_pool.append(item_dictionary["Winter Tundra Gem Bundle"])
+            item_pool.append(item_dictionary["Mystic Marsh Gem Bundle"])
+            item_pool.append(item_dictionary["Cloud Temples Gem Bundle"])
+            item_pool.append(item_dictionary["Robotica Farms Gem Bundle"])
+            item_pool.append(item_dictionary["Metropolis Gem Bundle"])
+        remaining_count -= bundle_count * 21
+    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardOptions.GEMS:
         for i in range(60):
             item_pool.append(item_dictionary["Summer Forest Red Gem"])
         for i in range(40):
