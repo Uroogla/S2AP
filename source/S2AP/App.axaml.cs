@@ -1539,7 +1539,7 @@ public partial class App : Application
     {
         // Make Glimmer bridge free.  In normal settings, this cannot be an item or the start is too restrictive.
         // It's not worth making this payment an item for Gemsanity alone.
-        Memory.Write(Addresses.GlimmerBridgeUnlock, 0);
+        Memory.Write(Addresses.GlimmerBridgeUnlock, (short)0);
         MoneybagsOptions moneybagsOption = (MoneybagsOptions)int.Parse(Client.Options?.GetValueOrDefault("moneybags_settings", "0").ToString());
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
         LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
@@ -1587,13 +1587,10 @@ public partial class App : Application
             foreach (string unlock in moneybagsAddresses.Keys)
             {
                 uint unlockAddress = moneybagsAddresses[unlock];
-                if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"Moneybags Unlock - {unlock}").Count() ?? 0) == 0)
+                Memory.Write(unlockAddress, (short)0);
+                if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"Moneybags Unlock - {unlock}").Count() ?? 0) != 0)
                 {
-                    Memory.Write(unlockAddress, 0);
-                }
-                else
-                {
-                    Memory.Write(unlockAddress, 65536);
+                    Memory.Write(unlockAddress + 2, (short)1);
                 }
             }
         }
