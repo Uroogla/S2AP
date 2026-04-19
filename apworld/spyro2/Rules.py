@@ -404,7 +404,7 @@ def get_level_rules(logic: Logic):
                         2
                     ),
                     GemRuleRestriction(
-                        [96, 97, 98, 99, 100],
+                        [104, 105, 106, 107, 108],
                         "swim",
                         lambda state: logic.can_swim(state),
                         13
