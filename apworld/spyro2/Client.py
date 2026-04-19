@@ -405,13 +405,13 @@ class Spyro2Client(BizHawkClient):
 
             # Prevent sending items when connecting early (Sony, Menu or Intro Cutscene)
             firstBootStates = {GameStatus.TitleScreen, GameStatus.Loading}
-            # TODO: This doesn't work, I'd imagine?
             boolIsFirstBoot = guidebookText != "Guidebook" or demoMode == 1 or gameStatus in firstBootStates or resetCheck == 0
             if recv_index <= (len(ctx.items_received)) and not boolIsFirstBoot:
                 increment = 0
                 orbCountFromServer = 0
                 sfTalismansFromServer = 0
                 apTalismansFromServer = 0
+                riptoDefeated = False
                 for item in ctx.items_received:
                     # Increment to already received address first before sending
                     itemName = ctx.item_names.lookup_in_slot(item.item, ctx.slot)
@@ -421,6 +421,8 @@ class Spyro2Client(BizHawkClient):
                         sfTalismansFromServer += 1
                     elif itemName == "Autumn Plains Talisman":
                         apTalismansFromServer += 1
+                    elif itemName == "Ripto Defeated":
+                        riptoDefeated = True
                     if increment < START_recv_index:
                         increment += 1
                     else:
@@ -446,13 +448,31 @@ class Spyro2Client(BizHawkClient):
                 elif currentLevel == LevelInGameIDs.SummerForest and talismanCount != sfTalismansFromServer:
                     itemsWrites += [(RAM.TotalTalismanAddress, sfTalismansFromServer.to_bytes(1, "little"), "MainRAM")]
 
+                # Check for victory conditions
+                currentgoal = ctx.slot_data["options"]["goal"]
+                if not ctx.finished_game:
+                    if currentgoal == GoalOptions.RIPTO and orbCountFromServer >= 40 and riptoDefeated:
+                        await ctx.send_msgs([{
+                            "cmd": "StatusUpdate",
+                            "status": ClientStatus.CLIENT_GOAL
+                        }])
+                        await self.send_bizhawk_message(ctx, "You have completed your goal", "Passthrough", "")
+                        ctx.finished_game = True
+
             #await bizhawk.write(ctx.bizhawk_ctx, writes)
             # await bizhawk.guarded_write(ctx.bizhawk_ctx, TR_writes, TR_guards)
-            await bizhawk.write(ctx.bizhawk_ctx, itemsWrites)
-            return
+            if len(itemsWrites) > 0:
+                await bizhawk.write(ctx.bizhawk_ctx, itemsWrites)
+
             # ======== Locations handling =========
-            Locations_Reads = [currentLevel,gameState,currentRoom,previousCoinStateRoom,currentCoinStateRoom,gameRunning,TVT_BossPhase,gotMail,mailboxID,jakeVictory,S1_P2_State,S1_P2_Life,S2_isCaptured,levelselect_coinlock_Address,CoinTable,TempCoinTable,monkeylevelcounts,currentApes,transitionPhase]
-            await self.locations_handling(ctx, Locations_Reads)
+            if not boolIsFirstBoot:
+                Locations_Reads = [currentLevel, talismanBitArray, orbBitArray]
+                await self.locations_handling(ctx, Locations_Reads)
+
+            # If there is messages waiting in the queue, print them to Bizhawk
+            if self.messagequeue is not None and self.messagequeue != []:
+                await self.process_bizhawk_messages(ctx)
+            return
 
 
             # Write Array
@@ -527,10 +547,6 @@ class Spyro2Client(BizHawkClient):
                 #print(f"Wrote value to Specter2CompleteAddress : 1")
                 writes += [(RAM.Specter2CompleteAddress, Specter2CompleteAddress.to_bytes(1, "little"), "MainRAM")]
                 writes += [(RAM.tempSpecter2CompleteAddress, Specter2CompleteAddress.to_bytes(1, "little"), "MainRAM")]
-
-            # If there is messages waiting in the queue, print them to Bizhawk
-            if self.messagequeue is not None and self.messagequeue != []:
-                await self.process_bizhawk_messages(ctx)
 
             # ======== Handle Death Link =========
             DL_Reads = [cookies, gameRunning, gameState, menuState2, spikeState2]
@@ -697,369 +713,42 @@ class Spyro2Client(BizHawkClient):
             pass
 
     async def locations_handling(self, ctx: "BizHawkClientContext", Locations_Reads) -> None:
-        pass
-        # currentLevel = Locations_Reads[0]
-        # gameState = Locations_Reads[1]
-        # currentRoom = Locations_Reads[2]
-        # previousCoinStateRoom = Locations_Reads[3]
-        # currentCoinStateRoom = Locations_Reads[4]
-        # gameRunning = Locations_Reads[5]
-        # TVT_BossPhase = Locations_Reads[6]
-        # gotMail = Locations_Reads[7]
-        # mailboxID = Locations_Reads[8]
-        # jakeVictory = Locations_Reads[9]
-        # S1_P2_State = Locations_Reads[10]
-        # S1_P2_Life = Locations_Reads[11]
-        # S2_isCaptured = Locations_Reads[12]
-        # levelselect_coinlock_Address = Locations_Reads[13]
-        # CoinTable = Locations_Reads[14]
-        # TempCoinTable = Locations_Reads[15]
-        # monkeylevelcounts = Locations_Reads[16]
-        # currentApes = Locations_Reads[17]
-        # transitionPhase = Locations_Reads[18]
-        #
-        # locationsToSend = []
-        # monkeysToSend = set()
-        # coinsToSend = set()
-        # mailToSend = set()
-        # bossesToSend = set()
-        # racesToSend = set()
-        # allowcollect = 1 if self.allowcollect == 0x01 or self.forcecollect == True else 0
-        # SyncCount = 0
-        # # Replace levelID if in Monkey Madness
-        # if 0x18 < currentLevel <= 0x1D:
-        #     level = 0x18
-        # else:
-        #     level = currentLevel
-        #
-        # # Local update conditions
-        # # Condition to not update on first pass of client (self.roomglobal is 0 on first pass)
-        # if self.roomglobal == 0:
-        #     localcondition = False
-        #     return
-        # else:
-        #     localcondition = (currentLevel == self.levelglobal)
-        #
-        # # Stock BossRooms in a variable (For excluding these rooms in local monkeys sending)
-        # locationWrites = []
-        # levelsToSync = []
-        # bossRooms = RAM.bossListLocal.keys()
-        # mailboxesRooms = RAM.mailboxListLocal.keys()
-        # redmailboxesRooms = RAM.redMailboxes.keys()
-        # keyList = list(RAM.monkeyListGlobal.keys())
-        # valList = list(RAM.monkeyListGlobal.values())
-        #
-        # addresses = []
-        # for val in valList:
-        #     tuple1 = (val, 1, "MainRAM")
-        #     addresses.append(tuple1)
-        # globalMonkeys = await bizhawk.read(ctx.bizhawk_ctx, addresses)
-        # GlobalIDToValueTable  = dict(zip(keyList,globalMonkeys))
-        # # localmonkeys = await bizhawk.read(ctx.bizhawk_ctx, addresses)
-        # # Check if in level select or in time hub, then read global monkeys
-        #
-        # temp_counter = currentApes
-        # if gameState == RAM.gameState["LevelSelect"] or currentLevel == RAM.levels["Time"] or (level == 0x18 and gameState == RAM.gameState["InLevel"]) or self.forcecollect and transitionPhase != 0x06:
-        #     for i in range(len(globalMonkeys)):
-        #         MonkeyID = keyList[i]
-        #         MonkeyAddress = valList[i]
-        #         iscaught = int.from_bytes(GlobalIDToValueTable[MonkeyID], byteorder='little') == RAM.caughtStatus["PrevCaught"]
-        #         if iscaught:
-        #             if (MonkeyID + self.offset) not in self.locations_list:
-        #                 monkeysToSend.add(MonkeyID + self.offset)
-        #         else:
-        #             if allowcollect == 0x01:
-        #                 if (MonkeyID + self.offset) in self.locations_list:
-        #                     levels_containing_monkey = [level for level, monkeys in RAM.monkeysperlevel.items() if MonkeyID in monkeys]
-        #                     room_containing_monkey = [room for room, monkeys in RAM.monkeyListTempLocal.items() if MonkeyID in monkeys]
-        #                     if currentLevel in RAM.MM_roomspersublevel.keys():
-        #                         Sub_Levels_Rooms = list(RAM.MM_roomspersublevel[currentLevel])
-        #                     else:
-        #                         Sub_Levels_Rooms = []
-        #                     if levels_containing_monkey[0] == 0x18 and (level == 0x18 and (room_containing_monkey not in Sub_Levels_Rooms)) and currentRoom not in room_containing_monkey:
-        #                         #print(f"+1 for Monkey#{MonkeyID}")
-        #                         temp_counter += 1
-        #                     locationWrites += [(MonkeyAddress,0x02.to_bytes(1, "little"), "MainRAM")]
-        #                     GlobalIDToValueTable[MonkeyID] = 0x02.to_bytes(1, "little")
-        #                     if not set(levels_containing_monkey).issubset(set(levelsToSync)):
-        #                         levelsToSync += levels_containing_monkey
-        # # if being in a level
-        # # check if NOT in a boss room since there is no monkeys to send there
-        # if gameState == RAM.gameState["InLevel"] and (localcondition) and not (currentRoom in bossRooms):
-        #     monkeyaddrs = RAM.monkeyListLocal[currentRoom]
-        #     key_list = list(monkeyaddrs.keys())
-        #     val_list = list(monkeyaddrs.values())
-        #
-        #     addresses = []
-        #     for val in val_list:
-        #         tuple1 = (val, 1, "MainRAM")
-        #         addresses.append(tuple1)
-        #     localmonkeys = await bizhawk.read(ctx.bizhawk_ctx, addresses)
-        #
-        #     if level == 0x18:
-        #         levelRooms = list(RAM.MM_roomspersublevel[currentLevel])
-        #     else:
-        #         levelRooms = list(RAM.roomsperlevel[currentLevel])
-        #
-        #     for i in range(len(levelRooms)):
-        #         roomID = levelRooms[i]
-        #         inRoom = currentRoom == roomID
-        #         MonkeysInRoom_keys = list(RAM.monkeyListLocal.get(roomID).keys())
-        #         MonkeysInRoom_address = list(RAM.monkeyListLocal.get(roomID).values())
-        #
-        #         for x in range(len(MonkeysInRoom_keys)):
-        #             MonkeyID = MonkeysInRoom_keys[x]
-        #             GlobalMonkeyAddress = RAM.monkeyListGlobal.get(MonkeyID)
-        #             iscaughtglobal = int.from_bytes(GlobalIDToValueTable[MonkeyID], byteorder='little') in (RAM.caughtStatus["Caught"],RAM.caughtStatus["PrevCaught"])
-        #             if inRoom:
-        #                 if transitionPhase != 0x06:
-        #                     iscaughtlocal = int.from_bytes(localmonkeys[x], byteorder='little') in (RAM.caughtStatus["Caught"], RAM.caughtStatus["PrevCaught"])
-        #                 else:
-        #                     iscaughtlocal = False
-        #                 if iscaughtlocal:
-        #                     # If the Monkey is not already in the sent locations list, add it to an array to send location
-        #                     if (MonkeyID + self.offset) not in self.locations_list and currentRoom == self.roomglobal:
-        #                         monkeysToSend.add(MonkeyID + self.offset)
-        #                         locationWrites += [(GlobalMonkeyAddress, 0x02.to_bytes(1, "little"), "MainRAM")]
-        #                         GlobalIDToValueTable[MonkeyID] = 0x02.to_bytes(1, "little")
-        #                         iscaughtglobal = True
-        #                 else:
-        #                     if allowcollect:
-        #                         # If the location ID is in the list and they are not caught, sync them
-        #                         if (MonkeyID + self.offset) in self.locations_list and transitionPhase != 0x06:
-        #                             #MonkeyID = key_list[x]
-        #                             MonkeyAddress = val_list[x]
-        #                             levels_containing_monkey = [level for level, monkeys in RAM.monkeysperlevel.items() if MonkeyID in monkeys]
-        #                             MonkeyHitboxUpdateAddress = RAM.localMonkeyHitbox.get(MonkeyAddress)
-        #                             locationWrites += [(MonkeyHitboxUpdateAddress, 0xFF.to_bytes(1, "little"), "MainRAM")]
-        #                             locationWrites += [(MonkeyAddress, 0x02.to_bytes(1, "little"), "MainRAM")]
-        #                             locationWrites += [(GlobalMonkeyAddress, 0x02.to_bytes(1, "little"), "MainRAM")]
-        #                             #print(f"+1 for Monkey#{MonkeyID}")
-        #                             #print(f"iscaughtglobal:{iscaughtglobal}")
-        #                             temp_counter += 1
-        #                             if not set(levels_containing_monkey).issubset(set(levelsToSync)):
-        #                                 levelsToSync += levels_containing_monkey
-        #                                 #print(levelsToSync)
-        #             else:
-        #                 if allowcollect:
-        #                     # Supposed to only do a local sync of the current MM_Sub-Level
-        #                     if (MonkeyID + self.offset) in self.locations_list and iscaughtglobal == False:
-        #                         #print(f"Synched monkey #{MonkeyID}")
-        #                         levels_containing_monkey = [level for level, monkeys in RAM.monkeysperlevel.items() if MonkeyID in monkeys]
-        #                         room_containing_monkey = [room for room, monkeys in RAM.monkeyListTempLocal.items() if MonkeyID in monkeys]
-        #                         MonkeyAddress = RAM.monkeyListTempLocal.get(room_containing_monkey[0]).get(MonkeyID)
-        #                         locationWrites += [(GlobalMonkeyAddress, 0x02.to_bytes(1, "little"), "MainRAM")]
-        #                         locationWrites += [(MonkeyAddress, 0x02.to_bytes(1, "little"), "MainRAM")]
-        #                         GlobalIDToValueTable[MonkeyID] = 0x02.to_bytes(1, "little")
-        #                         iscaughtglobal = True
-        #                         print(f"Local +1 for Monkey#{MonkeyID}")
-        #                         temp_counter += 1
-        #                         if not set(levels_containing_monkey).issubset(set(levelsToSync)):
-        #                             levelsToSync += levels_containing_monkey
-        #                             #print(levelsToSync)
-        #     if temp_counter > currentApes:
-        #         locationWrites += [(RAM.currentApesAddress, temp_counter.to_bytes(1, "little"), "MainRAM")]
-        #
-        # # Check for Coins
-        #
-        # # New Coins System !
-        # # Gets the entirety of the game's coin table, then evaluate if the server is missing some of them
-        # # If a coin is collected and is not in the server it will then send
-        #
-        # # When allowcollect is on, the inverse is also true : Any coin the server have that is not in the game will be put in the game
-        #
-        # targetCoinTable = TempCoinTable if levelselect_coinlock_Address == 0x01 else CoinTable
-        # targetTableAddress = RAM.temp_startingCoinAddress if levelselect_coinlock_Address == 0x01 else RAM.startingCoinAddress
-        #
-        # # List of coins already in the client
-        # FormattedCoinTable = self.format_cointable(ctx,targetCoinTable,0,0,"Locations")
-        # if FormattedCoinTable == "":
-        #     FormattedCoinTable = []
-        # FormattedCoinTable.sort(reverse=True)
-        #
-        # # List of coins in the client that the server does not have
-        # ClientCoinTable = [item for item in FormattedCoinTable if (item + self.offset + 300) not in self.locations_list]
-        # ClientCoinTable.sort(reverse=True)
-        #
-        # # List of coins in the server that the client does not have
-        # ServerCoinTable = [(item - self.offset - 300) for item in self.locations_list if (300 < (item - self.offset) <= 385) and (item - self.offset - 300) not in FormattedCoinTable]
-        # ServerCoinTable.sort(reverse=True)
-        #
-        # # Assemble the 2 coin table (Client and MissingFromServer)
-        # CoinsTableString = "".join([f"01{item:02x}" for item in FormattedCoinTable])
-        # FinalCoinsTableString = "".join([f"01{item:02x}" for item in ServerCoinTable])
-        # finalCoinTable = f"{CoinsTableString}{FinalCoinsTableString}"
-        #
-        # # Adjust to the coin table format
-        # while len(finalCoinTable) < 200:
-        #     finalCoinTable = f"00FF{finalCoinTable}"
-        # CoinsTableint = int(f"0x{finalCoinTable}", 16)
-        # if allowcollect == 0x01:
-        #     if ServerCoinTable != set() and ServerCoinTable != []:
-        #         locationWrites += [(targetTableAddress, CoinsTableint.to_bytes(100, "little"), "MainRAM")]
-        # if ClientCoinTable != set() and ClientCoinTable != []:
-        #     [coinsToSend.add((item + self.offset + 300)) for item in ClientCoinTable]
-        #
-        # if currentRoom in FormattedCoinTable:
-        #     CoinValues = RAM.coinsListLocal.get(currentRoom)
-        #     CoinVisualSprite = CoinValues[0]
-        #     CoinHitBoxPosition = CoinValues[1]
-        #     locationWrites2 = []
-        #     locationGuards2 = []
-        #     locationWrites2 += [(CoinVisualSprite, 0x00.to_bytes(1, "little"), "MainRAM")]
-        #     locationWrites2 += [(CoinHitBoxPosition, RAM.CoinHitBoxPositionOff.to_bytes(2, "little"), "MainRAM")]
-        #     locationGuards2 += [(CoinVisualSprite,0x04.to_bytes(1, "little"), "MainRAM")]
-        #     locationGuards2 += [(RAM.currentRoomIdAddress,currentRoom.to_bytes(1, "little"), "MainRAM")]
-        #     await bizhawk.guarded_write(ctx.bizhawk_ctx, locationWrites2,locationGuards2)
-        #
-        # if locationWrites:
-        #     await bizhawk.write(ctx.bizhawk_ctx, locationWrites)
-        #
-        # if levelsToSync:
-        #     # Sync all needed levels and return the number synched
-        #     SyncCount = await self.syncAllMonkeycount(ctx,levelsToSync)
-        # # Check for level bosses
-        # if gameState == RAM.gameState["InLevel"] and (localcondition) and (currentRoom in bossRooms):
-        #     bossaddrs = RAM.bossListLocal[currentRoom]
-        #     key_list = list(bossaddrs.keys())
-        #     val_list = list(bossaddrs.values())
-        #     addresses = []
-        #
-        #     for val in val_list:
-        #         tuple1 = (val, 1, "MainRAM")
-        #         addresses.append(tuple1)
-        #
-        #     bossesList = await bizhawk.read(ctx.bizhawk_ctx, addresses)
-        #     #bossesToSend = set()
-        #
-        #     for i in range(len(bossesList)):
-        #         # For TVT boss, check TVT_BossPhase, if it's 3 the fight is ongoing
-        #         if (currentRoom == 68):
-        #             if (TVT_BossPhase == 3 and int.from_bytes(bossesList[i], byteorder='little') == 0x00):
-        #                 if (key_list[i] + self.offset) not in self.locations_list:
-        #                     bossesToSend.add(key_list[i] + self.offset)
-        #         elif (currentRoom == 70):
-        #             if (gameRunning == 1 and int.from_bytes(bossesList[i], byteorder='little') == 0x00):
-        #                 if (key_list[i] + self.offset) not in self.locations_list:
-        #                     bossesToSend.add(key_list[i] + self.offset)
-        #                     self.MM_Jake_Defeated = 1
-        #         elif (currentRoom == 71):
-        #             if int.from_bytes(bossesList[i], byteorder='little') == 0x00:
-        #                 if (key_list[i] + self.offset) not in self.locations_list:
-        #                     bossesToSend.add(key_list[i] + self.offset)
-        #                     self.MM_Professor_Rescued = 1
-        #         else:
-        #             if int.from_bytes(bossesList[i], byteorder='little') == 0x00:
-        #                 if (key_list[i] + self.offset) not in self.locations_list:
-        #                     bossesToSend.add(key_list[i] + self.offset)
-        #
-        # # Check for Mailboxes
-        # if (localcondition) and (currentRoom in mailboxesRooms) and (gameState == RAM.gameState["InLevel"] or gameState == RAM.gameState["TimeStation"]):
-        #     mailboxesaddrs = RAM.mailboxListLocal[currentRoom]
-        #
-        #     boolGotMail = (gotMail == 0x02)
-        #     key_list = list(mailboxesaddrs.keys())
-        #     val_list = list(mailboxesaddrs.values())
-        #
-        #     #mail_to_send = set()
-        #     # Rearrange the array if there is 2 indexes for the same mailbox
-        #     for i in range(len(val_list)):
-        #         strVal = str(val_list[i])
-        #         if strVal.__contains__("{"):
-        #             strVal = strVal.replace("{", "").replace("}", "")
-        #             strVal = strVal.split(",")
-        #             for j in range(len(strVal)):
-        #                 key_list.append(key_list[i])
-        #                 val_list.append(int(strVal[j]))
-        #             val_list.pop(i)
-        #             key_list.pop(i)
-        #     for i in range(len(val_list)):
-        #         if val_list[i] == mailboxID and boolGotMail:
-        #             if (key_list[i] + self.offset) not in self.locations_list:
-        #                 mailToSend.add(key_list[i] + self.offset)
-        #
-        #     # Only triggers if there is a red mailbox in the room and you are NOT viewing mail
-        #     if (currentRoom in redmailboxesRooms) and (gotMail == 0x00):
-        #         redMailboxaddrs = RAM.redMailboxes[currentRoom]
-        #
-        #         redkey_list = list(redMailboxaddrs.keys())
-        #         redval_list = list(redMailboxaddrs.values())
-        #
-        #         addresses = []
-        #
-        #         for val in redval_list:
-        #             tuple1 = (val, 1, "MainRAM")
-        #             addresses.append(tuple1)
-        #
-        #         redMailboxesList = await bizhawk.read(ctx.bizhawk_ctx, addresses)
-        #         for i in range(len(redkey_list)):
-        #             if int.from_bytes(redMailboxesList[i], byteorder='little') == 0x01:
-        #                 if (redkey_list[i] + self.offset) not in self.locations_list:
-        #                     mailToSend.add(redkey_list[i] + self.offset)
-        #
-        # # Check for Jake Victory
-        # if currentRoom == 19 and gameState == RAM.gameState["JakeCleared"] and jakeVictory == 0x2:
-        #     #racesToSend = set()
-        #     racesToSend.add(295 + self.offset)
-        #     racesToSend.add(296 + self.offset)
-        #     racesToSend.add(297 + self.offset)
-        #     racesToSend.add(298 + self.offset)
-        #     racesToSend.add(299 + self.offset)
-        #
-        # elif currentRoom == 36 and gameState == RAM.gameState["JakeCleared"] and jakeVictory == 0x2:
-        #     #coins = set()
-        #     racesToSend.add(290 + self.offset)
-        #     racesToSend.add(291 + self.offset)
-        #     racesToSend.add(292 + self.offset)
-        #     racesToSend.add(293 + self.offset)
-        #     racesToSend.add(294 + self.offset)
-        #
-        #
-        # # Check for victory conditions
-        # specter1Condition = (currentRoom == 86 and S1_P2_State == 1 and S1_P2_Life == 0)
-        # specter2Condition = (currentRoom == 87 and S2_isCaptured == 1)
-        # currentgoal = ctx.slot_data["goal"]
-        # if RAM.gameState["InLevel"] == gameState and specter1Condition:
-        #     bossesToSend.add(self.offset + 205)
-        #     if currentgoal in (GoalOption.option_mm, GoalOption.option_mmtoken) and not ctx.finished_game:
-        #             await ctx.send_msgs([{
-        #                 "cmd": "StatusUpdate",
-        #                 "status": ClientStatus.CLIENT_GOAL
-        #             }])
-        #             await self.send_bizhawk_message(ctx, "You have completed your goal o[8(|)", "Passthrough", "")
-        #     self.MM_Completed = True
-        #     ctx.finished_game = True
-        # if RAM.gameState["InLevel"] == gameState and specter2Condition:
-        #     bossesToSend.add(self.offset + 206)
-        #
-        #     if currentgoal in (GoalOption.option_ppm, GoalOption.option_ppmtoken) and not ctx.finished_game:
-        #             await ctx.send_msgs([{
-        #                 "cmd": "StatusUpdate",
-        #                 "status": ClientStatus.CLIENT_GOAL
-        #             }])
-        #             await self.send_bizhawk_message(ctx, "You have completed your goal o[8(|)", "Passthrough", "")
-        #     self.PPM_Completed = True
-        #     ctx.finished_game = True
-        #
-        # locationsToSend = monkeysToSend | coinsToSend | mailToSend | bossesToSend | racesToSend
-        # if locationsToSend != "" and locationsToSend != set():
-        #     await ctx.check_locations(locationsToSend)
-        #
-        # if self.forcecollect == True:
-        #     msg = f"=================================\n"
-        #     msg += f"Synced progress into the game:\n"
-        #     if ctx.slot_data["coin"] == 0x01:
-        #         if len(ServerCoinTable) == 0:
-        #             msg += f"    No Coins updated\n"
-        #         else:
-        #             msg += f"    {len(ServerCoinTable)} Coins updated\n"
-        #     if SyncCount == 0:
-        #         msg += f"    No Monkeys updated\n"
-        #     else:
-        #         msg += f"    {SyncCount} Monkeys updated\n"
-        #     msg += f"=================================\n"
-        #     logger.info(msg)
-        #     self.forcecollect = False
+        current_level = Locations_Reads[0]
+        talisman_bit_array = Locations_Reads[1].to_bytes(29, "little")
+        orb_bit_array = Locations_Reads[2].to_bytes(29, "little")
+
+        locationsToSend = []
+        talismansToSend = set()
+        orbsToSend = set()
+        bossesToSend = set()
+
+        base_id = 1230000
+        level_offset = 1000
+        level_index = 0
+        levels = GetLevelData()
+        for level in levels:
+            location_offset = 0
+            if level.HasTalisman:
+                id = base_id + level_offset * level.LevelId + location_offset
+                if talisman_bit_array[level_index] != 0 and id not in self.locations_list:
+                    talismansToSend.add(id)
+                location_offset += 1
+            for i in range(level.OrbCount):
+                id = base_id + level_offset * level.LevelId + location_offset
+                orb_bit = pow(2, i)
+                if orb_bit_array[level_index] & orb_bit != 0 and id not in self.locations_list:
+                    orbsToSend.add(id)
+                location_offset += 1
+            if level.IsBoss:
+                id = base_id + level_offset * level.LevelId + location_offset
+                if talisman_bit_array[level_index] != 0 and id not in self.locations_list:
+                    bossesToSend.add(id)
+                location_offset += 1
+            level_index += 1
+
+        locationsToSend = talismansToSend | orbsToSend | bossesToSend
+        if locationsToSend != "" and locationsToSend != set():
+             await ctx.check_locations(locationsToSend)
 
     async def specialitems_handling(self, ctx: "BizHawkClientContext", SpecialItems_Reads) -> None:
         pass
