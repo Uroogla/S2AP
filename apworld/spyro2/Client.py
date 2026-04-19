@@ -407,7 +407,7 @@ class Spyro2Client(BizHawkClient):
             firstBootStates = {GameStatus.TitleScreen, GameStatus.Loading}
             # TODO: This doesn't work, I'd imagine?
             boolIsFirstBoot = guidebookText != "Guidebook" or demoMode == 1 or gameStatus in firstBootStates or resetCheck == 0
-            if recv_index < (len(ctx.items_received)) and not boolIsFirstBoot:
+            if recv_index <= (len(ctx.items_received)) and not boolIsFirstBoot:
                 increment = 0
                 orbCountFromServer = 0
                 sfTalismansFromServer = 0
