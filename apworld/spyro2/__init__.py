@@ -17,6 +17,7 @@ from .Options import Spyro2Option, GoalOptions, GemsanityOptions, GemsanityLocat
     RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions
 from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic, CustomLogic
 from .Rules import get_level_rules
+from .Client import Spyro2Client
 
 class Spyro2Settings(Group):
 
