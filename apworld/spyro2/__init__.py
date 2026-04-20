@@ -14,7 +14,7 @@ from .Items import (Spyro2Item, Spyro2ItemCategory, item_dictionary, key_item_na
 from .Locations import (Spyro2Location, Spyro2LocationCategory, location_tables,
     location_dictionary, location_name_groups)
 from .Options import Spyro2Option, GoalOptions, GemsanityOptions, GemsanityLocationOptions, MoneybagsOptions, \
-    RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions
+    RandomizeGemColorOptions, LevelLockOptions, TrickDifficultyOptions, spyro_options_groups, AbilityOptions, GemsanityRewardOptions
 from .Logic import Logic, BaseLogic, EasyLogic, MediumLogic, CustomLogic
 from .Rules import get_level_rules
 
@@ -136,7 +136,20 @@ class Spyro2World(World):
             self.enabled_location_categories.add(Spyro2LocationCategory.LIFE_BOTTLE)
         if self.options.enable_gemsanity.value != GemsanityOptions.OFF:
             self.enabled_location_categories.add(Spyro2LocationCategory.GEM)
-        if self.options.enable_gemsanity.value == GemsanityOptions.PARTIAL:
+        bundle_count = int(21 * 400 / self.options.gemsanity_gem_bundle_size)
+        if not self.settings.allow_full_gemsanity and self.multiworld.players > 1:
+            if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
+                 raise OptionError(f"Spyro 2: Player {self.player_name} has gemsanity set to full, which adds 2546 locations "
+                                  f"and up to that many progression items to the pool and may result in long generation times. "
+                                  f"They must either switch to partial gemsanity, or the "
+                                  f"host needs to enable allow_full_gemsanity in their host.yaml settings.")
+            if bundle_count > 400 and self.options.gemsanity_reward_type.value == GemsanityRewardOptions.BUNDLES and self.options.enable_gemsanity.value != GemsanityOptions.OFF:
+                 raise OptionError(f"Spyro 2: Player {self.player_name} has their gemsanity gem bundle size set to [{self.options.gemsanity_gem_bundle_size.value}] "
+                                  f"which is attempting to add [{bundle_count}] progression items (and locations) to the pool and may "
+                                  f"result in long generation times. They must switch to a larger bundle size (less items to place). "
+                                  f"Alternatively, the host can enable allow_full_gemsanity in their host.yaml settings to authorize "
+                                  f"up to 2600 progression items (per spyro gemsanity player) to be added to the item pool.")
+        if  self.options.enable_gemsanity.value == GemsanityOptions.PARTIAL:
             all_gem_locations = []
             for location in location_dictionary:
                 if location_dictionary[location].category == Spyro2LocationCategory.GEM:
@@ -146,13 +159,8 @@ class Spyro2World(World):
             if is_ut:
                 self.chosen_gem_locations = []
             else:
-                self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=200)
-        if self.options.enable_gemsanity.value == GemsanityOptions.FULL:
-            if not self.settings.allow_full_gemsanity and self.multiworld.players > 1:
-                raise OptionError(f"Spyro 2: Player {self.player_name} has gemsanity set to full, which adds 2546 locations "
-                                  f"and up to that many progression items to the pool and may result in long generation times. "
-                                  f"They must either switch to partial gemsanity, or the "
-                                  f"host needs to enable allow_full_gemsanity in their host.yaml settings.")
+                self.chosen_gem_locations = self.multiworld.random.sample(all_gem_locations, k=bundle_count)
+            
         if self.options.gemsanity_item_locations.value == GemsanityLocationOptions.LOCAL:
             for itemname, item in item_dictionary.items():
                 if item.category in [Spyro2ItemCategory.GEM, Spyro2ItemCategory.GEMSANITY_PARTIAL]:
@@ -693,6 +701,9 @@ class Spyro2World(World):
                 "enable_life_bottle_checks": self.options.enable_life_bottle_checks.value,
                 "enable_spirit_particle_checks": self.options.enable_spirit_particle_checks.value,
                 "enable_gemsanity": self.options.enable_gemsanity.value,
+                "gemsanity_item_locations": self.options.gemsanity_item_locations.value,
+                "gemsanity_reward_type": self.options.gemsanity_reward_type.value,
+                "gemsanity_gem_bundle_size": self.options.gemsanity_gem_bundle_size.value,
                 "moneybags_settings": self.options.moneybags_settings.value,
                 "death_link": self.options.death_link.value,
                 "enable_filler_extra_lives": self.options.enable_filler_extra_lives.value,
