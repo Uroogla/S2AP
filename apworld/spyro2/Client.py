@@ -24,7 +24,7 @@ from .Addresses import RAM
 from .Enums import GameStatus, LevelInGameIDs, SpyroColor
 from .LevelData import GetLevelData
 
-from .Options import GoalOptions, MoneybagsOptions, GemsanityOptions, LevelLockOptions, AbilityOptions
+from .Options import GoalOptions, MoneybagsOptions, GemsanityOptions, LevelLockOptions, AbilityOptions, BomboOptions, PortalTextColorOptions
 
 logger = logging.getLogger("Client")
 
@@ -138,7 +138,6 @@ class Spyro2Client(BizHawkClient):
 
     def initialize_client(self):
         self.messagequeue = []
-        # TODO: Make Spyro values
         self.boolsyncprogress = False
         self.syncWaitConfirm = False
         self.changeDeathlink = False
@@ -157,6 +156,7 @@ class Spyro2Client(BizHawkClient):
         self.cosmeticQueue = []
         self.lastCosmeticUpdate = 0
         self.moneybagsUnlocks = set()
+        self.unlockedLevels = set()
         self.riptoDefeated = False
         self.hasDoubleJumpItem = False
         self.hasFireballItem = False
@@ -411,6 +411,38 @@ class Spyro2Client(BizHawkClient):
                 "idolFishThrowUp": (RAM.IdolFishThrowUp, 4, "MainRAM"),
                 "idolFishIncludeReds": (RAM.IdolFishIncludeReds, 4, "MainRAM"),
                 "idolFishIncludeRedsHUD": (RAM.IdolFishIncludeRedsHUD, 4, "MainRAM"),
+                "hurricosLightningThiefAddresses": (RAM.HurricosLightningThiefAddresses, 0x18CFC0 - 0x18C8A8, "MainRAM"),
+                "spyroHUDScore": (RAM.spyroHUDScore, 1, "MainRAM"),
+                "secondBomboStatus": (RAM.secondBomboStatus, 1, "MainRAM"),
+                "secondBomboZPos": (RAM.secondBomboStatus - 0x35, 4, "MainRAM"),
+                "thirdBomboStatus": (RAM.thirdBomboStatus, 1, "MainRAM"),
+                "thirdBomboZPos": (RAM.secondBomboStatus - 0x35, 4, "MainRAM"),
+                "bomboAttackAddress": (RAM.bomboAttackAddress, 4, "MainRAM"),
+                "fractureHeadbashCheck": (RAM.fractureHeadbashCheck, 4, "MainRAM"),
+                "fractureEarthshaperAddresses": (RAM.FractureEarthshaperAddresses, 0x189000 - 0x188DB8, "MainRAM"),
+                "maxFractureSpiritParticles": (RAM.maxFractureSpiritParticles, 1, "MainRAM"),
+                "opponentHUDScore": (RAM.opponentHUDScore, 1, "MainRAM"),
+                "shadyHeadbashCheck": (RAM.ShadyHeadbashCheck, 4, "MainRAM"),
+                "gulpDoubleDamage": (RAM.GulpDoubleDamage, 1, "MainRAM"),
+                "redGemShadow": (RAM.RedGemShadow, 4, "MainRAM"),
+                "redGemColor": (RAM.RedGemColor, 4, "MainRAM"),
+                "greenGemShadow": (RAM.GreenGemShadow, 4, "MainRAM"),
+                "greenGemColor": (RAM.GreenGemColor, 4, "MainRAM"),
+                "blueGemShadow": (RAM.BlueGemShadow, 4, "MainRAM"),
+                "blueGemColor": (RAM.BlueGemColor, 4, "MainRAM"),
+                "goldGemShadow": (RAM.GoldGemShadow, 4, "MainRAM"),
+                "goldGemColor": (RAM.GoldGemColor, 4, "MainRAM"),
+                "pinkGemShadow": (RAM.PinkGemShadow, 4, "MainRAM"),
+                "pinkGemColor": (RAM.PinkGemColor, 4, "MainRAM"),
+                "portalTextRed": (RAM.PortalTextRed, 1, "MainRAM"),
+                "portalTextGreen": (RAM.PortalTextGreen, 1, "MainRAM"),
+                "portalTextBlue": (RAM.PortalTextBlue, 1, "MainRAM"),
+                "riptoDoorOrbRequirement": (RAM.RiptoDoorOrbRequirementAddress, 1, "MainRAM"),
+                "riptoDoorOrbDisplay": (RAM.RiptoDoorOrbDisplayAddress, 1, "MainRAM"),
+                "crushGuidebookUnlock": (RAM.CrushGuidebookUnlock, 1, "MainRAM"),
+                "gulpGuidebookUnlock": (RAM.GulpGuidebookUnlock, 1, "MainRAM"),
+                "autumnGuidebookUnlock": (RAM.AutumnGuidebookUnlock, 1, "MainRAM"),
+                "winterGuidebookUnlock": (RAM.WinterGuidebookUnlock, 1, "MainRAM"),
             }
 
             readTuples = [Value for Value in readsDict.values()]
@@ -453,6 +485,38 @@ class Spyro2Client(BizHawkClient):
             idolFishThrowUp = readValues["idolFishThrowUp"]
             idolFishIncludeReds = readValues["idolFishIncludeReds"]
             idolFishIncludeRedsHUD = readValues["idolFishIncludeRedsHUD"]
+            hurricosLightningThiefAddresses = readValues["hurricosLightningThiefAddresses"]
+            spyroHUDScore = readValues["spyroHUDScore"]
+            secondBomboStatus = readValues["secondBomboStatus"]
+            secondBomboZPos = readValues["secondBomboZPos"]
+            thirdBomboStatus = readValues["thirdBomboStatus"]
+            thirdBomboZPos = readValues["thirdBomboZPos"]
+            bomboAttackAddress = readValues["bomboAttackAddress"]
+            fractureHeadbashCheck = readValues["fractureHeadbashCheck"]
+            fractureEarthshaperAddresses = readValues["fractureEarthshaperAddresses"]
+            maxFractureSpiritParticles = readValues["maxFractureSpiritParticles"]
+            opponentHUDScore = readValues["opponentHUDScore"]
+            shadyHeadbashCheck = readValues["shadyHeadbashCheck"]
+            gulpDoubleDamage = readValues["gulpDoubleDamage"]
+            redGemShadow = readValues["redGemShadow"]
+            redGemColor = readValues["redGemColor"]
+            greenGemShadow = readValues["greenGemShadow"]
+            greenGemColor = readValues["greenGemColor"]
+            blueGemShadow = readValues["blueGemShadow"]
+            blueGemColor = readValues["blueGemColor"]
+            goldGemShadow = readValues["goldGemShadow"]
+            goldGemColor = readValues["goldGemColor"]
+            pinkGemShadow = readValues["pinkGemShadow"]
+            pinkGemColor = readValues["pinkGemColor"]
+            portalTextRed = readValues["portalTextRed"]
+            portalTextGreen = readValues["portalTextGreen"]
+            portalTextBlue = readValues["portalTextBlue"]
+            riptoDoorOrbRequirement = readValues["riptoDoorOrbRequirement"]
+            riptoDoorOrbDisplay = readValues["riptoDoorOrbDisplay"]
+            crushGuidebookUnlock = readValues["crushGuidebookUnlock"]
+            gulpGuidebookUnlock = readValues["gulpGuidebookUnlock"]
+            autumnGuidebookUnlock = readValues["autumnGuidebookUnlock"]
+            winterGuidebookUnlock = readValues["winterGuidebookUnlock"]
 
             # Write tables
             itemsWrites = []
@@ -510,6 +574,8 @@ class Spyro2Client(BizHawkClient):
                         self.hasDoubleJumpItem = True
                     elif itemName == "Permanent Fireball Ability":
                         self.hasFireballItem = True
+                    elif itemName.endswith("Unlock"):
+                        self.unlockedLevels.add(itemName)
                     if increment < START_recv_index:
                         increment += 1
                     else:
@@ -547,7 +613,7 @@ class Spyro2Client(BizHawkClient):
                     itemsWrites += [(RAM.PlayerHealth, currentHealth.to_bytes(1, "little"), "MainRAM")]
 
                 if ctx.slot_data["options"]["enable_gemsanity"]:
-                    itemsWrites += self.calculateCurrentGems(gemsanityItems, currentGems, totalGems)
+                    itemsWrites += self.calculateCurrentGems(ctx, gemsanityItems, currentGems, totalGems)
 
                 cosmeticTimestamp = time.time()
                 if len(self.cosmeticQueue) > 0 and cosmeticTimestamp > self.lastCosmeticUpdate + 5:
@@ -627,11 +693,62 @@ class Spyro2Client(BizHawkClient):
                     colossusHockeyScore,
                     idolFishThrowUp,
                     idolFishIncludeReds,
-                    idolFishIncludeRedsHUD
+                    idolFishIncludeRedsHUD,
+                    hurricosLightningThiefAddresses,
+                    spyroHUDScore,
+                    secondBomboStatus,
+                    secondBomboZPos,
+                    thirdBomboStatus,
+                    thirdBomboZPos,
+                    bomboAttackAddress,
+                    fractureHeadbashCheck,
+                    fractureEarthshaperAddresses,
+                    maxFractureSpiritParticles,
+                    opponentHUDScore,
+                    shadyHeadbashCheck,
+                    gulpDoubleDamage
                 ]
                 easyChallengeWrites = self.handleEasyChallenge(ctx, easyChallengeReads)
                 if len(easyChallengeWrites) > 0:
                     await bizhawk.write(ctx.bizhawk_ctx, easyChallengeWrites)
+
+                # ======== Color Change Handling ========
+                colorChangeReads = [
+                    redGemShadow,
+                    redGemColor,
+                    greenGemShadow,
+                    greenGemColor,
+                    blueGemShadow,
+                    blueGemColor,
+                    goldGemShadow,
+                    goldGemColor,
+                    pinkGemShadow,
+                    pinkGemColor,
+                    portalTextRed,
+                    portalTextGreen,
+                    portalTextBlue
+                ]
+                colorChangeWrites = self.handleColorChanges(ctx, colorChangeReads)
+                if len(colorChangeWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, colorChangeWrites)
+
+                # ======== Elora Text and Door Requirements ========
+                eloraDoorReads = [currentLevel, riptoDoorOrbRequirement, riptoDoorOrbDisplay]
+                eloraDoorWrites = self.handleEloraDoorChanges(ctx, eloraDoorReads)
+                if len(eloraDoorWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, eloraDoorWrites)
+
+                # ======== Open World Handling ========
+                openWorldReads = [crushGuidebookUnlock, gulpGuidebookUnlock, autumnGuidebookUnlock, winterGuidebookUnlock]
+                openWorldWrites = self.handleOpenWorldChanges(ctx, openWorldReads)
+                if len(openWorldWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, openWorldWrites)
+
+                # ======== Level Lock Handling ========
+                levelLockReads = [currentLevel]
+                levelLockWrites = self.handleLevelLockChanges(ctx, levelLockReads)
+                if len(levelLockWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, levelLockWrites)
 
             # If there is messages waiting in the queue, print them to Bizhawk
             if self.messagequeue is not None and self.messagequeue != []:
@@ -768,22 +885,22 @@ class Spyro2Client(BizHawkClient):
             if not level.IsBoss:
                 if ctx.slot_data["options"]["enable_25_pct_gem_checks"]:
                     id = base_id + offset
-                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+3], "little") >= 100 and id not in self.locations_list:
+                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+4], "little") >= 100 and id not in self.locations_list:
                         levelGemsToSend.add(id)
                 offset += 1
                 if ctx.slot_data["options"]["enable_50_pct_gem_checks"]:
                     id = base_id + offset
-                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+3], "little") >= 200 and id not in self.locations_list:
+                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+4], "little") >= 200 and id not in self.locations_list:
                         levelGemsToSend.add(id)
                 offset += 1
                 if ctx.slot_data["options"]["enable_75_pct_gem_checks"]:
                     id = base_id + offset
-                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+3], "little") >= 300 and id not in self.locations_list:
+                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+4], "little") >= 300 and id not in self.locations_list:
                         levelGemsToSend.add(id)
                 offset += 1
                 if ctx.slot_data["options"]["enable_gem_checks"]:
                     id = base_id + offset
-                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+3], "little") >= 400 and id not in self.locations_list:
+                    if int.from_bytes(current_gems[current_gem_address:current_gem_address+4], "little") >= 400 and id not in self.locations_list:
                         levelGemsToSend.add(id)
                 offset += 1
             current_gem_address += 4
@@ -841,14 +958,19 @@ class Spyro2Client(BizHawkClient):
             ]
         return cosmeticWrites
 
-    def calculateCurrentGems(self, gemsanityItems, currentGems, totalGems):
+    def calculateCurrentGems(self, ctx, gemsanityItems, currentGems, totalGems):
         gemItems = []
         currentGemsArr = currentGems.to_bytes(29 * 4, "little")
         newTotalGems = 0
         levels = GetLevelData()
         level_index = 0
+        if "gemsanity_gem_bundle_size" in ctx.slot_data["options"]:
+            gem_bundle_size = ctx.slot_data["options"]["gemsanity_gem_bundle_size"]
+        else:
+            gem_bundle_size = 0  # This case shouldn't happen but to be safe.
+
         for level in levels:
-            current_gems = int.from_bytes(currentGemsArr[level_index * 4 : level_index * 4 + 3], "little")
+            current_gems = int.from_bytes(currentGemsArr[level_index * 4 : level_index * 4 + 4], "little")
             newCurrentGems = 0
             if "Speedway" in level.Name:
                 newTotalGems += current_gems
@@ -865,6 +987,8 @@ class Spyro2Client(BizHawkClient):
                     newCurrentGems += 25 * gemsanityItems[f"{level.Name} Pink Gem"]
                 if f"{level.Name} 50 Gems" in gemsanityItems.keys():
                     newCurrentGems += 50 * gemsanityItems[f"{level.Name} 50 Gems"]
+                if f"{level.Name} Gem Bundle" in gemsanityItems.keys():
+                    newCurrentGems += gem_bundle_size * gemsanityItems[f"{level.Name} Gem Bundle"]
                 if newCurrentGems != current_gems:
                     gemItems += [(RAM.LevelGemsAddress + 4 * level_index, newCurrentGems.to_bytes(4, "little"), "MainRAM")]
                 newTotalGems += newCurrentGems
@@ -976,8 +1100,23 @@ class Spyro2Client(BizHawkClient):
         colossusHockeyScore = easyChallengeReads[1]
         idolFishThrowUp = easyChallengeReads[2]
         idolFishIncludeReds = easyChallengeReads[3]
-        idolFishIncludeRedsHUD =easyChallengeReads[4]
+        idolFishIncludeRedsHUD = easyChallengeReads[4]
+        hurricosLightningThiefAddresses = easyChallengeReads[5].to_bytes(0x18CFC0 - 0x18C8A8, "little")
+        spyroHUDScore = easyChallengeReads[6]
+        secondBomboStatus = easyChallengeReads[7]
+        secondBomboZPos = easyChallengeReads[8]
+        thirdBomboStatus = easyChallengeReads[9]
+        thirdBomboZPos = easyChallengeReads[10]
+        bomboAttackAddress = easyChallengeReads[11]
+        fractureHeadbashCheck = easyChallengeReads[12]
+        fractureEarthshaperAddresses = easyChallengeReads[13].to_bytes(0x189000 - 0x188DB8, "little")
+        maxFractureSpiritParticles = easyChallengeReads[14]
+        opponentHUDScore = easyChallengeReads[15]
+        shadyHeadbashCheck = easyChallengeReads[16]
+        gulpDoubleDamage = easyChallengeReads[17]
+
         easyChallengeWrites = []
+
         if currentLevel == LevelInGameIDs.Colossus:
             starting_goals = ctx.slot_data["options"]["colossus_starting_goals"]
             if colossusHockeyScore < starting_goals:
@@ -994,110 +1133,323 @@ class Spyro2Client(BizHawkClient):
                     easyChallengeWrites += [(RAM.IdolFishIncludeReds, (0x28820006).to_bytes(4, "little"), "MainRAM")]
                 if idolFishIncludeRedsHUD != 0x28a20006:
                     easyChallengeWrites += [(RAM.IdolFishIncludeRedsHUD, (0x28a20006).to_bytes(4, "little"), "MainRAM")]
-        # else if (currentLevel == LevelInGameIDs.Hurricos)
-        # {
-        #     bool easyLightningOrbs = int.Parse(Client.Options?.GetValueOrDefault("hurricos_easy_lightning_orbs", "0").ToString()) > 0;
-        #     if (easyLightningOrbs)
-        #     {
-        #         foreach (uint thiefStatus in Addresses.HurricosLightningThiefStatuses)
-        #         {
-        #             Memory.WriteByte(thiefStatus, 253);
-        #         }
-        #         foreach (uint thiefZCoordinate in Addresses.HurricosLightningThiefZCoordinates)
-        #         {
-        #             Memory.Write(thiefZCoordinate, 0);
-        #         }
-        #     }
-        # }
-        # else if (currentLevel == LevelInGameIDs.BreezeHarbor)
-        # {
-        #     int requiredGears = int.Parse(Client.Options?.GetValueOrDefault("breeze_required_gears", "0").ToString());
-        #     int currentGears = (int)Memory.ReadByte(Addresses.spyroHUDScore);
-        #     if (currentGears > 50)
-        #     {
-        #         Memory.WriteByte(Addresses.spyroHUDScore, 50);
-        #     }
-        #     else if (currentGears < 50 - requiredGears)
-        #     {
-        #         Memory.WriteByte(Addresses.spyroHUDScore, (byte)(50 - requiredGears));
-        #     }
-        # }
-        # else if (currentLevel == LevelInGameIDs.Scorch)
-        # {
-        #     // Nothing ever goes wrong in Scorch : )
-        #     BomboOptions bomboSettings = (BomboOptions)int.Parse(Client.Options?.GetValueOrDefault("scorch_bombo_settings", "0").ToString());
-        #     if (bomboSettings == BomboOptions.FirstOnly)
-        #     {
-        #         // Mark the other two bombos as complete, and move their models out of rendering range.
-        #         // Otherwise, their models appear on the flagpoles.
-        #         // -0x35 is the offset from status to z coordinate
-        #         Memory.WriteByte(Addresses.secondBomboStatus, 11);
-        #         Memory.Write(Addresses.secondBomboStatus - 0x35, 100000);
-        #         Memory.WriteByte(Addresses.thirdBomboStatus, 11);
-        #         Memory.Write(Addresses.thirdBomboStatus - 0x35, 100000);
-        #     }
-        #     else if (bomboSettings == BomboOptions.FirstOnlyNoAttack)
-        #     {
-        #         Memory.WriteByte(Addresses.secondBomboStatus, 11);
-        #         Memory.Write(Addresses.secondBomboStatus - 0x35, 100000);
-        #         Memory.WriteByte(Addresses.thirdBomboStatus, 11);
-        #         Memory.Write(Addresses.thirdBomboStatus - 0x35, 100000);
-        #         Memory.Write(Addresses.bomboAttackAddress, 0x0801E71E);
-        #     }
-        # }
-        # else if (currentLevel == LevelInGameIDs.FractureHills)
-        # {
-        #     bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("fracture_require_headbash", "0").ToString()) > 0;
-        #     bool easyEarthshapers = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", "0").ToString()) > 0;
-        #     if (!requireHeadbash)
-        #     {
-        #         Memory.Write(Addresses.fractureHeadbashCheck, 0x0801E2A5);
-        #     }
-        #     if (easyEarthshapers)
-        #     {
-        #         foreach (uint earthshaperStatus in Addresses.FractureEarthshaperStatuses)
-        #         {
-        #             Memory.WriteByte(earthshaperStatus, 253);
-        #         }
-        #         foreach (uint earthshaperZCoordinate in Addresses.FractureEarthshaperZCoordinates)
-        #         {
-        #             Memory.Write(earthshaperZCoordinate, 0);
-        #         }
-        #         Memory.WriteByte(Addresses.maxFractureSpiritParticles, 22);
-        #     }
-        # }
-        # else if (currentLevel == LevelInGameIDs.MagmaCone)
-        # {
-        #     int spyroStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_spyro_starting_popcorn", "0").ToString());
-        #     int hunterStartingScore = int.Parse(Client.Options?.GetValueOrDefault("magma_hunter_starting_popcorn", "0").ToString());
-        #     int spyroScore = Memory.ReadByte(Addresses.spyroHUDScore);
-        #     int hunterScore = Memory.ReadByte(Addresses.opponentHUDScore);
-        #     if (spyroScore < spyroStartingScore)
-        #     {
-        #         Memory.WriteByte(Addresses.spyroHUDScore, (byte)spyroStartingScore);
-        #     }
-        #     if (hunterScore < hunterStartingScore)
-        #     {
-        #         Memory.WriteByte(Addresses.opponentHUDScore, (byte)hunterStartingScore);
-        #     }
-        # }
-        # else if (currentLevel == LevelInGameIDs.ShadyOasis)
-        # {
-        #     bool requireHeadbash = int.Parse(Client.Options?.GetValueOrDefault("shady_require_headbash", "0").ToString()) > 0;
-        #     if (!requireHeadbash)
-        #     {
-        #         Memory.Write(Addresses.ShadyHeadbashCheck, 0x00000000);
-        #     }
-        # }
-        # else if (currentLevel == LevelInGameIDs.GulpsOverlook)
-        # {
-        #     bool easyGulp = int.Parse(Client.Options?.GetValueOrDefault("easy_gulp", "0").ToString()) > 0;
-        #     if (easyGulp)
-        #     {
-        #         Memory.WriteByte(Addresses.GulpDoubleDamage, 1);
-        #     }
-        # }
+        elif currentLevel == LevelInGameIDs.Hurricos:
+            easyLightningOrbs = ctx.slot_data["options"]["hurricos_easy_lightning_orbs"]
+            if easyLightningOrbs:
+                for thiefStatus in RAM.HurricosLightningThiefStatuses:
+                    if hurricosLightningThiefAddresses[thiefStatus] != 253:
+                        easyChallengeWrites += [(RAM.HurricosLightningThiefAddresses + thiefStatus, (253).to_bytes(1, "little"), "MainRAM")]
+                for thiefZCoordinate in RAM.HurricosLightningThiefZCoordinates:
+                    if int.from_bytes(hurricosLightningThiefAddresses[thiefZCoordinate:thiefZCoordinate+4]) != 0:
+                        easyChallengeWrites += [(RAM.HurricosLightningThiefAddresses + thiefZCoordinate, (0).to_bytes(4, "little"), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.BreezeHarbor:
+            requiredGears = ctx.slot_data["options"]["breeze_required_gears"]
+            if spyroHUDScore > 50:
+                easyChallengeWrites += [(RAM.spyroHUDScore, (50).to_bytes(1, "little"), "MainRAM")]
+            elif spyroHUDScore < 50 - requiredGears:
+                easyChallengeWrites += [(RAM.spyroHUDScore, (50 - requiredGears).to_bytes(1, "little"), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.Scorch:
+            # Nothing ever goes wrong in Scorch : )
+            bomboSettings = ctx.slot_data["options"]["scorch_bombo_settings"]
+            if bomboSettings == BomboOptions.FIRST_ONLY:
+                # Mark the other two Bombos as complete, and move their models out of rendering range.
+                # Otherwise, their models appear on the flagpoles.
+                # -0x35 is the offset from status to z coordinate
+                if secondBomboStatus != 11:
+                    easyChallengeWrites += [(RAM.secondBomboStatus, (11).to_bytes(1, "little"), "MainRAM")]
+                if secondBomboZPos != 100000:
+                    easyChallengeWrites += [(RAM.secondBomboStatus - 0x35, (100000).to_bytes(4, "little"), "MainRAM")]
+                if thirdBomboStatus != 11:
+                    easyChallengeWrites += [(RAM.thirdBomboStatus, (11).to_bytes(1, "little"), "MainRAM")]
+                if thirdBomboZPos != 100000:
+                    easyChallengeWrites += [(RAM.thirdBomboStatus - 0x35, (100000).to_bytes(4, "little"), "MainRAM")]
+            elif bomboSettings == BomboOptions.FIRST_ONLY_NO_ATTACK:
+                if secondBomboStatus != 11:
+                    easyChallengeWrites += [(RAM.secondBomboStatus, (11).to_bytes(1, "little"), "MainRAM")]
+                if secondBomboZPos != 100000:
+                    easyChallengeWrites += [(RAM.secondBomboStatus - 0x35, (100000).to_bytes(4, "little"), "MainRAM")]
+                if thirdBomboStatus != 11:
+                    easyChallengeWrites += [(RAM.thirdBomboStatus, (11).to_bytes(1, "little"), "MainRAM")]
+                if thirdBomboZPos != 100000:
+                    easyChallengeWrites += [(RAM.thirdBomboStatus - 0x35, (100000).to_bytes(4, "little"), "MainRAM")]
+                if bomboAttackAddress != 0x0801E71E:
+                    easyChallengeWrites += [(RAM.bomboAttackAddress, (0x0801E71E).to_bytes(4, "little"), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.FractureHills:
+            requireHeadbash = ctx.slot_data["options"]["fracture_require_headbash"]
+            easyEarthshapers = ctx.slot_data["options"]["fracture_easy_earthshapers"]
+            if not requireHeadbash and fractureHeadbashCheck != 0x0801E2A5:
+                easyChallengeWrites += [(RAM.fractureHeadbashCheck, (0x0801E2A5).to_bytes(4, "little"), "MainRAM")]
+            if easyEarthshapers:
+                for earthshaperStatus in RAM.FractureEarthshaperStatuses:
+                    if fractureEarthshaperAddresses[earthshaperStatus] != 253:
+                        easyChallengeWrites += [(RAM.FractureEarthshaperAddresses + earthshaperStatus, (253).to_bytes(1, "little"), "MainRAM")]
+                for earthshaperZCoordinate in RAM.FractureEarthshaperZCoordinates:
+                        if int.from_bytes(fractureEarthshaperAddresses[earthshaperZCoordinate:earthshaperZCoordinate + 4]) != 0:
+                            easyChallengeWrites += [(RAM.FractureEarthshaperAddresses + earthshaperZCoordinate, (0).to_bytes(4, "little"), "MainRAM")]
+                if maxFractureSpiritParticles != 22:
+                    easyChallengeWrites += [(RAM.maxFractureSpiritParticles, (22).to_bytes(1, "little"), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.MagmaCone:
+            spyroStartingScore = ctx.slot_data["options"]["magma_spyro_starting_popcorn"]
+            hunterStartingScore = ctx.slot_data["options"]["magma_hunter_starting_popcorn"]
+            if spyroHUDScore < spyroStartingScore:
+                easyChallengeWrites += [(RAM.spyroHUDScore, spyroStartingScore.to_bytes(1, "little"), "MainRAM")]
+            if opponentHUDScore < hunterStartingScore:
+                easyChallengeWrites += [(RAM.opponentHUDScore, hunterStartingScore.to_bytes(1, "little"), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.ShadyOasis:
+            requireHeadbash = ctx.slot_data["options"]["shady_require_headbash"]
+            if not requireHeadbash and shadyHeadbashCheck != 0x00000000:
+                easyChallengeWrites += [(RAM.ShadyHeadbashCheck, (0).to_bytes(4, "little"), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.GulpsOverlook:
+            easyGulp = ctx.slot_data["options"]["easy_gulp"]
+            if easyGulp and gulpDoubleDamage != 1:
+                easyChallengeWrites += [(RAM.GulpDoubleDamage, (1).to_bytes(1, "little"), "MainRAM")]
         return easyChallengeWrites
+
+    def handleColorChanges(self, ctx, colorChangeReads):
+        redGemShadow = colorChangeReads[0]
+        redGemColor = colorChangeReads[1]
+        greenGemShadow = colorChangeReads[2]
+        greenGemColor = colorChangeReads[3]
+        blueGemShadow = colorChangeReads[4]
+        blueGemColor = colorChangeReads[5]
+        goldGemShadow = colorChangeReads[6]
+        goldGemColor = colorChangeReads[7]
+        pinkGemShadow = colorChangeReads[8]
+        pinkGemColor = colorChangeReads[9]
+        portalTextRed = colorChangeReads[10]
+        portalTextGreen = colorChangeReads[11]
+        portalTextBlue = colorChangeReads[12]
+
+        colorChangeWrites = []
+
+        red_gem_shadow_color = ctx.slot_data["options"]["red_gem_shadow_color"]
+        red_gem_color = ctx.slot_data["options"]["red_gem_color"]
+        green_gem_shadow_color = ctx.slot_data["options"]["green_gem_shadow_color"]
+        green_gem_color = ctx.slot_data["options"]["green_gem_color"]
+        blue_gem_shadow_color = ctx.slot_data["options"]["blue_gem_shadow_color"]
+        blue_gem_color = ctx.slot_data["options"]["blue_gem_color"]
+        gold_gem_shadow_color = ctx.slot_data["options"]["gold_gem_shadow_color"]
+        gold_gem_color = ctx.slot_data["options"]["gold_gem_color"]
+        pink_gem_shadow_color = ctx.slot_data["options"]["pink_gem_shadow_color"]
+        pink_gem_color = ctx.slot_data["options"]["pink_gem_color"]
+        portal_gem_collection_color = ctx.slot_data["options"]["portal_gem_collection_color"]
+
+        if redGemShadow != red_gem_shadow_color:
+            colorChangeWrites += [(RAM.RedGemShadow, red_gem_shadow_color.to_bytes(4, "little"), "MainRAM")]
+        if redGemColor != red_gem_color:
+            colorChangeWrites += [(RAM.RedGemColor, red_gem_color.to_bytes(4, "little"), "MainRAM")]
+        if greenGemShadow != green_gem_shadow_color:
+            colorChangeWrites += [(RAM.GreenGemShadow, green_gem_shadow_color.to_bytes(4, "little"), "MainRAM")]
+        if greenGemColor != green_gem_color:
+            colorChangeWrites += [(RAM.GreenGemColor, green_gem_color.to_bytes(4, "little"), "MainRAM")]
+        if blueGemShadow != blue_gem_shadow_color:
+            colorChangeWrites += [(RAM.BlueGemShadow, blue_gem_shadow_color.to_bytes(4, "little"), "MainRAM")]
+        if blueGemColor != blue_gem_color:
+            colorChangeWrites += [(RAM.BlueGemColor, blue_gem_color.to_bytes(4, "little"), "MainRAM")]
+        if goldGemShadow != gold_gem_shadow_color:
+            colorChangeWrites += [(RAM.GoldGemShadow, gold_gem_shadow_color.to_bytes(4, "little"), "MainRAM")]
+        if goldGemColor != gold_gem_color:
+            colorChangeWrites += [(RAM.GoldGemColor, gold_gem_color.to_bytes(4, "little"), "MainRAM")]
+        if pinkGemShadow != pink_gem_shadow_color:
+            colorChangeWrites += [(RAM.PinkGemShadow, pink_gem_shadow_color.to_bytes(4, "little"), "MainRAM")]
+        if pinkGemColor != pink_gem_color:
+            colorChangeWrites += [(RAM.PinkGemColor, pink_gem_color.to_bytes(4, "little"), "MainRAM")]
+
+        if portal_gem_collection_color == PortalTextColorOptions.RED:
+            if portalTextRed != 128:
+                colorChangeWrites += [(RAM.PortalTextRed, (128).to_bytes(1, "little"), "MainRAM")]
+            if portalTextGreen != 0:
+                colorChangeWrites += [(RAM.PortalTextGreen, (0).to_bytes(1, "little"), "MainRAM")]
+            if portalTextBlue != 0:
+                colorChangeWrites += [(RAM.PortalTextBlue, (0).to_bytes(1, "little"), "MainRAM")]
+        elif portal_gem_collection_color == PortalTextColorOptions.GREEN:
+            if portalTextRed != 0:
+                colorChangeWrites += [(RAM.PortalTextRed, (0).to_bytes(1, "little"), "MainRAM")]
+            if portalTextGreen != 128:
+                colorChangeWrites += [(RAM.PortalTextGreen, (128).to_bytes(1, "little"), "MainRAM")]
+            if portalTextBlue != 0:
+                colorChangeWrites += [(RAM.PortalTextBlue, (0).to_bytes(1, "little"), "MainRAM")]
+        elif portal_gem_collection_color == PortalTextColorOptions.BLUE:
+            if portalTextRed != 0:
+                colorChangeWrites += [(RAM.PortalTextRed, (0).to_bytes(1, "little"), "MainRAM")]
+            if portalTextGreen != 0:
+                colorChangeWrites += [(RAM.PortalTextGreen, (0).to_bytes(1, "little"), "MainRAM")]
+            if portalTextBlue != 128:
+                colorChangeWrites += [(RAM.PortalTextBlue, (128).to_bytes(1, "little"), "MainRAM")]
+        elif portal_gem_collection_color == PortalTextColorOptions.PINK:
+            if portalTextRed != 64:
+                colorChangeWrites += [(RAM.PortalTextRed, (64).to_bytes(1, "little"), "MainRAM")]
+            if portalTextGreen != 0:
+                colorChangeWrites += [(RAM.PortalTextGreen, (0).to_bytes(1, "little"), "MainRAM")]
+            if portalTextBlue != 64:
+                colorChangeWrites += [(RAM.PortalTextBlue, (64).to_bytes(1, "little"), "MainRAM")]
+        elif portal_gem_collection_color == PortalTextColorOptions.WHITE:
+            if portalTextRed != 128:
+                colorChangeWrites += [(RAM.PortalTextRed, (128).to_bytes(1, "little"), "MainRAM")]
+            if portalTextGreen != 128:
+                colorChangeWrites += [(RAM.PortalTextGreen, (128).to_bytes(1, "little"), "MainRAM")]
+            if portalTextBlue != 128:
+                colorChangeWrites += [(RAM.PortalTextBlue, (128).to_bytes(1, "little"), "MainRAM")]
+        else:
+            if portalTextRed != 64:
+                colorChangeWrites += [(RAM.PortalTextRed, (64).to_bytes(1, "little"), "MainRAM")]
+            if portalTextGreen != 64:
+                colorChangeWrites += [(RAM.PortalTextGreen, (64).to_bytes(1, "little"), "MainRAM")]
+            if portalTextBlue != 0:
+                colorChangeWrites += [(RAM.PortalTextBlue, (0).to_bytes(1, "little"), "MainRAM")]
+        return colorChangeWrites
+
+    def handleEloraDoorChanges(self, ctx, eloraDoorReads):
+        currentLevel = eloraDoorReads[0]
+        riptoDoorOrbRequirement = eloraDoorReads[1]
+        riptoDoorOrbDisplay = eloraDoorReads[2]
+
+        eloraDoorWrites = []
+
+        if currentLevel == LevelInGameIDs.WinterTundra:
+            requiredOrbs = ctx.slot_data["options"]["ripto_door_orbs"]
+            if riptoDoorOrbRequirement != requiredOrbs:
+                eloraDoorWrites += [(RAM.RiptoDoorOrbRequirementAddress, requiredOrbs.to_bytes(1, "little"), "MainRAM")]
+            if riptoDoorOrbDisplay != requiredOrbs:
+                eloraDoorWrites += [(RAM.RiptoDoorOrbDisplayAddress, requiredOrbs.to_bytes(1, "little"), "MainRAM")]
+        # TODO: Handle text in Summer Forest and Autumn Plains
+        # // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
+        # // Note that Elora won't open the door if your count is more than 6.
+        # if (currentLevel == (byte)LevelInGameIDs.SummerForest)
+        # {
+        #     Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)summerCount);
+        #     WriteStringToMemory(Addresses.SummerEloraStartText, Addresses.SummerEloraEndText, $"Hi, Spyro! You have @4{summerCount}@0 Summer Forest Talismans.");
+        #     WriteStringToMemory(Addresses.SummerEloraWarpStartText, Addresses.SummerEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount}@0 Summer Forest Talismans.");
+        # }
+        # else if (currentLevel == (byte)LevelInGameIDs.AutumnPlains)
+        # {
+        #     Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)(summerCount + autumnCount));
+        #     WriteStringToMemory(Addresses.AutumnEloraStartText, Addresses.AutumnEloraEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount }@0 Talismans.");
+        #     WriteStringToMemory(Addresses.AutumnEloraWarpStartText, Addresses.AutumnEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount}@0 Talismans.");
+        # }
+        return eloraDoorWrites
+
+    def handleOpenWorldChanges(self, ctx, openWorldReads):
+        crushGuidebookUnlock = openWorldReads[0]
+        gulpGuidebookUnlock = openWorldReads[1]
+        autumnGuidebookUnlock = openWorldReads[2]
+        winterGuidebookUnlock = openWorldReads[3]
+
+        openWorldOption = ctx.slot_data["options"]["enable_open_world"]
+        openWorldWarpUnlocks = ctx.slot_data["options"]["open_world_warp_unlocks"]
+
+        openWorldWrites = []
+
+        if openWorldOption:
+            if crushGuidebookUnlock != 1:
+                openWorldWrites += [(RAM.CrushGuidebookUnlock, (1).to_bytes(1, "little"), "MainRAM")]
+            if gulpGuidebookUnlock != 1:
+                openWorldWrites += [(RAM.GulpGuidebookUnlock, (1).to_bytes(1, "little"), "MainRAM")]
+            if openWorldWarpUnlocks:
+                if autumnGuidebookUnlock != 1:
+                    openWorldWrites += [(RAM.AutumnGuidebookUnlock, (1).to_bytes(1, "little"), "MainRAM")]
+                if winterGuidebookUnlock != 1:
+                    openWorldWrites += [(RAM.WinterGuidebookUnlock, (1).to_bytes(1, "little"), "MainRAM")]
+        return openWorldWrites
+
+    def handleLevelLockChanges(self, ctx, levelLockReads):
+        currentLevel = levelLockReads[0]
+        levelLockOptions = ctx.slot_data["options"]["level_lock_options"]
+        levelLockWrites = []
+        if levelLockOptions == LevelLockOptions.KEYS:
+            levelNames = {
+                ("Idol Springs", RAM.IdolNameAddress, 16),
+                ("Colossus", RAM.ColossusNameAddress, 12),
+                ("Hurricos", RAM.HurricosNameAddress, 12),
+                ("Aquaria Towers", RAM.AquariaNameAddress, 16),
+                ("Sunny Beach", RAM.SunnyNameAddress, 12),
+                ("Ocean Speedway", RAM.OceanNameAddress, 16),
+                ("Skelos Badlands", RAM.SkelosNameAddress, 16),
+                ("Crystal Glacier", RAM.CrystalNameAddress, 16),
+                ("Breeze Harbor", RAM.BreezeNameAddress, 16),
+                ("Zephyr", RAM.ZephyrNameAddress, 8),
+                ("Metro Speedway", RAM.MetroNameAddress, 16),
+                ("Scorch", RAM.ScorchNameAddress, 8),
+                ("Shady Oasis", RAM.ShadyNameAddress, 12),
+                ("Magma Cone", RAM.MagmaNameAddress, 12),
+                ("Fracture Hills", RAM.FractureNameAddress, 16),
+                ("Icy Speedway", RAM.IcyNameAddress, 16),
+                ("Mystic Marsh", RAM.MysticNameAddress, 16),
+                ("Cloud Temples", RAM.CloudNameAddress, 16),
+                ("Canyon Speedway", RAM.CanyonNameAddress, 16),
+                ("Robotica Farms", RAM.RoboticaNameAddress, 16),
+                ("Metropolis", RAM.MetropolisNameAddress, 12),
+                ("Dragon Shores", RAM.ShoresNameAddress, 16),
+           }
+            for level in levelNames:
+                levelName = level[0]
+                levelNameAddress = level[1]
+                levelNameLength = level[2]
+                if f"{levelName} Unlock" in self.unlockedLevels:
+                    writtenName = text_to_bytes(levelName, levelNameLength)
+                else:
+                    writtenName = text_to_bytes("LOCKED", levelNameLength)
+                # TODO: Write only when value doesn't match
+                for x in range(levelNameLength):
+                    levelLockWrites += [(levelNameAddress + x, writtenName[x].to_bytes(1, "little"), "MainRAM")]
+
+            if currentLevel == LevelInGameIDs.SummerForest:
+                summerUnlocks = [
+                    "Idol Springs Unlock" in self.unlockedLevels,
+                    "Colossus Unlock" in self.unlockedLevels,
+                    "Hurricos Unlock" in self.unlockedLevels,
+                    "Aquaria Towers Unlock" in self.unlockedLevels,
+                    "Sunny Beach Unlock" in self.unlockedLevels,
+                    "Ocean Speedway Unlock" in self.unlockedLevels,
+                ]
+                # Glimmer is always unlocked.
+                # TODO: Write only when value doesn't match
+                portalAddress = RAM.SummerPortalBlock + 8
+                for isLevelUnlocked in summerUnlocks:
+                    if isLevelUnlocked:
+                        levelLockWrites += [(portalAddress, (6).to_bytes(4, "little"), "MainRAM")]
+                    else:
+                        levelLockWrites += [(portalAddress, (0).to_bytes(4, "little"), "MainRAM")]
+                    portalAddress += 8
+            elif currentLevel == LevelInGameIDs.AutumnPlains:
+                autumnUnlocks = [
+                    "Skelos Badlands Unlock" in self.unlockedLevels,
+                    "Crystal Glacier Unlock" in self.unlockedLevels,
+                    "Breeze Harbor Unlock" in self.unlockedLevels,
+                    "Zephyr Unlock" in self.unlockedLevels,
+                    "Metro Speedway Unlock" in self.unlockedLevels,
+                    "Scorch Unlock" in self.unlockedLevels,
+                    "Shady Oasis Unlock" in self.unlockedLevels,
+                    "Magma Cone Unlock" in self.unlockedLevels,
+                    "Fracture Hills Unlock" in self.unlockedLevels,
+                    "Icy Speedway Unlock" in self.unlockedLevels,
+                ]
+                # TODO: Write only when value doesn't match
+                portalAddress = RAM.AutumnPortalBlock
+                for isLevelUnlocked in autumnUnlocks:
+                    if isLevelUnlocked:
+                        levelLockWrites += [(portalAddress, (6).to_bytes(4, "little"), "MainRAM")]
+                    else:
+                        levelLockWrites += [(portalAddress, (0).to_bytes(4, "little"), "MainRAM")]
+                    portalAddress += 8
+            elif currentLevel == LevelInGameIDs.WinterTundra:
+                winterUnlocks = [
+                    "Mystic Marsh Unlock" in self.unlockedLevels,
+                    "Cloud Temples Unlock" in self.unlockedLevels,
+                    "Robotica Farms Unlock" in self.unlockedLevels,
+                    "Metropolis Unlock" in self.unlockedLevels,
+                    "Canyon Speedway Unlock" in self.unlockedLevels,
+                    "Dragon Shores Unlock" in self.unlockedLevels,
+                ]
+                # TODO: Write only when value doesn't match
+                portalAddress = RAM.WinterPortalBlock
+                for isLevelUnlocked in winterUnlocks:
+                    if isLevelUnlocked:
+                        levelLockWrites += [(portalAddress, (6).to_bytes(4, "little"), "MainRAM")]
+                    else:
+                        levelLockWrites += [(portalAddress, (0).to_bytes(4, "little"), "MainRAM")]
+                    portalAddress += 8
+        return levelLockWrites
 
     async def update_tags(self, ctx: "BizHawkClientContext") -> None:
         updateTags = False
@@ -1214,28 +1566,11 @@ class Spyro2Client(BizHawkClient):
         self.pending_death_link = True
 
 # Text helper functions
-def text_to_bytes(name):
+def text_to_bytes(name, string_len):
     bytelist = []
     for x in name:
-        bytelist.append(character_lookup(x))
+        bytelist.append(ord(x))
+    remaining_len = string_len - len(bytelist)
+    for i in range(remaining_len):
+        bytelist.append(0)
     return bytelist
-
-
-def character_lookup(byte):
-    if byte.isspace():  # Space
-        return 255
-    if byte.isalpha():
-        return ord(byte) - 49  # Both uppercase and lowercase letters
-    if byte.isdecimal():
-        if int(byte) < 6:
-            return ord(byte) + 58  # 0-5
-        else:
-            return ord(byte) + 68  # 6-9
-    if ord(byte) == 39:  # Single apostrophe
-        return 187
-    if ord(byte) == 46:  # Period
-        return 172
-    if ord(byte) == 47:  # Slash
-        return 141
-    if ord(byte) == 58:  # Colon
-        return 174

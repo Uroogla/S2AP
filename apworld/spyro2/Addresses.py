@@ -197,29 +197,30 @@ class RAM:
     IdolFishThrowUp = 0x00082010
     IdolFishIncludeReds = 0x00082048
     IdolFishIncludeRedsHUD = 0x0007efe0
+    HurricosLightningThiefAddresses = 0x18C8A8
     HurricosLightningThiefStatuses = [
-        0x18C8DC,
-        0x18CB44,
-        0x18CBF4,
-        0x18CCA4,
-        0x18CCFC,
-        0x18CD54,
-        0x18CDAC,
-        0x18CE04,
-        0x18CF0C,
-        0x18CFBC
+        0x18C8DC - 0x18C8A8,
+        0x18CB44 - 0x18C8A8,
+        0x18CBF4 - 0x18C8A8,
+        0x18CCA4 - 0x18C8A8,
+        0x18CCFC - 0x18C8A8,
+        0x18CD54 - 0x18C8A8,
+        0x18CDAC - 0x18C8A8,
+        0x18CE04 - 0x18C8A8,
+        0x18CF0C - 0x18C8A8,
+        0x18CFBC - 0x18C8A8
     ]
     HurricosLightningThiefZCoordinates = [
-        0x18C8A8,
-        0x18CB10,
-        0x18CBC0,
-        0x18CC70,
-        0x18CCC8,
-        0x18CD20,
-        0x18CD78,
-        0x18CDD0,
-        0x18CED8,
-        0x18CF88
+        0x18C8A8 - 0x18C8A8,
+        0x18CB10 - 0x18C8A8,
+        0x18CBC0 - 0x18C8A8,
+        0x18CC70 - 0x18C8A8,
+        0x18CCC8 - 0x18C8A8,
+        0x18CD20 - 0x18C8A8,
+        0x18CD78 - 0x18C8A8,
+        0x18CDD0 - 0x18C8A8,
+        0x18CED8 - 0x18C8A8,
+        0x18CF88 - 0x18C8A8
     ]
     spyroHUDScore = 0x00066FEC
     opponentHUDScore = 0x67084
@@ -229,23 +230,24 @@ class RAM:
     bomboAttackAddress = 0x79b34
     fractureHeadbashCheck = 0x78a88
     maxFractureSpiritParticles = 0x64826
+    FractureEarthshaperAddresses = 0x188DB8
     FractureEarthshaperStatuses = [
-        0x188DEC,
-        0x188E44,
-        0x188E9C,
-        0x188EF4,
-        0x188F4C,
-        0x188FA4,
-        0x188FFC
+        0x188DEC - 0x188DB8,
+        0x188E44 - 0x188DB8,
+        0x188E9C - 0x188DB8,
+        0x188EF4 - 0x188DB8,
+        0x188F4C - 0x188DB8,
+        0x188FA4 - 0x188DB8,
+        0x188FFC - 0x188DB8
     ]
     FractureEarthshaperZCoordinates = [
-        0x188DB8,
-        0x188E10,
-        0x188E68,
-        0x188EC0,
-        0x188F18,
-        0x188F70,
-        0x188FC8
+        0x188DB8 - 0x188DB8,
+        0x188E10 - 0x188DB8,
+        0x188E68 - 0x188DB8,
+        0x188EC0 - 0x188DB8,
+        0x188F18 - 0x188DB8,
+        0x188F70 - 0x188DB8,
+        0x188FC8 - 0x188DB8
     ]
     ShadyHeadbashCheck = 0x7d6c0
     GulpDoubleDamage = 0x120c5e
