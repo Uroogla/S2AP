@@ -681,9 +681,15 @@ location_dictionary: Dict[str, Spyro2LocationData] = {}
 for location_table in location_tables.values():
     location_dictionary.update({location_data.name: location_data for location_data in location_table})
 
-location_name_groups = {"Speedways": set(), "Speedway Orbs": set()}
+location_name_groups = {"Speedways": set(), "Speedway Orbs": set(), "Gemsanity (All)": set()}
+levelnames = ["Summer Forest" , "Glimmer" , "Idol Springs" , "Colossus" , "Hurricos" , "Aquaria Towers" , "Sunny Beach" , "Autumn Plains" , "Skelos Badlands" , "Crystal Glacier" , "Breeze Harbor" , "Zephyr" , "Scorch" , "Shady Oasis" , "Magma Cone" , "Fracture Hills" , "Winter Tundra" , "Mystic Marsh" , "Cloud Temples" , "Robotica Farms" , "Metropolis"]
 speedways = ["Ocean Speedway", "Metro Speedway", "Icy Speedway", "Canyon Speedway"]
+for level in levelnames:
+    location_name_groups.update({"Gemsanity (" + level + ")": set()})
 for location in location_dictionary.keys():
+    if location_dictionary[location].category == Spyro2LocationCategory.GEM:
+        location_name_groups["Gemsanity (All)"].add(location)
+        location_name_groups["Gemsanity (" + location.split(":")[0] + ")"].add(location)
     for speedway in speedways:
         if location.startswith(speedway):
             location_name_groups["Speedways"].add(location)
