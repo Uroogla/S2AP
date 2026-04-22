@@ -39,8 +39,8 @@ namespace S2AP;
 public partial class App : Application
 {
     // TODO: Remember to set this in S2AP.Desktop as well.
-    public static string Version = "1.2.0-rc";
-    public static List<string> SupportedVersions = ["1.2.0-rc"];
+    public static string Version = "2.0.0";
+    public static List<string> SupportedVersions = ["1.2.0-rc", "1.2.0", "2.0.0-rc", "2.0.0"];
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
@@ -1554,7 +1554,7 @@ public partial class App : Application
             { "Swim", Addresses.SwimUnlock },
             { "Climb", Addresses.ClimbUnlock },
             { "Headbash", Addresses.HeadbashUnlock },
-            { "Wall by Aquaria Towers", Addresses.WallToAquariaUnlock },  // Name changed in 1.2.0.
+            { "Wall by Aquaria Towers", Addresses.WallToAquariaUnlock },  // Name changed in 2.0.0.
             { "Zephyr Portal", Addresses.ZephyrPortalUnlock },
             { "Shady Oasis Portal", Addresses.ShadyPortalUnlock },
             { "Icy Speedway Portal", Addresses.IcyPortalUnlock },
