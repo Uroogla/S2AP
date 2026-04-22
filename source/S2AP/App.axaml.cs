@@ -959,6 +959,8 @@ public partial class App : Application
 
             if (_destructiveMode)
             {
+                // TODO: This is buggy.
+                // Probably need to temporarily overwrite changes to this halfword elsewhere too.
                 Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
             } // Turns off automatically on its own.
 

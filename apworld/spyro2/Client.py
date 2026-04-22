@@ -24,7 +24,7 @@ from .Addresses import RAM
 from .Enums import GameStatus, LevelInGameIDs, SpyroColor
 from .LevelData import GetLevelData
 
-from .Options import GoalOptions, MoneybagsOptions, GemsanityOptions, LevelLockOptions, AbilityOptions, BomboOptions, PortalTextColorOptions
+from .Options import GoalOptions, MoneybagsOptions, GemsanityOptions, LevelLockOptions, AbilityOptions, BomboOptions, PortalTextColorOptions, WTWarpOptions, SparxUpgradeOptions
 
 logger = logging.getLogger("Client")
 
@@ -114,57 +114,70 @@ class Spyro2Client(BizHawkClient):
     client_version = apworld_manifest["world_version"]
     supported_versions = ["2.0.0", "2.0.0-rc"]
 
-    local_checked_locations: Set[int]
-    local_set_events: Dict[str, bool]
-    local_found_key_items: Dict[str, bool]
-    goal_flag: int
-
     boolsyncprogress = False
     syncWaitConfirm = False
     changeDeathlink = False
     DeathLink_DS = -1
     deathlink = -1
+    changeItemIndex = False
+    item_index_DS = 0
     resetClient = False
     gotDatastorage = False
+    initDatastorage = False
 
     def __init__(self) -> None:
         super().__init__()
-        self.local_checked_locations = set()
-        self.local_set_events = {}
-        self.local_found_key_items = {}
+        self.messagequeue = []
+        self.initClient = False
         self.riptoDefeated = False
         self.hasDoubleJumpItem = False
         self.hasFireballItem = False
+        self.previous_death_link = 0
+        self.pending_death_link: bool = False
+        self.locations_list = {}
+        # default to true, as we don't want to send a deathlink until playing
+        self.sending_death_link: bool = True
+        self.cosmeticQueue = []
+        self.lastCosmeticUpdate = 0
+        self.healthItemQueue = []
+        self.moneybagsUnlocks = set()
+        self.unlockedLevels = set()
+        self.isInvisible = False
+        self.invisibilityEnd = 0
+        self.isDestructive = False
+        self.destructiveEnd = 0
+        self.maxHealth = 3
 
     def initialize_client(self):
         self.messagequeue = []
         self.boolsyncprogress = False
         self.syncWaitConfirm = False
         self.changeDeathlink = False
-        self.killPlayer = True
-        self.death_counter = None
         self.previous_death_link = 0
         self.pending_death_link: bool = False
         self.locations_list = {}
         # default to true, as we don't want to send a deathlink until playing
         self.sending_death_link: bool = True
-        self.ignore_next_death_link = False
-        self.specialitem_queue = []
-        self.priority_trap_queue = []
         self.gotDatastorage = False
         self.initDatastorage = False
         self.cosmeticQueue = []
         self.lastCosmeticUpdate = 0
+        self.healthItemQueue = []
         self.moneybagsUnlocks = set()
         self.unlockedLevels = set()
         self.riptoDefeated = False
         self.hasDoubleJumpItem = False
         self.hasFireballItem = False
+        self.isInvisible = False
+        self.invisibilityEnd = 0
+        self.isDestructive = False
+        self.destructiveEnd = 0
+        self.maxHealth = 3
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         s2_identifier_ram_address: int = 0x9244
         # SCUS_944.25 in ASCII = Spyro 2
-        bytes_expected: bytes = bytes.fromhex("534355535F393434")
+        bytes_expected: bytes = bytes.fromhex("534355535F3934342E3235")
         # TODO: Fix this.
         #Commands_List = list(Commands_Dict.keys())
         Commands_List = list()
@@ -280,9 +293,11 @@ class Spyro2Client(BizHawkClient):
             if f"S2_deathlink_{ctx.team}_{ctx.slot}" in args["keys"]:
                 self.DeathLink_DS = keys.get(f"S2_deathlink_{ctx.team}_{ctx.slot}", None)
                 self.gotDatastorage = True
-            #if f"AE_DIButton_{ctx.team}_{ctx.slot}" in args["keys"]:
-            #    self.DIButton = keys.get(f"AE_DIButton_{ctx.team}_{ctx.slot}", None)
-            #    self.gotDatastorage = True
+            if f"S2_item_index_{ctx.team}_{ctx.slot}" in args["keys"]:
+                self.item_index_DS = keys.get(f"S2_item_index_{ctx.team}_{ctx.slot}", 0)
+                self.gotDatastorage = True
+            else:
+                self.item_index_DS = 0
 
     async def set_auth(self, ctx: "BizHawkClientContext") -> None:
         # TODO: ?
@@ -294,6 +309,7 @@ class Spyro2Client(BizHawkClient):
                 self.initDatastorage = False
                 return
             keys = [f"S2_{Option}_{ctx.team}_{ctx.slot}" for Option in ["deathlink"]]
+            keys += [f"S2_item_index_{ctx.team}_{ctx.slot}"]
             await ctx.send_msgs([{"cmd": "Get", "keys": keys}])
 
             if not self.gotDatastorage:
@@ -328,6 +344,19 @@ class Spyro2Client(BizHawkClient):
                 msg = f"Deathlink {"Enabled" if self.deathlink == 1 else "Disabled"}"
                 await self.send_bizhawk_message(ctx, msg, "Passthrough", "")
                 self.changeDeathlink = False
+            if self.changeItemIndex:
+                await ctx.send_msgs(
+                    [
+                        {
+                            "cmd": "Set",
+                            "key": f"S2_item_index_{ctx.team}_{ctx.slot}",
+                            "default": 0,
+                            "want_reply": False,
+                            "operations": [{"operation": "replace", "value": 0 if self.item_index_DS is None else self.item_index_DS}],
+                        }
+                    ]
+                )
+                self.changeItemIndex = False
 
     async def syncprogress(self, ctx: "BizHawkClientContext") -> None:
         if self.boolsyncprogress:
@@ -360,13 +389,23 @@ class Spyro2Client(BizHawkClient):
 
             strMessage = "Connected to Bizhawk Client - Spyro 2 Archipelago v" + str(self.client_version)
             await self.send_bizhawk_message(ctx, strMessage, "Passthrough", "")
+
+            startingHealth = 3
+            sparxOption = ctx.slot_data["options"]["enable_progressive_sparx_health"]
+            if sparxOption == SparxUpgradeOptions.BLUE:
+                startingHealth = 2
+            elif sparxOption == SparxUpgradeOptions.GREEN:
+                startingHealth = 1
+            elif sparxOption != SparxUpgradeOptions.OFF:
+                startingHealth = 0
+            self.maxHealth = startingHealth
         try:
             if self.gotDatastorage:
                 # Last init to write the status
                 if not self.initDatastorage:
                     await self.ds_options_handling(ctx, "init")
 
-                if  self.changeDeathlink:
+                if self.changeDeathlink or self.changeItemIndex:
                     await self.ds_options_handling(ctx, "change")
                 if self.boolsyncprogress:
                     await self.syncprogress(ctx)
@@ -443,6 +482,12 @@ class Spyro2Client(BizHawkClient):
                 "gulpGuidebookUnlock": (RAM.GulpGuidebookUnlock, 1, "MainRAM"),
                 "autumnGuidebookUnlock": (RAM.AutumnGuidebookUnlock, 1, "MainRAM"),
                 "winterGuidebookUnlock": (RAM.WinterGuidebookUnlock, 1, "MainRAM"),
+                "wtWarpReroute": (RAM.WTWarpAddress, 2, "MainRAM"),
+                "wtDoorGem": (RAM.WTDoorGemAddress, 1, "MainRAM"),
+                "wtWallOrb": (RAM.WTWallOrbAddress, 1, "MainRAM"),
+                "invisibleAddress1": (RAM.InvisibleAddress1, 2, "MainRAM"),
+                "invisibleAddress2": (RAM.InvisibleAddress2, 2, "MainRAM"),
+                "destructiveAddress": (RAM.DestructiveSpyroAddress, 2, "MainRAM"),
             }
 
             readTuples = [Value for Value in readsDict.values()]
@@ -517,13 +562,20 @@ class Spyro2Client(BizHawkClient):
             gulpGuidebookUnlock = readValues["gulpGuidebookUnlock"]
             autumnGuidebookUnlock = readValues["autumnGuidebookUnlock"]
             winterGuidebookUnlock = readValues["winterGuidebookUnlock"]
+            wtWarpReroute = readValues["wtWarpReroute"]
+            wtDoorGem = readValues["wtDoorGem"]
+            wtWallOrb = readValues["wtWallOrb"]
+            invisibleAddress1 = readValues["invisibleAddress1"]
+            invisibleAddress2 = readValues["invisibleAddress2"]
+            destructiveAddress = readValues["destructiveAddress"]
 
             # Write tables
             itemsWrites = []
 
-            # Set Initial received_ID
-            # TODO: I don't think this works for Spyro.
-            if (recv_index == 0xFFFFFFFF) or (recv_index == 0x00FF00FF):
+            # Handle reconnecting and loading into saves without resetting.
+            if recv_index != self.item_index_DS and self.item_index_DS is not None:
+                recv_index = self.item_index_DS
+            elif recv_index != self.item_index_DS and self.item_index_DS is None:
                 recv_index = 0
 
             START_recv_index = recv_index
@@ -539,8 +591,10 @@ class Spyro2Client(BizHawkClient):
                 skillPointsFromServer = 0
                 shoresTokensFromServer = 0
                 newLives = 0
+                healthItemTimestamp = time.time()
+                newHealthItems = []
                 gemsanityItems = {}
-                currentHealth = sparxHealth
+                sparxUpgrades = 0
                 for item in ctx.items_received:
                     # Increment to already received address first before sending
                     itemName = ctx.item_names.lookup_in_slot(item.item, ctx.slot)
@@ -576,23 +630,33 @@ class Spyro2Client(BizHawkClient):
                         self.hasFireballItem = True
                     elif itemName.endswith("Unlock"):
                         self.unlockedLevels.add(itemName)
+                    elif itemName == "Progressive Sparx Health Upgrade":
+                        sparxUpgrades += 1
                     if increment < START_recv_index:
                         increment += 1
                     else:
                         if itemName == "Extra Life":
                             newLives += 1
                         elif itemName == "Damage Sparx Trap":
-                            if 0 < currentHealth < 128:
-                                currentHealth -= 1
+                            newHealthItems.append(itemName)
                         elif itemName == "Sparxless Trap":
-                            if 0 < currentHealth < 128:
-                                currentHealth = 0
+                            newHealthItems.append(itemName)
                         elif itemName == "Heal Sparx":
-                            # TODO: Use Progressive Sparx Health items
-                            if 0 <= currentHealth < 3:
-                                currentHealth += 1
+                            newHealthItems.append(itemName)
                         elif itemName in ["Big Head Mode", "Flat Spyro Mode", "Turn Spyro Red", "Turn Spyro Blue", "Turn Spyro Pink", "Turn Spyro Yellow", "Turn Spyro Green", "Turn Spyro Black", "Normal Spyro"]:
                             self.cosmeticQueue.append(itemName)
+                        elif itemName == "Invisibility Trap":
+                            if self.isInvisible:
+                                self.invisibilityEnd += 15
+                            else:
+                                self.invisibilityEnd = time.time() + 15
+                                self.isInvisible = True
+                        elif itemName == "Destructive Spyro":
+                            if self.isDestructive:
+                                self.destructiveEnd += 15
+                            else:
+                                self.destructiveEnd = time.time() + 15
+                                self.isDestructive = True
                         recv_index += 1
 
                 # Writes to memory if there is a new item, after the loop
@@ -600,6 +664,8 @@ class Spyro2Client(BizHawkClient):
                 if increment != recv_index:
                     itemsWrites += [(RAM.lastReceivedArchipelagoID, recv_index.to_bytes(4, "little"), "MainRAM")]
                     itemsWrites += [(RAM.tempLastReceivedArchipelagoID, recv_index.to_bytes(4, "little"), "MainRAM")]
+                    self.changeItemIndex = True
+                    self.item_index_DS = recv_index
                 if orbCountFromServer != orbCount:
                     itemsWrites += [(RAM.TotalOrbAddress, orbCountFromServer.to_bytes(1, "little"), "MainRAM")]
                 if currentLevel != LevelInGameIDs.SummerForest and talismanCount != sfTalismansFromServer + apTalismansFromServer:
@@ -608,9 +674,18 @@ class Spyro2Client(BizHawkClient):
                     itemsWrites += [(RAM.TotalTalismanAddress, sfTalismansFromServer.to_bytes(1, "little"), "MainRAM")]
                 if newLives != 0:
                     itemsWrites += [(RAM.PlayerLives, min(99, lifeCount + newLives).to_bytes(2, "little"), "MainRAM")]
-                # TODO: Ideally, delay 3 seconds.
-                if sparxHealth != currentHealth:
-                    itemsWrites += [(RAM.PlayerHealth, currentHealth.to_bytes(1, "little"), "MainRAM")]
+                if len(newHealthItems) > 0:
+                    self.healthItemQueue += [(healthItemTimestamp, newHealthItems)]
+
+                startingHealth = 3
+                sparxOption = ctx.slot_data["options"]["enable_progressive_sparx_health"]
+                if sparxOption == SparxUpgradeOptions.BLUE:
+                    startingHealth = 2
+                elif sparxOption == SparxUpgradeOptions.GREEN:
+                    startingHealth = 1
+                elif sparxOption != SparxUpgradeOptions.OFF:
+                    startingHealth = 0
+                self.maxHealth = startingHealth + sparxUpgrades
 
                 if ctx.slot_data["options"]["enable_gemsanity"]:
                     itemsWrites += self.calculateCurrentGems(ctx, gemsanityItems, currentGems, totalGems)
@@ -750,6 +825,33 @@ class Spyro2Client(BizHawkClient):
                 if len(levelLockWrites) > 0:
                     await bizhawk.write(ctx.bizhawk_ctx, levelLockWrites)
 
+                # ======== Winter Tundra Warp Handling ========
+                wtWarpReads = [wtWarpReroute, wtDoorGem, wtWallOrb]
+                wtWarpWrites = self.handleWinterWarpChanges(ctx, wtWarpReads)
+                if len(wtWarpWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, wtWarpWrites)
+
+                # ======== Invisibility Handling ========
+                invisibilityReads = [invisibleAddress1, invisibleAddress2]
+                invisibilityWrites = self.handleInvisibilityChanges(invisibilityReads)
+                if len(invisibilityWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, invisibilityWrites)
+
+                # ======== Destructive Spyro Handling ========
+                destructiveReads = [destructiveAddress]
+                destructiveWrites = self.handleDestructiveChanges(destructiveReads)
+                if len(destructiveWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, destructiveWrites)
+
+                # ======== Sparx Health Handling ========
+                sparxReads = [sparxHealth]
+                sparxWrites = self.handleSparxChanges(sparxReads)
+                if len(sparxWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, sparxWrites)
+
+            # ======== Update tags (DeathLink) =========
+            await self.update_tags(ctx)
+
             # If there is messages waiting in the queue, print them to Bizhawk
             if self.messagequeue is not None and self.messagequeue != []:
                 await self.process_bizhawk_messages(ctx)
@@ -758,9 +860,6 @@ class Spyro2Client(BizHawkClient):
             # ======== Handle Death Link =========
             DL_Reads = [cookies, gameRunning, gameState, menuState2, spikeState2]
             await self.handle_death_link(ctx, DL_Reads)
-
-            # ======== Update tags (DeathLink) =========
-            await self.update_tags(ctx)
 
         except bizhawk.RequestFailedError:
             # Exit handler and return to main loop to reconnect
@@ -1451,9 +1550,103 @@ class Spyro2Client(BizHawkClient):
                     portalAddress += 8
         return levelLockWrites
 
+    def handleWinterWarpChanges(self, ctx, wtWarpReads):
+        wtWarpReroute = wtWarpReads[0]
+        wtDoorGem = wtWarpReads[1]
+        wtWallOrb = wtWarpReads[2]
+        warpOption = ctx.slot_data["options"]["wt_warp_options"]
+
+        wtWarpWrites = []
+
+        rerouteWarp = 0
+        if warpOption == WTWarpOptions.DOOR:
+            gemBit = pow(2, RAM.WTDoorGemBit)
+            if wtDoorGem & gemBit != 0:
+                rerouteWarp = 1
+        if warpOption == WTWarpOptions.WALL_ORB:
+            orbBit = pow(2, RAM.WTWallOrbBit)
+            if wtWallOrb & orbBit != 0:
+                rerouteWarp = 1
+        if wtWarpReroute != rerouteWarp:
+            wtWarpWrites += [(RAM.WTWarpAddress, (rerouteWarp).to_bytes(2, "little"), "MainRAM")]
+
+        return wtWarpWrites
+
+    def handleInvisibilityChanges(self, invisibilityReads):
+        invisibleAddress1 = invisibilityReads[0]
+        invisibleAddress2 = invisibilityReads[1]
+
+        invisibilityWrites = []
+
+        if not self.isInvisible:
+            if invisibleAddress1 != 0:
+                invisibilityWrites += [(RAM.InvisibleAddress1, (0).to_bytes(2, "little"), "MainRAM")]
+            if invisibleAddress2 != 0:
+                invisibilityWrites += [(RAM.InvisibleAddress2, (0).to_bytes(2, "little"), "MainRAM")]
+        elif self.invisibilityEnd < time.time():
+            self.isInvisible = False
+            if invisibleAddress1 != 0:
+                invisibilityWrites += [(RAM.InvisibleAddress1, (0).to_bytes(2, "little"), "MainRAM")]
+            if invisibleAddress2 != 0:
+                invisibilityWrites += [(RAM.InvisibleAddress2, (0).to_bytes(2, "little"), "MainRAM")]
+        else:
+            if invisibleAddress1 != 1:
+                invisibilityWrites += [(RAM.InvisibleAddress1, (1).to_bytes(2, "little"), "MainRAM")]
+            if invisibleAddress2 != 0x3402:
+                invisibilityWrites += [(RAM.InvisibleAddress2, (0x3402).to_bytes(2, "little"), "MainRAM")]
+
+        return invisibilityWrites
+
+    def handleDestructiveChanges(self, destructiveReads):
+        destructiveAddress = destructiveReads[0]
+
+        destructiveWrites = []
+
+        if self.isDestructive and self.destructiveEnd < time.time():
+            self.isDestructive = False
+            logger.info("Destructive mode has ended.")
+            # Turns off on its own.
+        elif self.isDestructive:
+            if destructiveAddress != 0xFF:
+                # TODO: This is buggy.
+                # Probably need to temporarily overwrite changes to this halfword elsewhere too.
+                destructiveWrites += [(RAM.DestructiveSpyroAddress, (0xFF).to_bytes(2, "little"), "MainRAM")]
+
+        return destructiveWrites
+
+    def handleSparxChanges(self, sparxReads):
+        sparxHealth = sparxReads[0]
+        currentTimestamp = time.time()
+
+        sparxWrites = []
+        i = 0
+        while i < len(self.healthItemQueue):
+            sparxHealthItems = self.healthItemQueue[i]
+            if sparxHealthItems[0] + 3 <= currentTimestamp:
+                for item in sparxHealthItems[1]:
+                    if item == "Damage Sparx Trap":
+                        if 0 < sparxHealth < 128:
+                            sparxHealth -= 1
+                    elif item == "Sparxless Trap":
+                        if 0 < sparxHealth < 128:
+                            sparxHealth = 0
+                    elif item == "Heal Sparx":
+                        if 0 <= sparxHealth < self.maxHealth:
+                            sparxHealth += 1
+                self.healthItemQueue.pop(i)
+            else:
+                i = i + 1
+        if 128 > sparxHealth > self.maxHealth:
+            sparxHealth = self.maxHealth
+
+        if sparxHealth != sparxReads[0]:
+            sparxWrites += [(RAM.PlayerHealth, sparxHealth.to_bytes(1, "little"), "MainRAM")]
+
+        return sparxWrites
+
     async def update_tags(self, ctx: "BizHawkClientContext") -> None:
         updateTags = False
-        if ctx.slot_data["death_link"] or self.deathlink == 1:
+        if ctx.slot_data["options"]["death_link"] or self.deathlink == 1:
             if "DeathLink" not in ctx.tags:
                 ctx.tags.add("DeathLink")
                 updateTags = True
