@@ -6,6 +6,7 @@ class GameStatus:
     Loading = 5
     Cutscene = 6
     LoadingWorld = 7
+    GameLoadMaybe = 9
     TitleScreen = 11
 
 class SpyroColor:

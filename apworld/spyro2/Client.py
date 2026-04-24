@@ -1,7 +1,6 @@
 import logging
 import math
 import pkgutil
-import random
 
 import orjson
 
@@ -11,7 +10,7 @@ import time
 from BaseClasses import ItemClassification
 from NetUtils import ClientStatus, NetworkItem
 
-from typing import TYPE_CHECKING, Optional, Dict, Set, ClassVar, Any, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Any
 
 import worlds._bizhawk as bizhawk
 
@@ -21,50 +20,48 @@ if TYPE_CHECKING:
     from worlds._bizhawk.context import BizHawkClientContext, BizHawkClientCommandProcessor
 
 from .Addresses import RAM
-from .Enums import GameStatus, LevelInGameIDs, SpyroColor
+from .Enums import GameStatus, LevelInGameIDs, SpyroColor, SpyroStates
 from .LevelData import GetLevelData
 
-from .Options import GoalOptions, MoneybagsOptions, GemsanityOptions, LevelLockOptions, AbilityOptions, BomboOptions, PortalTextColorOptions, WTWarpOptions, SparxUpgradeOptions
+from .Options import GoalOptions, TrickDifficultyOptions, MoneybagsOptions, GemsanityOptions, LevelLockOptions, AbilityOptions, BomboOptions, PortalTextColorOptions, WTWarpOptions, SparxUpgradeOptions
 
 logger = logging.getLogger("Client")
 
-def cmd_s2_commands(self: "BizHawkClientCommandProcessor") -> None:
+Commands_Dict = {
+    "s2_help" : "cmd_s2_help",
+    "goal" : "cmd_goal",
+    "options": "cmd_options",
+    "unlockedlevels": "cmd_unlockedlevels",
+    "talismans": "cmd_talismans",
+    "debuginfo" : "cmd_debugInfo",
+}
+
+def cmd_s2_help(self: "BizHawkClientCommandProcessor") -> None:
     """Show what commands are available for Spyro 2 Archipelago"""
     from worlds._bizhawk.context import BizHawkClientContext
     if self.ctx.game != "Spyro 2":
         logger.warning("This command can only be used when playing Spyro 2: Ripto's Rage.")
         return
-    return
-    # TODO: Support this
     logger.info(f"----------------------------------------------\n"
                 f"Commands for Spyro 2\n"
                 f"----------------------------------------------\n"
-                f"  /ae_commands\n"
+                f"  /s2_help\n"
                 f"      Description: Show this list\n"
-                f"  /bh_itemdisplay [On/Off]\n"
-                f"      Description: Display items directly in the Bizhawk client\n"
-                f"      [Optional] Status (On/Off): Toggle or Enable/Disable the option\n"
-                f"  /prevent_kickout [On/Off]\n"
-                f"      Description: If on, prevents Spike from being ejected \n"
-                f"                    after catching all monkeys in a level\n"
-                f"      [Optional] Status (On/Off): Toggle or Enable/Disable the option\n"
-                f"  /deathlink [On/Off]\n"
-                f"      Description: Enable/Disable the deathlink option\n"
-                f"      [Optional] Status (On/Off): Toggle or Enable/Disable the option\n"
-                f"  /auto_equip [On/Off]\n"
-                f"      Description: When on, will equip gadgets if there is a free face button\n"
-                f"      [Optional] Status (On/Off): Toggle or Enable/Disable the option\n"
-                f"  /syncprogress \n"
-                f"      Description: Fetch the server's state of monkeys and sync it into the game\n"
-                f"      [Optional] \"cancel\": If prompted, cancel the currently pending sync\n"
-                f"  /spikecolor \n"
-                f"      Description: Display/Change Spike's color palette according to presets\n"
-                f"      or RGB Hex values (\"000000\" to \"FFFFFF\")\n"
-                f"      Presets: {presetColors}\n"
+                f"  /goal\n"
+                f"      Description: Shows your current goal and progress towards it.\n"
+                f"  /options\n"
+                f"      Description: Shows important options for your slot.\n"
+                f"  /unlockedLevels\n"
+                f"      Description: When level locks are keys, shows the levels you have unlocked.\n"
+                f"  /talismans\n"
+                f"      Description: When open world is off, shows how many talismans you have received.\n"
+                f"  /debugInfo\n"
+                f"      Description: Prints information about your game to the screen.\n"
+                f"      You may be asked to screenshot this if there is an error.\n"
                 f"  \n")
 
-def cmd_deathlink(self: "BizHawkClientCommandProcessor", status = "") -> None:
-    """Toggle Deathlink on and off"""
+def cmd_goal(self: "BizHawkClientCommandProcessor") -> None:
+    """Prints information about your game to the screen."""
     from worlds._bizhawk.context import BizHawkClientContext
     if self.ctx.game != "Spyro 2":
         logger.warning("This command can only be used when playing Spyro 2: Ripto's Rage.")
@@ -72,38 +69,175 @@ def cmd_deathlink(self: "BizHawkClientCommandProcessor", status = "") -> None:
     if not self.ctx.server or not self.ctx.slot:
         logger.warning("You must be connected to a server to use this command.")
         return
-
     ctx = self.ctx
     assert isinstance(ctx, BizHawkClientContext)
     client = ctx.client_handler
     assert isinstance(client, Spyro2Client)
-    if status == "":
-        if client.deathlink == 0:
-            msg = "ON"
+
+    goalText = ""
+    progressText = ""
+    requiredOrbs = ctx.slot_data["options"]["ripto_door_orbs"]
+    orbsNeededText = f"{requiredOrbs} orb" if requiredOrbs == 1 else f"{requiredOrbs} orbs"
+    orbsText = f"{client.currentOrbs} orb" if client.currentOrbs == 1 else f"{client.currentOrbs} orbs"
+    gemsText = f"{client.currentGems} gem" if client.currentGems == 1 else f"{client.currentGems} gems"
+    talismansText = f"{client.currentTalismans} talisman" if client.currentTalismans == 1 else f"{client.currentTalismans} talismans"
+    tokensText = f"{client.currentTokens} token" if client.currentTokens == 1 else f"{client.currentTokens} tokens"
+    skillPointsText = f"{client.currentSkillPoints} Skill Point" if client.currentSkillPoints == 1 else f"{client.currentSkillPoints} Skill Points"
+    defeatedRiptoText = "have defeated Ripto" if client.riptoDefeated else "have not defeated Ripto"
+    goal = ctx.slot_data["options"]["goal"]
+    openWorldOption = ctx.slot_data["options"]["enable_open_world"]
+    if goal == GoalOptions.RIPTO:
+        goalText = f"Defeat Ripto and collect {orbsNeededText}, the requirement to open his arena"
+        progressText = f"You have {orbsText} and {defeatedRiptoText}."
+    elif goal == GoalOptions.SIXTY_FOUR_ORB:
+        goalText = "Defeat Ripto and collect all 64 orbs"
+        progressText = f"You have {orbsText} and {defeatedRiptoText}."
+    elif goal == GoalOptions.HUNDRED_PERCENT:
+        if openWorldOption == 0:
+            goalText = "Defeat Ripto and collect all 14 talismans, 64 orbs, and 10000 gems"
+            progressText = f"You have {talismansText}, {orbsText}, {gemsText},\nand {defeatedRiptoText}"
         else:
-            msg = "OFF"
-        logger.info(f"Deathlink: {msg}\n"
-                    f"    To change the status, use the command like so: /deathlink [on/off]")
-        return
-    elif status.lower() == "on":
-        client.deathlink = 1
-    elif status.lower() == "off":
-        client.deathlink = 0
+            goalText = "Defeat Ripto and collect all 64 orbs and 10000 gems"
+            progressText = f"You have {orbsText}, {gemsText}, and {defeatedRiptoText}"
+    elif goal == GoalOptions.TEN_TOKENS:
+        goalText = "Collect 55 orbs and 8000 gems to unlock the theme park\nand collect all 10 tokens in Dragon Shores"
+        progressText = f"You have {orbsText}, {gemsText}, and {tokensText}"
+    elif goal == GoalOptions.ALL_SKILLPOINTS:
+        goalText = "Collect all 16 skill points"
+        progressText = f"You have {skillPointsText}"
+    elif goal == GoalOptions.EPILOGUE:
+        goalText = "Defeat Ripto and collect all 16 skill points"
+        progressText = f"You have {skillPointsText} and {defeatedRiptoText}"
     else:
-        logger.info(f"Invalid argument for function ""deathlink""\n")
+        logger.error("Error finding your goal")
         return
+    logger.info(f"Your goal is: {goalText}\n{progressText}")
 
-    client.changeDeathlink = True
-    if client.deathlink == 1:
-        Utils.async_start(ctx.update_death_link(True))
-        msg = "ON"
+def cmd_options(self: "BizHawkClientCommandProcessor"):
+    """Shows important options for your slot."""
+    from worlds._bizhawk.context import BizHawkClientContext
+    if self.ctx.game != "Spyro 2":
+        logger.warning("This command can only be used when playing Spyro 2: Ripto's Rage.")
+        return
+    if not self.ctx.server or not self.ctx.slot:
+        logger.warning("You must be connected to a server to use this command.")
+        return
+    ctx = self.ctx
+    assert isinstance(ctx, BizHawkClientContext)
+    client = ctx.client_handler
+    assert isinstance(client, Spyro2Client)
+
+    gemsanityOption = ctx.slot_data["options"]["enable_gemsanity"]
+    if gemsanityOption == GemsanityOptions.OFF:
+        gemsanityOption = "Off"
+    elif gemsanityOption == GemsanityOptions.PARTIAL:
+        gemsanityOption = "Partial"
     else:
-        Utils.async_start(ctx.update_death_link(False))
-        msg = "OFF"
-    client.DeathLink_DS = client.deathlink
+        gemsanityOption = "Full"
+    levelLockOption = ctx.slot_data["options"]["level_lock_options"]
+    moneybagssanity = "Moneybagssanity" if ctx.slot_data["options"]["moneybags_settings"] == MoneybagsOptions.MONEYBAGSSANITY else "Vanilla"
+    if levelLockOption == LevelLockOptions.VANILLA:
+        levelLockOption = "Vanilla"
+    elif levelLockOption == LevelLockOptions.KEYS:
+        levelLockOption = "Keys"
+    trickDifficultyOption = ctx.slot_data["options"]["trick_difficulty"]
+    trickDifficultyString = ""
+    if trickDifficultyOption == TrickDifficultyOptions.OFF:
+        trickDifficultyString = "Tricks Off"
+    elif trickDifficultyOption == TrickDifficultyOptions.EASY:
+        trickDifficultyString = "Easy Tricks"
+    elif trickDifficultyOption == TrickDifficultyOptions.MEDIUM:
+        trickDifficultyString = "Medium Tricks"
+    elif trickDifficultyOption == TrickDifficultyOptions.HARD:
+        trickDifficultyString = "Hard Tricks"
+    else:
+        trickDifficultyString = "Custom"
+    worldSettings = "Open World" if ctx.slot_data["options"]["enable_open_world"] else "Vanilla Progression"
+    goalEnum = ctx.slot_data["options"]["goal"]
+    goalString = ""
+    if goalEnum == GoalOptions.RIPTO:
+        requiredOrbs = ctx.slot_data["options"]["ripto_door_orbs"]
+        goalString = f"Ripto ({requiredOrbs} orbs)"
+    elif goalEnum == GoalOptions.SIXTY_FOUR_ORB:
+        goalString = "Sixty Four Orb"
+    elif goalEnum == GoalOptions.HUNDRED_PERCENT:
+        goalString = "Hundred Percent"
+    elif goalEnum == GoalOptions.TEN_TOKENS:
+        goalString = "Ten Tokens"
+    elif goalEnum == GoalOptions.ALL_SKILLPOINTS:
+        goalString = "All Skill Points"
+    elif goalEnum == GoalOptions.EPILOGUE:
+        goalString = "Epilogue"
+    else:
+        goalString = "Unknown"
+    optionsString = (f"Goal: {goalString} - Use /goal for more info\n"
+                    f"World Settings: {worldSettings}\n"
+                    f"Level Locks: {levelLockOption}\n"
+                    f"Moneybagssanity: {moneybagssanity}\n"
+                    f"Gemsanity: {gemsanityOption}\n"
+                    # TODO: Uncomment and support.
+                    # f"Powerup Locks: {_powerupLockOption}\n"
+                    f"Trick Difficulty: {trickDifficultyString}\n"
+                    f"Ripto's Arena Requirement: {ctx.slot_data["options"]["ripto_door_orbs"]} orb(s)")
+    logger.info(optionsString)
 
-    logger.info(f"Deathlink is now {msg}\n")
+def cmd_unlockedlevels(self: "BizHawkClientCommandProcessor"):
+    """When level locks are keys, shows the levels you have unlocked"""
+    from worlds._bizhawk.context import BizHawkClientContext
+    if self.ctx.game != "Spyro 2":
+        logger.warning("This command can only be used when playing Spyro 2: Ripto's Rage.")
+        return
+    if not self.ctx.server or not self.ctx.slot:
+        logger.warning("You must be connected to a server to use this command.")
+        return
+    ctx = self.ctx
+    assert isinstance(ctx, BizHawkClientContext)
+    client = ctx.client_handler
+    assert isinstance(client, Spyro2Client)
+    client.showUnlockedLevels(ctx, True)
 
+def cmd_talismans(self: "BizHawkClientCommandProcessor"):
+    """When open world is off, shows how many talismans you have received."""
+    from worlds._bizhawk.context import BizHawkClientContext
+    if self.ctx.game != "Spyro 2":
+        logger.warning("This command can only be used when playing Spyro 2: Ripto's Rage.")
+        return
+    if not self.ctx.server or not self.ctx.slot:
+        logger.warning("You must be connected to a server to use this command.")
+        return
+    ctx = self.ctx
+    assert isinstance(ctx, BizHawkClientContext)
+    client = ctx.client_handler
+    assert isinstance(client, Spyro2Client)
+
+    openWorldOption = ctx.slot_data["options"]["enable_open_world"]
+    if openWorldOption != 0:
+        logger.info("Talismans are removed in Open World mode.")
+    else:
+        logger.info(f"Summer Forest: {client.currentSFTalismans}; Autumn Plains: {client.currentAPTalismans}")
+
+def cmd_debugInfo(self: "BizHawkClientCommandProcessor") -> None:
+    """Prints information about your game to the screen."""
+    from worlds._bizhawk.context import BizHawkClientContext
+    if self.ctx.game != "Spyro 2":
+        logger.warning("This command can only be used when playing Spyro 2: Ripto's Rage.")
+        return
+    if not self.ctx.server or not self.ctx.slot:
+        logger.warning("You must be connected to a server to use this command.")
+        return
+    ctx = self.ctx
+    assert isinstance(ctx, BizHawkClientContext)
+    client = ctx.client_handler
+    assert isinstance(client, Spyro2Client)
+
+    host_version = "Unknown"
+    if "apworldVersion" in ctx.slot_data:
+        host_version = ctx.slot_data["apworldVersion"]
+    # TODO: Add more information.
+    logger.info(f"Host APWorld Version: {host_version}\n"
+                f"Client Version: {client.client_version}\n"
+                f"Current Level: {client.currentLevel}\n"
+                "Screenshot this if requested to help debug issues.")
 
 class Spyro2Client(BizHawkClient):
     game = "Spyro 2"
@@ -147,6 +281,14 @@ class Spyro2Client(BizHawkClient):
         self.isDestructive = False
         self.destructiveEnd = 0
         self.maxHealth = 3
+        self.currentLevel = None
+        self.currentOrbs = 0
+        self.currentGems = 0
+        self.currentTalismans = 0
+        self.currentSFTalismans = 0
+        self.currentAPTalismans = 0
+        self.currentTokens = 0
+        self.currentSkillPoints = 0
 
     def initialize_client(self):
         self.messagequeue = []
@@ -173,33 +315,39 @@ class Spyro2Client(BizHawkClient):
         self.isDestructive = False
         self.destructiveEnd = 0
         self.maxHealth = 3
+        self.currentLevel = None
+        self.currentOrbs = 0
+        self.currentGems = 0
+        self.currentTalismans = 0
+        self.currentSFTalismans = 0
+        self.currentAPTalismans = 0
+        self.currentTokens = 0
+        self.currentSkillPoints = 0
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         s2_identifier_ram_address: int = 0x9244
         # SCUS_944.25 in ASCII = Spyro 2
         bytes_expected: bytes = bytes.fromhex("534355535F3934342E3235")
-        # TODO: Fix this.
-        #Commands_List = list(Commands_Dict.keys())
-        Commands_List = list()
+        Commands_List = list(Commands_Dict.keys())
         try:
             bytes_actual: bytes = (await bizhawk.read(ctx.bizhawk_ctx, [(
                 s2_identifier_ram_address, len(bytes_expected), "MainRAM"
             )]))[0]
             if bytes_actual != bytes_expected:
-                # Remove commands from client from list in Strings.py
+                # Remove commands from client
                 for command in Commands_List:
                     if command in ctx.command_processor.commands:
                         ctx.command_processor.commands.pop(command)
                 return False
         except Exception:
-            # Remove commands from client from list in Strings.py
+            # Remove commands from client
             for command in Commands_List:
                 if command in ctx.command_processor.commands:
                     ctx.command_processor.commands.pop(command)
             return False
 
         if not self.game == "Spyro 2":
-            # Remove commands from client from list in Strings.py
+            # Remove commands from client
             for command in Commands_List:
                 if command in ctx.command_processor.commands:
                     ctx.command_processor.commands.pop(command)
@@ -208,13 +356,12 @@ class Spyro2Client(BizHawkClient):
         ctx.items_handling = 0b111
         ctx.want_slot_data = True
         ctx.watcher_timeout = 0.125
-        # Add custom commands to client from list in Strings.py
-        # TODO: Do this.
-        #for command in Commands_List:
-        #    if command not in ctx.command_processor.commands:
-        #        functionName = Commands_Dict[command]
-        #        linkedfunction = globals()[functionName]
-        #        ctx.command_processor.commands[command] = linkedfunction
+        # Add custom commands to client
+        for command in Commands_List:
+            if command not in ctx.command_processor.commands:
+                functionName = Commands_Dict[command]
+                linkedfunction = globals()[functionName]
+                ctx.command_processor.commands[command] = linkedfunction
         self.initialize_client()
         return True
 
@@ -299,9 +446,8 @@ class Spyro2Client(BizHawkClient):
             else:
                 self.item_index_DS = 0
 
-    async def set_auth(self, ctx: "BizHawkClientContext") -> None:
-        # TODO: ?
-        x = 3
+    #async def set_auth(self, ctx: "BizHawkClientContext") -> None:
+    #    pass
 
     async def ds_options_handling(self, ctx: "BizHawkClientContext", context):
         if context == "init":
@@ -488,6 +634,10 @@ class Spyro2Client(BizHawkClient):
                 "invisibleAddress1": (RAM.InvisibleAddress1, 2, "MainRAM"),
                 "invisibleAddress2": (RAM.InvisibleAddress2, 2, "MainRAM"),
                 "destructiveAddress": (RAM.DestructiveSpyroAddress, 2, "MainRAM"),
+                "zPos": (RAM.PlayerZPos, 4, "MainRAM"),
+                "animationLength": (RAM.PlayerAnimationLength, 4, "MainRAM"),
+                "spyroState": (RAM.SpyroStateAddress, 1, "MainRAM"),
+                "spyroVelocityFlag": (RAM.PlayerVelocityStatus, 1, "MainRAM"),
             }
 
             readTuples = [Value for Value in readsDict.values()]
@@ -503,6 +653,7 @@ class Spyro2Client(BizHawkClient):
             talismanBitArray = readValues["talismanBitArray"]
             orbBitArray = readValues["orbBitArray"]
             currentLevel = readValues["currentLevel"]
+            self.currentLevel = currentLevel
             demoMode = readValues["demoMode"]
             try:
                 guidebookText = readValues["guidebookText"].to_bytes(9, byteorder = "little").decode("ascii")
@@ -568,6 +719,10 @@ class Spyro2Client(BizHawkClient):
             invisibleAddress1 = readValues["invisibleAddress1"]
             invisibleAddress2 = readValues["invisibleAddress2"]
             destructiveAddress = readValues["destructiveAddress"]
+            zPos = readValues["zPos"]
+            animationLength = readValues["animationLength"]
+            spyroState = readValues["spyroState"]
+            spyroVelocityFlag = readValues["spyroVelocityFlag"]
 
             # Write tables
             itemsWrites = []
@@ -595,6 +750,8 @@ class Spyro2Client(BizHawkClient):
                 newHealthItems = []
                 gemsanityItems = {}
                 sparxUpgrades = 0
+                oldUnlockedLevels = len(self.unlockedLevels)
+
                 for item in ctx.items_received:
                     # Increment to already received address first before sending
                     itemName = ctx.item_names.lookup_in_slot(item.item, ctx.slot)
@@ -668,14 +825,25 @@ class Spyro2Client(BizHawkClient):
                     self.item_index_DS = recv_index
                 if orbCountFromServer != orbCount:
                     itemsWrites += [(RAM.TotalOrbAddress, orbCountFromServer.to_bytes(1, "little"), "MainRAM")]
+                self.currentOrbs = orbCountFromServer
                 if currentLevel != LevelInGameIDs.SummerForest and talismanCount != sfTalismansFromServer + apTalismansFromServer:
                     itemsWrites += [(RAM.TotalTalismanAddress, (sfTalismansFromServer + apTalismansFromServer).to_bytes(1, "little"), "MainRAM")]
                 elif currentLevel == LevelInGameIDs.SummerForest and talismanCount != sfTalismansFromServer:
                     itemsWrites += [(RAM.TotalTalismanAddress, sfTalismansFromServer.to_bytes(1, "little"), "MainRAM")]
+                self.currentTalismans = sfTalismansFromServer + apTalismansFromServer
+                if self.currentAPTalismans != apTalismansFromServer or self.currentSFTalismans != sfTalismansFromServer:
+                    logger.info(f"Current Talisman count - Summer Forest: {sfTalismansFromServer}; Autumn Plains: {apTalismansFromServer}")
+                self.currentSFTalismans = sfTalismansFromServer
+                self.currentAPTalismans = apTalismansFromServer
                 if newLives != 0:
                     itemsWrites += [(RAM.PlayerLives, min(99, lifeCount + newLives).to_bytes(2, "little"), "MainRAM")]
                 if len(newHealthItems) > 0:
                     self.healthItemQueue += [(healthItemTimestamp, newHealthItems)]
+                self.currentTokens = shoresTokensFromServer
+                self.currentSkillPoints = skillPointsFromServer
+
+                if oldUnlockedLevels < len(self.unlockedLevels):
+                    self.showUnlockedLevels(ctx)
 
                 startingHealth = 3
                 sparxOption = ctx.slot_data["options"]["enable_progressive_sparx_health"]
@@ -689,6 +857,8 @@ class Spyro2Client(BizHawkClient):
 
                 if ctx.slot_data["options"]["enable_gemsanity"]:
                     itemsWrites += self.calculateCurrentGems(ctx, gemsanityItems, currentGems, totalGems)
+                else:
+                    self.currentGems = totalGems
 
                 cosmeticTimestamp = time.time()
                 if len(self.cosmeticQueue) > 0 and cosmeticTimestamp > self.lastCosmeticUpdate + 5:
@@ -808,10 +978,13 @@ class Spyro2Client(BizHawkClient):
                     await bizhawk.write(ctx.bizhawk_ctx, colorChangeWrites)
 
                 # ======== Elora Text and Door Requirements ========
-                eloraDoorReads = [currentLevel, riptoDoorOrbRequirement, riptoDoorOrbDisplay]
-                eloraDoorWrites = self.handleEloraDoorChanges(ctx, eloraDoorReads)
-                if len(eloraDoorWrites) > 0:
-                    await bizhawk.write(ctx.bizhawk_ctx, eloraDoorWrites)
+                # Menuing out of Winter Tundra crashes the game on save file load,
+                # since the level ID doesn't change.
+                if gameStatus != GameStatus.GameLoadMaybe:
+                    eloraDoorReads = [currentLevel, riptoDoorOrbRequirement, riptoDoorOrbDisplay]
+                    eloraDoorWrites = self.handleEloraDoorChanges(ctx, eloraDoorReads)
+                    if len(eloraDoorWrites) > 0:
+                        await bizhawk.write(ctx.bizhawk_ctx, eloraDoorWrites)
 
                 # ======== Open World Handling ========
                 openWorldReads = [crushGuidebookUnlock, gulpGuidebookUnlock, autumnGuidebookUnlock, winterGuidebookUnlock]
@@ -849,6 +1022,18 @@ class Spyro2Client(BizHawkClient):
                 if len(sparxWrites) > 0:
                     await bizhawk.write(ctx.bizhawk_ctx, sparxWrites)
 
+                # ======== Handle Death Link =========
+                DL_Reads = [
+                    currentLevel,
+                    sparxHealth,
+                    gameStatus,
+                    zPos,
+                    animationLength,
+                    spyroVelocityFlag,
+                    spyroState
+                ]
+                await self.handle_death_link(ctx, DL_Reads)
+
             # ======== Update tags (DeathLink) =========
             await self.update_tags(ctx)
 
@@ -856,10 +1041,6 @@ class Spyro2Client(BizHawkClient):
             if self.messagequeue is not None and self.messagequeue != []:
                 await self.process_bizhawk_messages(ctx)
             return
-
-            # ======== Handle Death Link =========
-            DL_Reads = [cookies, gameRunning, gameState, menuState2, spikeState2]
-            await self.handle_death_link(ctx, DL_Reads)
 
         except bizhawk.RequestFailedError:
             # Exit handler and return to main loop to reconnect
@@ -1092,6 +1273,7 @@ class Spyro2Client(BizHawkClient):
                     gemItems += [(RAM.LevelGemsAddress + 4 * level_index, newCurrentGems.to_bytes(4, "little"), "MainRAM")]
                 newTotalGems += newCurrentGems
             level_index += 1
+        self.currentGems = newTotalGems
         if newTotalGems != totalGems:
             gemItems += [(RAM.TotalGemAddress, newTotalGems.to_bytes(4, "little"), "MainRAM")]
         return gemItems
@@ -1661,102 +1843,122 @@ class Spyro2Client(BizHawkClient):
         """
         Checks whether the player has died while connected and sends a death link if so.
         """
-        # TODO: Handle this
-        return
-        # C# Code:
-        # byte health = Memory.ReadByte(Addresses.PlayerHealth);
-        # int zPos = Memory.ReadInt(Addresses.PlayerZPos);
-        # int animationLength = Memory.ReadInt(Addresses.PlayerAnimationLength);
-        # byte spyroState = Memory.ReadByte(Addresses.SpyroStateAddress);
-        # byte spyroVelocityFlag = Memory.ReadByte(Addresses.PlayerVelocityStatus);
-        # LevelInGameIDs[] deathLinkLevels = [
-        #     LevelInGameIDs.SummerForest,
-        # LevelInGameIDs.Glimmer,
-        # LevelInGameIDs.Colossus,
-        # LevelInGameIDs.IdolSprings,
-        # LevelInGameIDs.Hurricos,
-        # LevelInGameIDs.SunnyBeach,
-        # LevelInGameIDs.AquariaTowers,
-        # LevelInGameIDs.CrushsDungeon,
-        # LevelInGameIDs.AutumnPlains,
-        # LevelInGameIDs.BreezeHarbor,
-        # LevelInGameIDs.SkelosBadlands,
-        # LevelInGameIDs.CrystalGlacier,
-        # LevelInGameIDs.Zephyr,
-        # LevelInGameIDs.Scorch,
-        # LevelInGameIDs.FractureHills,
-        # LevelInGameIDs.MagmaCone,
-        # LevelInGameIDs.ShadyOasis,
-        # LevelInGameIDs.GulpsOverlook,
-        # LevelInGameIDs.WinterTundra,
-        # LevelInGameIDs.MysticMarsh,
-        # LevelInGameIDs.CloudTemples,
-        # LevelInGameIDs.RoboticaFarms,
-        # LevelInGameIDs.Metropolis,
-        # LevelInGameIDs.RiptosArena
-        # ];
-        #
-        # if (
-        #     !_justDied &&
-        #     Helpers.IsInGame() &&
-        #     Client.ItemState != null &&
-        #     Client.CurrentSession != null &&
-        #     deathLinkLevels.Contains(currentLevel) &&
-        #     gameStatus != GameStatus.Cutscene &&
-        #     gameStatus != GameStatus.Loading &&
-        #     gameStatus != GameStatus.TitleScreen &&
-        #     (
-        #         health > 128 ||
-        #         (zPos > 0 && zPos < 0x400) ||  // zPos is 0 on initial load into a save
-        #         (spyroState == (byte)SpyroStates.Flop && spyroVelocityFlag == 1 && 0x3b < animationLength) ||
-        #         spyroState == (byte)SpyroStates.DeathBurn ||
-        #         spyroState == (byte)SpyroStates.DeathDrowning && animationLength >= 116 ||
-        #         spyroState == (byte)SpyroStates.DeathSquash
-        #     )
-        # )
-        cookies = DL_Reads[0]
-        gameRunning = DL_Reads[1]
-        gameState = DL_Reads[2]
-        menuState2 = DL_Reads[3]
-        spikestate2 = DL_Reads[4]
+        deathLinkLevels = [
+            LevelInGameIDs.SummerForest,
+            LevelInGameIDs.Glimmer,
+            LevelInGameIDs.Colossus,
+            LevelInGameIDs.IdolSprings,
+            LevelInGameIDs.Hurricos,
+            LevelInGameIDs.SunnyBeach,
+            LevelInGameIDs.AquariaTowers,
+            LevelInGameIDs.CrushsDungeon,
+            LevelInGameIDs.AutumnPlains,
+            LevelInGameIDs.BreezeHarbor,
+            LevelInGameIDs.SkelosBadlands,
+            LevelInGameIDs.CrystalGlacier,
+            LevelInGameIDs.Zephyr,
+            LevelInGameIDs.Scorch,
+            LevelInGameIDs.FractureHills,
+            LevelInGameIDs.MagmaCone,
+            LevelInGameIDs.ShadyOasis,
+            LevelInGameIDs.GulpsOverlook,
+            LevelInGameIDs.WinterTundra,
+            LevelInGameIDs.MysticMarsh,
+            LevelInGameIDs.CloudTemples,
+            LevelInGameIDs.RoboticaFarms,
+            LevelInGameIDs.Metropolis,
+            LevelInGameIDs.RiptosArena
+        ]
 
-        OnTree = {56, 57, 58, 59, 60}
+        currentLevel = DL_Reads[0]
+        health = DL_Reads[1]
+        gameState = DL_Reads[2]
+        zPos = DL_Reads[3]
+        animationLength = DL_Reads[4]
+        velocityFlag = DL_Reads[5]
+        spyroState = DL_Reads[6]
 
         DL_writes = []
-        DL_writes2 = []
         if self.deathlink == 1:
             if "DeathLink" not in ctx.tags:
-                #await ctx.update_death_link(True)
                 self.previous_death_link = ctx.last_death_link
             if "DeathLink" in ctx.tags and ctx.last_death_link + 1 < time.time():
-                if cookies == 0x00 and not self.sending_death_link and gameState in (RAM.gameState["InLevel"],RAM.gameState["TimeStation"]):
-                    await self.send_deathlink(ctx)
-                elif cookies != 0x00:
-                    self.sending_death_link = False
-            # Wait on exiting menu before sending deathlink
-            if self.pending_death_link and menuState2 != 1:
-                DL_writes += [(RAM.cookieAddress, 0x00.to_bytes(1, "little"), "MainRAM")]
-                DL_writes += [(RAM.instakillAddress, 0xFF.to_bytes(1, "little"), "MainRAM")]
-                if spikestate2 in OnTree:
-                    DL_writes2 += [(RAM.Controls_TriggersShapes, 0xFD.to_bytes(1, "little"), "MainRAM")]
+                if not self.sending_death_link and \
+                        currentLevel in deathLinkLevels and \
+                        gameState not in [GameStatus.Cutscene, GameStatus.Loading, GameStatus.TitleScreen]:
+                    cause = None
+                    if health > 128:
+                        cause = "Damage"
+                    elif 0 < zPos < 0x400: # zPos is 0 on initial load into a save.
+                        cause = "Fell below death plane"
+                    elif spyroState == SpyroStates.Flop and velocityFlag == 1 and 0x3b < animationLength:
+                        cause = "Fell to death"
+                    elif spyroState == SpyroStates.DeathBurn:
+                        cause = "Burned"
+                    elif spyroState == SpyroStates.DeathDrowning and animationLength >= 116:
+                        cause = "Drowned"
+                    elif spyroState == SpyroStates.DeathSquash:
+                        cause = "Squashed"
+                    if cause is not None:
+                        await self.send_deathlink(ctx, cause)
+                # Player has respawned.
+                elif self.sending_death_link:
+                    if health < 128 and zPos >= 0x400 and \
+                            not (spyroState == SpyroStates.Flop and velocityFlag == 1 and 0x3b < animationLength) and \
+                            spyroState != SpyroStates.DeathBurn and \
+                            not (spyroState == SpyroStates.DeathDrowning and animationLength >= 116) and \
+                            spyroState != SpyroStates.DeathSquash:
+                        self.sending_death_link = False
+            if self.pending_death_link:
+                if currentLevel not in deathLinkLevels:
+                    logger.info("Ignored the DeathLink to avoid softlock in current level.")
+                    self.pending_death_link = False
+                else:
+                    DL_writes += [(RAM.SpyroStateAddress, SpyroStates.DeathPirouette.to_bytes(1, "little"), "MainRAM")]
                 self.pending_death_link = False
                 self.sending_death_link = True
                 await bizhawk.write(ctx.bizhawk_ctx, DL_writes)
-                await bizhawk.write(ctx.bizhawk_ctx, DL_writes2)
         elif self.deathlink == 0:
-            #await ctx.update_death_link(False)
             self.previous_death_link = ctx.last_death_link
 
-    async def send_deathlink(self, ctx: "BizHawkClientContext") -> None:
+    async def send_deathlink(self, ctx: "BizHawkClientContext", cause) -> None:
         self.sending_death_link = True
         ctx.last_death_link = time.time()
-        # TODO: Add cause.
-        DeathText = ctx.player_names[ctx.slot] + " died in Spyro 2"
+        if cause == "Unknown":
+            DeathText = ctx.player_names[ctx.slot] + " died in Spyro 2."
+        else:
+            DeathText = ctx.player_names[ctx.slot] + f" died in Spyro 2: {cause}"
         await ctx.send_death(DeathText)
 
     def on_deathlink(self, ctx: "BizHawkClientContext") -> None:
         ctx.last_death_link = time.time()
         self.pending_death_link = True
+
+    def showUnlockedLevels(self, ctx, showAll = False):
+        levelLockOption = ctx.slot_data["options"]["level_lock_options"]
+        if levelLockOption == LevelLockOptions.VANILLA:
+            logger.info("Levels have their vanilla unlock requirements.")
+        elif levelLockOption != LevelLockOptions.KEYS:
+            # TODO: Revisit this message when orb locks are added.
+            logger.info("Levels are not locked by keys.")
+        else:
+            if showAll or len(self.unlockedLevels) >= ctx.slot_data["options"]["level_unlocks"]:
+                unlockedLevelsString = "You have unlocked:\n"
+                for unlockedLevel in self.unlockedLevels:
+                    newLevel = ""
+                    if unlockedLevel == "Dragon Shores Unlock":
+                        newLevel = "Shores"
+                    else:
+                        newLevel = unlockedLevel.split(" Unlock")[0].split(" ")[0]
+                    if unlockedLevelsString == "You have unlocked:\n":
+                        unlockedLevelsString = f"{unlockedLevelsString}{newLevel}"
+                    else:
+                        unlockedLevelsString = f"{unlockedLevelsString}; {newLevel}"
+                if unlockedLevelsString == "You have unlocked:\n":
+                    unlockedLevelsString = f"{unlockedLevelsString}No levels yet"
+                logger.info(unlockedLevelsString)
+#     }
+# }
 
 # Text helper functions
 def text_to_bytes(name, string_len):
