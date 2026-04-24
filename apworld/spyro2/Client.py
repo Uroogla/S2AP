@@ -767,7 +767,7 @@ class Spyro2Client(BizHawkClient):
                         skillPointsFromServer += 1
                     elif itemName == "Dragon Shores Token":
                         shoresTokensFromServer += 1
-                    elif itemName.endswith("Gem") or itemName.endswith("Gems"):
+                    elif itemName.endswith("Gem") or itemName.endswith("Gems") or itemName.endswith("Gem Bundle"):
                         if itemName in gemsanityItems:
                             gemsanityItems[itemName] += 1
                         else:
