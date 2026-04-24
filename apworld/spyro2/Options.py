@@ -323,7 +323,8 @@ class EnableFillerExtraLives(DefaultOnToggle):
 class EnableFillerDestructiveSpyro(Toggle):
     """Adds to the item pool an item temporarily powering up
     Spyro so anything destructible he touches is destroyed.
-    Affects enemies, strong chests, breakable walls, etc."""
+    Affects enemies, strong chests, breakable walls, etc.
+    Warning: Behavior is not consistent while charging."""
     display_name = "Enable Temporary Destructive Spyro Filler"
 
 # Likely possible but check for side effects.
@@ -341,7 +342,8 @@ class EnableFillerBigHeadMode(Toggle):
     display_name = "Enable Big Head and Flat Spyro Filler"
 
 class EnableFillerHealSparx(Toggle):
-    """Adds healing Sparx to the item pool."""
+    """Adds healing Sparx to the item pool.
+    Sparx must be alive to be healed."""
     display_name = "Enable Healing Sparx Filler"
 
 class TrapFillerPercent(Range):

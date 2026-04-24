@@ -11,6 +11,7 @@
             Loading = 5,
             Cutscene = 6,
             LoadingWorld = 7,
+            GameLoadMaybe = 9,
             TitleScreen = 11
         }
 
@@ -24,6 +25,15 @@
             TenTokens = 5,
             AllSkillpoints = 6,
             Epilogue = 7
+        }
+
+        public enum TrickDifficultyOptions
+        {
+            Off = 0,
+            EasyTricks = 1,
+            MediumTricks = 2,
+            HardTricks = 3,
+            Custom = 4
         }
 
         public enum SpyroColor : short

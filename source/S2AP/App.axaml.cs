@@ -39,8 +39,8 @@ namespace S2AP;
 public partial class App : Application
 {
     // TODO: Remember to set this in S2AP.Desktop as well.
-    public static string Version = "1.2.0-rc";
-    public static List<string> SupportedVersions = ["1.2.0-rc"];
+    public static string Version = "2.0.0";
+    public static List<string> SupportedVersions = ["1.2.0-rc", "1.2.0", "2.0.0-rc", "2.0.0"];
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
@@ -294,6 +294,7 @@ public partial class App : Application
             case "!options":
                 GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
                 LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+                TrickDifficultyOptions trickDifficultyOption = (TrickDifficultyOptions)int.Parse(Client.Options?.GetValueOrDefault("trick_difficulty", "0").ToString());
                 string worldSettings = openWorldOption != 0 ? "Open World" : "Vanilla Progression";
                 string goalString = $"{goal}";
                 if (goal == CompletionGoal.Ripto)
@@ -307,8 +308,8 @@ public partial class App : Application
                     $"\tGemsanity: {gemsanityOption}\r\n" +
                     // TODO: Uncomment and support.
                     // $"\tPowerup Locks: {_powerupLockOption}\r\n" +
-                    // $"\tTrick Difficulty: {_trickDifficultyOption}\r\n" +
-                    $"\tRipto's Arena Requirement: {_requiredOrbs} egg(s)\r\n";
+                    $"\tTrick Difficulty: {trickDifficultyOption}\r\n" +
+                    $"\tRipto's Arena Requirement: {_requiredOrbs} orb(s)\r\n";
                 Log.Logger.Information($"\r\n{command.Command}\r\n{optionsString}");
                 break;
             case "!debuginfo":
@@ -959,6 +960,8 @@ public partial class App : Application
 
             if (_destructiveMode)
             {
+                // TODO: This is buggy.
+                // Probably need to temporarily overwrite changes to this halfword elsewhere too.
                 Memory.Write(Addresses.DestructiveSpyroAddress, (short)0xFF);
             } // Turns off automatically on its own.
 
@@ -1212,7 +1215,8 @@ public partial class App : Application
                         Memory.WriteByte(Addresses.GulpDoubleDamage, 1);
                     }
                 }
-                else if (currentLevel == LevelInGameIDs.WinterTundra)
+                // Exiting from WT and loading a save could crash the game with bad timing without the gameStatus check.
+                else if (currentLevel == LevelInGameIDs.WinterTundra && gameStatus != GameStatus.GameLoadMaybe)
                 {
                     Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
                     Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
@@ -1552,7 +1556,7 @@ public partial class App : Application
             { "Swim", Addresses.SwimUnlock },
             { "Climb", Addresses.ClimbUnlock },
             { "Headbash", Addresses.HeadbashUnlock },
-            { "Wall by Aquaria Towers", Addresses.WallToAquariaUnlock },  // Name changed in 1.2.0.
+            { "Wall by Aquaria Towers", Addresses.WallToAquariaUnlock },  // Name changed in 2.0.0.
             { "Zephyr Portal", Addresses.ZephyrPortalUnlock },
             { "Shady Oasis Portal", Addresses.ShadyPortalUnlock },
             { "Icy Speedway Portal", Addresses.IcyPortalUnlock },
