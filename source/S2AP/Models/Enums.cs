@@ -1,4 +1,6 @@
-﻿namespace S2AP.Models
+﻿using System.Collections.Generic;
+
+namespace S2AP.Models
 {
     public class Enums
     {
@@ -142,8 +144,77 @@
             RoboticaFarms = 25,
             Metropolis = 26,
             DragonShores = 27,
-            RiptosArena = 28
+            RiptosArena = 28,
+            None = 99
         }
+
+        // Each level has 2 IDs with a lookup array at 0x64940, mapping these values to those above.
+        // These are used for certain lookups, such as portal entrances and exits.
+        public static Dictionary<LevelInGameIDs, byte> LoadedLevelIDs = new Dictionary<LevelInGameIDs, byte>()
+        {
+            { LevelInGameIDs.SummerForest, 0xa },
+            { LevelInGameIDs.Glimmer, 0xb },
+            { LevelInGameIDs.IdolSprings, 0xc },
+            { LevelInGameIDs.Colossus, 0xd },
+            { LevelInGameIDs.Hurricos, 0x15 },
+            { LevelInGameIDs.AquariaTowers, 0x16 },
+            { LevelInGameIDs.SunnyBeach, 0x17 },
+            { LevelInGameIDs.OceanSpeedway, 0x19 },
+            { LevelInGameIDs.CrushsDungeon, 0x1a },
+            { LevelInGameIDs.AutumnPlains, 0x1e },
+            { LevelInGameIDs.SkelosBadlands, 0x1f },
+            { LevelInGameIDs.CrystalGlacier, 0x20 },
+            { LevelInGameIDs.BreezeHarbor, 0x21 },
+            { LevelInGameIDs.Zephyr, 0x22 },
+            { LevelInGameIDs.MetroSpeedway, 0x23 },
+            { LevelInGameIDs.Scorch, 0x29 },
+            { LevelInGameIDs.ShadyOasis, 0x2a },
+            { LevelInGameIDs.MagmaCone, 0x2b },
+            { LevelInGameIDs.FractureHills, 0x2c },
+            { LevelInGameIDs.IcySpeedway, 0x2d },
+            { LevelInGameIDs.GulpsOverlook, 0x2e },
+            { LevelInGameIDs.WinterTundra, 0x32 },
+            { LevelInGameIDs.MysticMarsh, 0x33 },
+            { LevelInGameIDs.CloudTemples, 0x34 },
+            { LevelInGameIDs.CanyonSpeedway, 0x37 },
+            { LevelInGameIDs.RoboticaFarms, 0x3d },
+            { LevelInGameIDs.Metropolis, 0x3e },
+            { LevelInGameIDs.DragonShores, 0x41 },
+            { LevelInGameIDs.RiptosArena, 0x42 },
+        };
+
+        public static Dictionary<LevelInGameIDs, LevelInGameIDs> HomeworldMappings = new Dictionary<LevelInGameIDs, LevelInGameIDs>()
+        {
+            { LevelInGameIDs.SummerForest, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.Glimmer, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.IdolSprings, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.Colossus, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.Hurricos, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.AquariaTowers, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.SunnyBeach, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.OceanSpeedway, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.CrushsDungeon, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.AutumnPlains, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.SkelosBadlands, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.CrystalGlacier, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.BreezeHarbor, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.Zephyr, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.MetroSpeedway, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.Scorch, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.ShadyOasis, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.MagmaCone, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.FractureHills, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.IcySpeedway, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.GulpsOverlook, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.WinterTundra, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.MysticMarsh, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.CloudTemples, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.CanyonSpeedway, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.RoboticaFarms, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.Metropolis, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.DragonShores, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.RiptosArena, LevelInGameIDs.WinterTundra },
+        };
 
         public enum SpyroStates : byte
         {

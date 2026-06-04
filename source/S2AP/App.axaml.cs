@@ -66,6 +66,8 @@ public partial class App : Application
     // Avoid marking the playthrough complete or opening the Ripto door before this value is populated.
     private static int _requiredOrbs = 65;
     private static bool _handleGemsanity = false;
+    private static LevelInGameIDs _lastLevel {  get; set; }
+    private static double _timeInHomeworld { get; set; }
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -953,6 +955,7 @@ public partial class App : Application
 
             CheckGoalCondition();
             HandleSparxAbilities();
+            HandleEntranceRandomizer();
             byte lifeCount = Memory.ReadByte(Addresses.PlayerLives);
             AbilityOptions doubleJumpOption = (AbilityOptions)int.Parse(Client.Options?.GetValueOrDefault("double_jump_ability", "0").ToString());
             int hasDoubleJumpItem = (byte)(Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Double Jump Ability").Count() ?? 0);
@@ -1413,6 +1416,7 @@ public partial class App : Application
                 Memory.WriteByte(Addresses.WinterGuidebookUnlock, 1);
             }
         }
+        // TODO: Support entrance randomizer.
         LevelLockOptions levelLockOptions = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
         if (levelLockOptions == LevelLockOptions.Keys)
         {
@@ -1908,6 +1912,126 @@ public partial class App : Application
     }
 
     /**
+     * Handles portal shuffling.
+     */
+    private static void HandleEntranceRandomizer()
+    {
+        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
+        {
+            return;
+        }
+        // Mapping a level to its new portal.
+        Dictionary<LevelInGameIDs, LevelInGameIDs> testMapping = new Dictionary<LevelInGameIDs, LevelInGameIDs>()
+        {
+            { LevelInGameIDs.SummerForest, LevelInGameIDs.SummerForest },
+            { LevelInGameIDs.Glimmer, LevelInGameIDs.Glimmer },
+            { LevelInGameIDs.IdolSprings, LevelInGameIDs.FractureHills },
+            { LevelInGameIDs.Colossus, LevelInGameIDs.MetroSpeedway },
+            { LevelInGameIDs.SunnyBeach, LevelInGameIDs.MysticMarsh },
+            { LevelInGameIDs.Hurricos, LevelInGameIDs.OceanSpeedway },
+            { LevelInGameIDs.AquariaTowers, LevelInGameIDs.ShadyOasis },
+            { LevelInGameIDs.OceanSpeedway, LevelInGameIDs.IcySpeedway },
+            { LevelInGameIDs.CrushsDungeon, LevelInGameIDs.CrushsDungeon },
+            { LevelInGameIDs.AutumnPlains, LevelInGameIDs.AutumnPlains },
+            { LevelInGameIDs.CrystalGlacier, LevelInGameIDs.BreezeHarbor },
+            { LevelInGameIDs.SkelosBadlands, LevelInGameIDs.MagmaCone },
+            { LevelInGameIDs.Zephyr, LevelInGameIDs.RoboticaFarms },
+            { LevelInGameIDs.BreezeHarbor, LevelInGameIDs.Zephyr },
+            { LevelInGameIDs.MetroSpeedway, LevelInGameIDs.CloudTemples },
+            { LevelInGameIDs.Scorch, LevelInGameIDs.IdolSprings },
+            { LevelInGameIDs.FractureHills, LevelInGameIDs.AquariaTowers },
+            { LevelInGameIDs.MagmaCone, LevelInGameIDs.Colossus },
+            { LevelInGameIDs.ShadyOasis, LevelInGameIDs.SunnyBeach },
+            { LevelInGameIDs.IcySpeedway, LevelInGameIDs.SkelosBadlands },
+            { LevelInGameIDs.GulpsOverlook, LevelInGameIDs.GulpsOverlook },
+            { LevelInGameIDs.WinterTundra, LevelInGameIDs.WinterTundra },
+            { LevelInGameIDs.MysticMarsh, LevelInGameIDs.Scorch },
+            { LevelInGameIDs.CloudTemples, LevelInGameIDs.Hurricos },
+            { LevelInGameIDs.CanyonSpeedway, LevelInGameIDs.Metropolis },
+            { LevelInGameIDs.Metropolis, LevelInGameIDs.CanyonSpeedway },
+            { LevelInGameIDs.RoboticaFarms, LevelInGameIDs.CrystalGlacier },
+            { LevelInGameIDs.DragonShores, LevelInGameIDs.DragonShores },
+            { LevelInGameIDs.RiptosArena, LevelInGameIDs.RiptosArena },
+        };
+        Dictionary<LevelInGameIDs, LevelInGameIDs> testReverseMapping = testMapping.ToDictionary(x => x.Value, x => x.Key);
+        foreach (LevelInGameIDs level in testMapping.Keys)
+        {
+            LevelInGameIDs portal = testMapping[level];
+            byte homeworldByte = LoadedLevelIDs[HomeworldMappings[portal]];
+            Memory.WriteByte(Addresses.HomeworldLookupArray + (byte)level, homeworldByte);
+        }
+
+        // Handle leaving level.
+        GameStatus gameStatus = (GameStatus)Memory.ReadByte(Addresses.GameStatus);
+        LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
+        byte sourceLevel = Memory.ReadByte(Addresses.SourceLevel);
+        if (testMapping.ContainsKey(currentLevel) && currentLevel != LevelInGameIDs.SummerForest && currentLevel != LevelInGameIDs.AutumnPlains && currentLevel != LevelInGameIDs.WinterTundra)
+        {
+            _lastLevel = currentLevel;
+            if (gameStatus != GameStatus.Cutscene && gameStatus != GameStatus.LoadingWorld)
+            {
+                _timeInHomeworld = 0;
+            }
+        }
+        else if (testMapping.ContainsKey(currentLevel) && gameStatus != GameStatus.Cutscene && gameStatus != GameStatus.LoadingWorld)
+        {
+            _timeInHomeworld += 0.25;
+        }
+        else
+        {
+            _timeInHomeworld = 0;
+        }
+
+        if (_timeInHomeworld == 0)
+        {
+            // Handles game over redirects.
+            int lives = Memory.ReadInt(Addresses.PlayerLives);
+            if (testMapping.ContainsKey(_lastLevel) && sourceLevel != (byte)LevelInGameIDs.SummerForest && sourceLevel != (byte)LevelInGameIDs.AutumnPlains && sourceLevel != (byte)LevelInGameIDs.WinterTundra && (gameStatus == GameStatus.LoadingWorld || lives < 0))
+            {
+                Memory.WriteByte(Addresses.SourceLevel, (byte)testMapping[_lastLevel]);
+            }
+        }
+
+        // Handle entering level.
+        if (_timeInHomeworld > 0.25)
+        {
+            if (currentLevel == LevelInGameIDs.SummerForest)
+            {
+                uint portalDataPointer = Memory.ReadUInt(Addresses.PortalDataPointer) - 0x80000000;
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 1, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.IdolSprings]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 2, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Colossus]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 3, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Hurricos]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 4, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.AquariaTowers]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 5, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.SunnyBeach]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 6, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.OceanSpeedway]]);
+            }
+            else if (currentLevel == LevelInGameIDs.AutumnPlains)
+            {
+                uint portalDataPointer = Memory.ReadUInt(Addresses.PortalDataPointer) - 0x80000000;
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 0, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.SkelosBadlands]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 1, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.CrystalGlacier]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 2, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.BreezeHarbor]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 3, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Zephyr]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 4, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.MetroSpeedway]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 5, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Scorch]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 6, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.ShadyOasis]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 7, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.MagmaCone]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 8, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.FractureHills]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 9, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.IcySpeedway]]);
+            }
+            else if (currentLevel == LevelInGameIDs.WinterTundra)
+            {
+                uint portalDataPointer = Memory.ReadUInt(Addresses.PortalDataPointer) - 0x80000000;
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 0, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.MysticMarsh]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 1, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.CloudTemples]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 2, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.CanyonSpeedway]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 3, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.RoboticaFarms]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 4, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Metropolis]]);
+            }
+        }
+    }
+
+    /**
      * Turns off big head mode and also flat Spyro mode.
      */
     private static async void DeactivateBigHeadMode()
@@ -2277,6 +2401,8 @@ public partial class App : Application
         _useQuietHints = true;
         _handleGemsanity = false;
         _unlockedLevels = 0;
+        _lastLevel = LevelInGameIDs.None;
+        _timeInHomeworld = 0.0;
         _requiredOrbs = 65;
         _lazySparxEnd = 0;
 

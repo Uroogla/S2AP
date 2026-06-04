@@ -195,6 +195,17 @@ namespace S2AP
         public const uint MetropolisNameAddress = 0x00010588;
         public const uint ShoresNameAddress = 0x00010578;
 
+        public static readonly Dictionary<LevelInGameIDs, uint> levelNamePointers = new Dictionary<LevelInGameIDs, uint>()
+        {
+            { LevelInGameIDs.IdolSprings, IdolNameAddress },
+            { LevelInGameIDs.Colossus, ColossusNameAddress },
+            { LevelInGameIDs.Hurricos, HurricosNameAddress },
+            { LevelInGameIDs.AquariaTowers, AquariaNameAddress },
+            { LevelInGameIDs.SunnyBeach, SunnyNameAddress },
+            { LevelInGameIDs.OceanSpeedway, OceanNameAddress },
+            // TODO: Finish this lookup.
+        };
+
         public const uint ColossusSpyroHockeyScore = 0x00198ec5;
         public const uint ColossusOpponentHockeyScore = 0x00198cc9;
         public const uint IdolFishThrowUp = 0x00082010;
@@ -307,6 +318,10 @@ namespace S2AP
         public const uint FullMusicArray = 0x64de4;
         public const uint CurrentMusicData = 0x68320;
         public const uint CurrentMusicStatus = 0x682f4;
+
+        public const uint HomeworldLookupArray = 0x64b84;
+        public const uint SourceLevel = 0x66fd0;
+        public const uint PortalDataPointer = 0x66f00;
 
         // ROM patching
         public const uint RomDialogueOrbCount = 0x3ec0c;
