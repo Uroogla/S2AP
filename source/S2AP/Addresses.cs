@@ -172,12 +172,16 @@ namespace S2AP
         public const uint SunnyPortalAddress = 0x00175718;
         public const uint OceanPortalAddress = 0x00179A20;
 
+        public const uint SummerNameAddress = 0x000106e0;
+        public const uint GlimmerNameAddress = 0x00066ea0;
         public const uint IdolNameAddress = 0x000106d0;
         public const uint ColossusNameAddress = 0x000106c4;
         public const uint HurricosNameAddress = 0x000106b8;
         public const uint AquariaNameAddress = 0x000106a8;
         public const uint SunnyNameAddress = 0x0001069c;
         public const uint OceanNameAddress = 0x0001068c;
+        public const uint CrushNameAddress = 0x0001067c;
+        public const uint AutumnNameAddress = 0x0001066c;
         public const uint SkelosNameAddress = 0x0001065c;
         public const uint CrystalNameAddress = 0x0001064c;
         public const uint BreezeNameAddress = 0x0001063c;
@@ -188,22 +192,47 @@ namespace S2AP
         public const uint MagmaNameAddress = 0x00010614;
         public const uint FractureNameAddress = 0x00010604;
         public const uint IcyNameAddress = 0x000105f4;
+        public const uint GulpNameAddress = 0x000105e4;
+        public const uint WinterNameAddress = 0x000105d4;
         public const uint MysticNameAddress = 0x000105c4;
         public const uint CloudNameAddress = 0x000105b4;
         public const uint CanyonNameAddress = 0x000105a4;
         public const uint RoboticaNameAddress = 0x00010594;
         public const uint MetropolisNameAddress = 0x00010588;
         public const uint ShoresNameAddress = 0x00010578;
+        public const uint RiptoNameAddress = 0x00010568;
 
         public static readonly Dictionary<LevelInGameIDs, uint> levelNamePointers = new Dictionary<LevelInGameIDs, uint>()
         {
+            { LevelInGameIDs.SummerForest, SummerNameAddress },
+            { LevelInGameIDs.Glimmer, GlimmerNameAddress },
             { LevelInGameIDs.IdolSprings, IdolNameAddress },
             { LevelInGameIDs.Colossus, ColossusNameAddress },
             { LevelInGameIDs.Hurricos, HurricosNameAddress },
             { LevelInGameIDs.AquariaTowers, AquariaNameAddress },
             { LevelInGameIDs.SunnyBeach, SunnyNameAddress },
             { LevelInGameIDs.OceanSpeedway, OceanNameAddress },
-            // TODO: Finish this lookup.
+            { LevelInGameIDs.CrushsDungeon, CrushNameAddress },
+            { LevelInGameIDs.AutumnPlains, AutumnNameAddress },
+            { LevelInGameIDs.SkelosBadlands, SkelosNameAddress },
+            { LevelInGameIDs.CrystalGlacier, CrystalNameAddress },
+            { LevelInGameIDs.BreezeHarbor, BreezeNameAddress },
+            { LevelInGameIDs.Zephyr, ZephyrNameAddress },
+            { LevelInGameIDs.MetroSpeedway, MetroNameAddress },
+            { LevelInGameIDs.Scorch, ScorchNameAddress },
+            { LevelInGameIDs.ShadyOasis, ShadyNameAddress },
+            { LevelInGameIDs.MagmaCone, MagmaNameAddress },
+            { LevelInGameIDs.FractureHills, FractureNameAddress },
+            { LevelInGameIDs.IcySpeedway, IcyNameAddress },
+            { LevelInGameIDs.GulpsOverlook, GulpNameAddress },
+            { LevelInGameIDs.WinterTundra, WinterNameAddress },
+            { LevelInGameIDs.MysticMarsh, MysticNameAddress },
+            { LevelInGameIDs.CloudTemples, CloudNameAddress },
+            { LevelInGameIDs.CanyonSpeedway, CanyonNameAddress },
+            { LevelInGameIDs.RoboticaFarms, RoboticaNameAddress },
+            { LevelInGameIDs.Metropolis, MetropolisNameAddress },
+            { LevelInGameIDs.DragonShores, ShoresNameAddress },
+            { LevelInGameIDs.RiptosArena, RiptoNameAddress },
         };
 
         public const uint ColossusSpyroHockeyScore = 0x00198ec5;
@@ -322,6 +351,15 @@ namespace S2AP
         public const uint HomeworldLookupArray = 0x64b84;
         public const uint SourceLevel = 0x66fd0;
         public const uint PortalDataPointer = 0x66f00;
+        public const uint SummerLevelNamesRedirect = 0x7f8c8;
+        public const uint SummerLevelNameLineOne = 0x765f0;
+        public const uint SummerLevelNameLineTwo = 0x765f8;
+        public const uint AutumnLevelNamesRedirect = 0x7f040;
+        public const uint AutumnLevelNameLineOne = 0x766f4;
+        public const uint AutumnLevelNameLineTwo = 0x766fc;
+        public const uint WinterLevelNamesRedirect = 0x7db30;
+        public const uint WinterLevelNameLineOne = 0x75a20;
+        public const uint WinterLevelNameLineTwo = 0x75a28;
 
         // ROM patching
         public const uint RomDialogueOrbCount = 0x3ec0c;

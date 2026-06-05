@@ -1289,11 +1289,11 @@ public partial class App : Application
                         bool isOceanUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
                         bool[] summerUnlocks = [
                             isIdolUnlocked,
-                        isColossusUnlocked,
-                        isHurricosUnlocked,
-                        isAquariaUnlocked,
-                        isSunnyUnlocked,
-                        isOceanUnlocked
+                            isColossusUnlocked,
+                            isHurricosUnlocked,
+                            isAquariaUnlocked,
+                            isSunnyUnlocked,
+                            isOceanUnlocked
                         ];
                         // Glimmer is always unlocked.
                         uint portalAddress = Addresses.SummerPortalBlock + 8;
@@ -1324,15 +1324,15 @@ public partial class App : Application
                         bool isIcyUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
                         bool[] autumnUnlocks = [
                             isSkelosUnlocked,
-                        isCrystalUnlocked,
-                        isBreezeUnlocked,
-                        isZephyrUnlocked,
-                        isMetroUnlocked,
-                        isScorchUnlocked,
-                        isShadyUnlocked,
-                        isMagmaUnlocked,
-                        isFractureUnlocked,
-                        isIcyUnlocked
+                            isCrystalUnlocked,
+                            isBreezeUnlocked,
+                            isZephyrUnlocked,
+                            isMetroUnlocked,
+                            isScorchUnlocked,
+                            isShadyUnlocked,
+                            isMagmaUnlocked,
+                            isFractureUnlocked,
+                            isIcyUnlocked
                         ];
                         uint portalAddress = Addresses.AutumnPortalBlock;
                         foreach (bool isUnlocked in autumnUnlocks)
@@ -1359,11 +1359,11 @@ public partial class App : Application
                         // This order does not match the index order, for whatever reason.
                         bool[] winterUnlocks = [
                             isMysticUnlocked,
-                        isCloudUnlocked,
-                        isRoboticaUnlocked,
-                        isMetropolisUnlocked,
-                        isCanyonUnlocked,
-                        isDragonShoresUnlocked
+                            isCloudUnlocked,
+                            isRoboticaUnlocked,
+                            isMetropolisUnlocked,
+                            isCanyonUnlocked,
+                            isDragonShoresUnlocked
                         ];
                         uint portalAddress = Addresses.WinterPortalBlock;
                         foreach (bool isUnlocked in winterUnlocks)
@@ -1418,7 +1418,8 @@ public partial class App : Application
         }
         // TODO: Support entrance randomizer.
         LevelLockOptions levelLockOptions = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
-        if (levelLockOptions == LevelLockOptions.Keys)
+        int entranceRando = 1; // TODO: REMOVE
+        if (levelLockOptions == LevelLockOptions.Keys && entranceRando == 0)
         {
             Dictionary<string, uint[]> levelNames = new Dictionary<string, uint[]>()
             {
@@ -1920,6 +1921,7 @@ public partial class App : Application
         {
             return;
         }
+        // TODO: Replace with slot data.
         // Mapping a level to its new portal.
         Dictionary<LevelInGameIDs, LevelInGameIDs> testMapping = new Dictionary<LevelInGameIDs, LevelInGameIDs>()
         {
@@ -1933,23 +1935,23 @@ public partial class App : Application
             { LevelInGameIDs.OceanSpeedway, LevelInGameIDs.IcySpeedway },
             { LevelInGameIDs.CrushsDungeon, LevelInGameIDs.CrushsDungeon },
             { LevelInGameIDs.AutumnPlains, LevelInGameIDs.AutumnPlains },
-            { LevelInGameIDs.CrystalGlacier, LevelInGameIDs.BreezeHarbor },
             { LevelInGameIDs.SkelosBadlands, LevelInGameIDs.MagmaCone },
-            { LevelInGameIDs.Zephyr, LevelInGameIDs.RoboticaFarms },
+            { LevelInGameIDs.CrystalGlacier, LevelInGameIDs.BreezeHarbor },
             { LevelInGameIDs.BreezeHarbor, LevelInGameIDs.Zephyr },
+            { LevelInGameIDs.Zephyr, LevelInGameIDs.RoboticaFarms },
             { LevelInGameIDs.MetroSpeedway, LevelInGameIDs.CloudTemples },
             { LevelInGameIDs.Scorch, LevelInGameIDs.IdolSprings },
-            { LevelInGameIDs.FractureHills, LevelInGameIDs.AquariaTowers },
-            { LevelInGameIDs.MagmaCone, LevelInGameIDs.Colossus },
             { LevelInGameIDs.ShadyOasis, LevelInGameIDs.SunnyBeach },
+            { LevelInGameIDs.MagmaCone, LevelInGameIDs.Colossus },
+            { LevelInGameIDs.FractureHills, LevelInGameIDs.AquariaTowers },
             { LevelInGameIDs.IcySpeedway, LevelInGameIDs.SkelosBadlands },
             { LevelInGameIDs.GulpsOverlook, LevelInGameIDs.GulpsOverlook },
             { LevelInGameIDs.WinterTundra, LevelInGameIDs.WinterTundra },
             { LevelInGameIDs.MysticMarsh, LevelInGameIDs.Scorch },
             { LevelInGameIDs.CloudTemples, LevelInGameIDs.Hurricos },
             { LevelInGameIDs.CanyonSpeedway, LevelInGameIDs.Metropolis },
-            { LevelInGameIDs.Metropolis, LevelInGameIDs.CanyonSpeedway },
             { LevelInGameIDs.RoboticaFarms, LevelInGameIDs.CrystalGlacier },
+            { LevelInGameIDs.Metropolis, LevelInGameIDs.CanyonSpeedway },
             { LevelInGameIDs.DragonShores, LevelInGameIDs.DragonShores },
             { LevelInGameIDs.RiptosArena, LevelInGameIDs.RiptosArena },
         };
@@ -2024,9 +2026,132 @@ public partial class App : Application
                 uint portalDataPointer = Memory.ReadUInt(Addresses.PortalDataPointer) - 0x80000000;
                 Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 0, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.MysticMarsh]]);
                 Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 1, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.CloudTemples]]);
-                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 2, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.CanyonSpeedway]]);
-                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 3, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.RoboticaFarms]]);
-                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 4, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Metropolis]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 2, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.RoboticaFarms]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 3, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.Metropolis]]);
+                Memory.WriteByte(portalDataPointer + 0x42 + 0x44 * 4, LoadedLevelIDs[testReverseMapping[LevelInGameIDs.CanyonSpeedway]]);
+            }
+        }
+
+        // Handle portal text
+        List<bool> unlockedLevels = new List<bool>();
+        string[] levelNames = [
+            "ALWAYS ON",
+            "ALWAYS ON",
+            "Idol Springs",
+            "Colossus",
+            "Hurricos",
+            "Aquaria Towers",
+            "Sunny Beach",
+            "Ocean Speedway",
+            "ALWAYS ON",
+            "ALWAYS ON",
+            "Skelos Badlands",
+            "Crystal Glacier",
+            "Breeze Harbor",
+            "Zephyr",
+            "Metro Speedway",
+            "Scorch",
+            "Shady Oasis",
+            "Magma Cone",
+            "Fracture Hills",
+            "Icy Speedway",
+            "ALWAYS ON",
+            "ALWAYS ON",
+            "Mystic Marsh",
+            "Cloud Temples",
+            "Canyon Speedway",
+            "Robotica Farms",
+            "Metropolis",
+            "Dragon Shores",
+            "ALWAYS ON"
+        ];
+        LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
+        foreach (string levelName in levelNames)
+        {
+            if (levelLockOption != LevelLockOptions.Keys || levelName == "ALWAYS ON" || (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ($"{levelName} Unlock")).Count() ?? 0) > 0) {
+                unlockedLevels.Add(true);
+            }
+            else
+            {
+                unlockedLevels.Add(false);
+            }
+        }
+        if (currentLevel == LevelInGameIDs.SummerForest)
+        {
+            uint summerLevelNameLineOne = Memory.ReadUInt(Addresses.SummerLevelNameLineOne);
+            uint summerLevelNameLineTwo = Memory.ReadUInt(Addresses.SummerLevelNameLineTwo);
+            if (summerLevelNameLineOne == 0x3c018006 && summerLevelNameLineTwo == 0x8c2549b4 || summerLevelNameLineOne == 0x3c018008 && summerLevelNameLineTwo == 0x8c25f8d8)
+            {
+                WriteStringToMemory(Addresses.SummerLevelNamesRedirect, Addresses.SummerLevelNamesRedirect + 8, "LOCKED", false);
+                uint portalOffset = 16;
+                int unlockedLevelsIndex = 0;
+                foreach (LevelInGameIDs portalID in testMapping.Keys)
+                {
+                    if (unlockedLevels[unlockedLevelsIndex])
+                    {
+                        Memory.Write(Addresses.SummerLevelNamesRedirect + portalOffset, 0x80000000 + Addresses.levelNamePointers[testReverseMapping[portalID]]);
+                    }
+                    else
+                    {
+                        Memory.Write(Addresses.SummerLevelNamesRedirect + portalOffset, 0x80000000 + Addresses.SummerLevelNamesRedirect);
+                    }
+                    portalOffset += 4;
+                    unlockedLevelsIndex++;
+                }
+                Memory.Write(Addresses.SummerLevelNameLineOne, 0x3c018008);
+                Memory.Write(Addresses.SummerLevelNameLineTwo, 0x8c25f8d8);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.AutumnPlains)
+        {
+            uint autumnLevelNameLineOne = Memory.ReadUInt(Addresses.AutumnLevelNameLineOne);
+            uint autumnLevelNameLineTwo = Memory.ReadUInt(Addresses.AutumnLevelNameLineTwo);
+            if (autumnLevelNameLineOne == 0x3c018006 && autumnLevelNameLineTwo == 0x8c2549b4 || autumnLevelNameLineOne == 0x3c018008 && autumnLevelNameLineTwo == 0x8c25f050)
+            {
+                WriteStringToMemory(Addresses.AutumnLevelNamesRedirect, Addresses.AutumnLevelNamesRedirect + 8, "LOCKED", false);
+                uint portalOffset = 16;
+                int unlockedLevelsIndex = 0;
+                foreach (LevelInGameIDs portalID in testMapping.Keys)
+                {
+                    if (unlockedLevels[unlockedLevelsIndex])
+                    {
+                        Memory.Write(Addresses.AutumnLevelNamesRedirect + portalOffset, 0x80000000 + Addresses.levelNamePointers[testReverseMapping[portalID]]);
+                    }
+                    else
+                    {
+                        Memory.Write(Addresses.AutumnLevelNamesRedirect + portalOffset, 0x80000000 + Addresses.AutumnLevelNamesRedirect);
+                    }
+                    portalOffset += 4;
+                    unlockedLevelsIndex++;
+                }
+                Memory.Write(Addresses.AutumnLevelNameLineOne, 0x3c018008);
+                Memory.Write(Addresses.AutumnLevelNameLineTwo, 0x8c25f050);
+            }
+        }
+        else if (currentLevel == LevelInGameIDs.WinterTundra)
+        {
+            uint winterLevelNameLineOne = Memory.ReadUInt(Addresses.WinterLevelNameLineOne);
+            uint winterLevelNameLineTwo = Memory.ReadUInt(Addresses.WinterLevelNameLineTwo);
+            if (winterLevelNameLineOne == 0x3c018006 && winterLevelNameLineTwo == 0x8c2549b4 || winterLevelNameLineOne == 0x3c018008 && winterLevelNameLineTwo == 0x8c25db40)
+            {
+                WriteStringToMemory(Addresses.WinterLevelNamesRedirect, Addresses.WinterLevelNamesRedirect + 8, "LOCKED", false);
+                uint portalOffset = 16;
+                int unlockedLevelsIndex = 0;
+                foreach (LevelInGameIDs portalID in testMapping.Keys)
+                {
+                    if (unlockedLevels[unlockedLevelsIndex])
+                    {
+                        Memory.Write(Addresses.WinterLevelNamesRedirect + portalOffset, 0x80000000 + Addresses.levelNamePointers[testReverseMapping[portalID]]);
+                    }
+                    else
+                    {
+                        Memory.Write(Addresses.WinterLevelNamesRedirect + portalOffset, 0x80000000 + Addresses.WinterLevelNamesRedirect);
+                    }
+                    portalOffset += 4;
+                    unlockedLevelsIndex++;
+                }
+                Memory.Write(Addresses.WinterLevelNameLineOne, 0x3c018008);
+                Memory.Write(Addresses.WinterLevelNameLineTwo, 0x8c25db40);
             }
         }
     }
