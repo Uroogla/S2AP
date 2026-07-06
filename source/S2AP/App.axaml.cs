@@ -1275,6 +1275,11 @@ public partial class App : Application
                 {
                     Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
                     Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
+                    int currentOrbs = Memory.ReadInt(Addresses.TotalOrbAddress);
+                    if (currentOrbs < _requiredOrbs)
+                    {
+                        Memory.WriteByte(Addresses.EloraOpenRipto, 0);
+                    }
                 }
                 LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
                 if (levelLockOption == LevelLockOptions.Keys)
@@ -1355,7 +1360,9 @@ public partial class App : Application
                         bool isCanyonUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
                         bool isRoboticaUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
                         bool isMetropolisUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Metropolis Unlock")).Count() ?? 0) > 0;
-                        bool isDragonShoresUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                        bool isDragonShoresUnlocked = 
+                            (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Dragon Shores Unlock")).Count() ?? 0) > 0 ||
+                            (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Ripto Defeated")).Count() ?? 0) > 0;
                         // This order does not match the index order, for whatever reason.
                         bool[] winterUnlocks = [
                             isMysticUnlocked,
@@ -1449,13 +1456,30 @@ public partial class App : Application
             foreach (string levelName in levelNames.Keys)
             {
                 uint[] nameAddresses = levelNames[levelName];
-                if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0)
+                if (levelName == "Dragon Shores")
                 {
-                    WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                    if (
+                        (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0 &&
+                        (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Ripto Defeated").Count() ?? 0) == 0
+                    )
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                    }
+                    else
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                    }
                 }
                 else
                 {
-                    WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                    if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0)
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                    }
+                    else
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                    }
                 }
             }
         }
@@ -1605,6 +1629,7 @@ public partial class App : Application
         {
             _loadGameTimer.Enabled = false;
         }
+        Client.ReceiveReady();
     }
 
     /**

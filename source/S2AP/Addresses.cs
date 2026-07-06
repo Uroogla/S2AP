@@ -25,6 +25,7 @@ namespace S2AP
 
         public const uint RiptoDoorOrbRequirementAddress = 0x0007695c;
         public const uint RiptoDoorOrbDisplayAddress = 0x000769e0;
+        public const uint EloraOpenRipto = 0x15df52;
 
         public const uint TotalGemAddress = 0x000670cc; // 0x00067660 is the HUD display; may need to be edited if this value is modified.
         public const uint LevelGemsAddress = 0x0006ac04; // One entire word per level, including boss levels.
