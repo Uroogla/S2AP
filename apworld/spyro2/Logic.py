@@ -461,7 +461,8 @@ class Logic(ABC):
         # Or a proxy, at a later date.
         return state.has("Orb", self.world.player, 6) or \
             self.can_pass_autumn_door(state, False) or \
-            hasattr(self, "logic_ap_zephyr_double_jump") and self.logic_ap_zephyr_double_jump and self.can_double_jump(state)
+            hasattr(self, "logic_ap_zephyr_double_jump") and self.logic_ap_zephyr_double_jump and self.can_double_jump(state) or \
+            hasattr(self, "logic_ap_wall_hover") and self.logic_ap_wall_hover
 
     def can_access_autumn_wall(self, state):
         # Or a proxy, at a later date.
