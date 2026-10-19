@@ -40,7 +40,8 @@ class Logic(ABC):
 
     def get_gemsanity_gems(self, level, state):
         count = 0
-        count += state.count(f"{level} Red Gem", self.world.player)
+        # Red gems are either non-progression or converted to higher values.
+        # count += state.count(f"{level} Red Gem", self.world.player)
         count += state.count(f"{level} Green Gem", self.world.player) * 2
         count += state.count(f"{level} Blue Gem", self.world.player) * 5
         count += state.count(f"{level} Gold Gem", self.world.player) * 10
@@ -484,7 +485,7 @@ class Logic(ABC):
                 self.world.options.open_world_warp_unlocks and
                 not from_other_homeworld and
                 (
-                    self.can_access_summer_second_half(state, True) or
+                    self.world.options.open_professor_door and self.can_access_summer_second_half(state, True) or
                     self.can_access_winter_second_half(state, True)
                 )
             )
@@ -504,7 +505,7 @@ class Logic(ABC):
                 self.world.options.open_world_warp_unlocks and
                 not from_other_homeworld and
                 (
-                    self.can_access_summer_second_half(state, True) or
+                    self.world.options.open_professor_door and self.can_access_summer_second_half(state, True) or
                     self.can_access_winter_second_half(state, True)
                 )
             )

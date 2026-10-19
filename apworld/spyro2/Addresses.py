@@ -20,6 +20,7 @@ class RAM:
 
     RiptoDoorOrbRequirementAddress = 0x0007695c
     RiptoDoorOrbDisplayAddress = 0x000769e0
+    EloraOpenRipto = 0x15df52
 
     TotalGemAddress = 0x000670cc # 0x00067660 is the HUD display; may need to be edited if this value is modified.
     LevelGemsAddress = 0x0006ac04 # One entire word per level, including boss levels.
@@ -311,6 +312,8 @@ class RAM:
     AquariaSharkDeathJAL = 0x788e8
     AquariaSharkDeathlink = 0x84788
     AquariaSharkDeathlinkCode = 0x84790
+
+    MenuExitInGlimmerAddress = 0x175d8
 
 class ROM:
     RomDialogueOrbCount = 0x3ec0c

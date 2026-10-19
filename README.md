@@ -10,7 +10,7 @@ Want to help with testing for Mac support? Feel free to reach out!
 - One of the following supported emulators:
   - [Duckstation](https://www.duckstation.org) - Detailed installation instructions for Duckstation can be found at [this link](https://github.com/ArsonAssassin/Archipelago.Core/wiki/How-to-start-playing-a-game-using-this-library). This option has been tested more for Spyro 2 by the community. Linux users will need the **Windows Portable** option.
   - [Bizhawk](https://tasvideos.org/BizHawk/ReleaseHistory) - Tested on versions 2.9.1 and 2.10; with less recent versions of Archipelago, you may need less recent versions.
-- [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) version 0.6.1 or later.
+- [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) version 0.6.6 or later.
 - The [Spyro 2 Archipelago .apworld](https://github.com/Uroogla/S2AP/releases). If you are playing on Duckstation, you also need the Client (within the s2ap .zip file).
 - A legal US Spyro 2: Ripto's Rage ROM.  We cannot help with this step.
 
@@ -52,7 +52,7 @@ Please follow the options below corresponding to your choice of emulator. Linux 
 5. In Duckstation, navigate to Settings > Game Properties > Console and select "Interpreter" under "Execution Mode".
 6. (Recommended) In Duckstation, navigate to Settings > Game Properties > Emulation and set Runahead to "Disabled". Filler items may not apply correctly if this is enabled.
 7. Start a new game (or if continuing an existing seed, load into that save file).
-8. Open S2AP.Desktop.exe, the Spyro 2 client.  You will likely want to do so as an administrator.
+8. Open S2AP.Desktop.exe, the Spyro 2 client.  You may need to do so as an administrator.
 9. In the top left of the Spyro 2 client, click the "burger" menu to open the settings page.
 10. Enter your host, slot, and optionally your password.
 11. Click Connect.
