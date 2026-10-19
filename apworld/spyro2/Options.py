@@ -25,16 +25,12 @@ class MoneybagsOptions:
 
 class GemsanityOptions:
     OFF = 0
-    PARTIAL = 1
+    BUNDLES = 1
     FULL = 2
 
 class GemsanityLocationOptions:
     LOCAL = 0
     GLOBAL = 1
-
-class GemsanityRewardOptions:
-    BUNDLES = 0
-    GEMS = 1
 
 class SparxUpgradeOptions:
     OFF = 0
@@ -136,10 +132,6 @@ class TotalAvailableOrbs(Range):
     range_end = 64
     default = 64
 
-class GuaranteedItemsOption(ItemDict):
-    """Guarantees that the specified items will be in the item pool"""
-    display_name = "Guaranteed Items"
-
 class EnableOpenWorld(Toggle):
     """If on, Crush and Gulp do not require talismans.
     Removes talisman items from the pool.
@@ -211,31 +203,31 @@ class ProfessorDoor(Toggle):
     display_name = "Open Professor's Door"
 
 class Enable25PctGemChecksOption(Toggle):
-    """Adds checks for getting 25% of the gems in a level"""
+    """Adds locations for getting 25% of the gems in a level"""
     display_name = "Enable 25% Gem Checks"
 
 class Enable50PctGemChecksOption(Toggle):
-    """Adds checks for getting 50% of the gems in a level"""
+    """Adds locations for getting 50% of the gems in a level"""
     display_name = "Enable 50% Gem Checks"
 
 class Enable75PctGemChecksOption(Toggle):
-    """Adds checks for getting 75% of the gems in a level"""
+    """Adds locations for getting 75% of the gems in a level"""
     display_name = "Enable 75% Gem Checks"
 
 class EnableGemChecksOption(Toggle):
-    """Adds checks for getting all gems in a level"""
+    """Adds locations for getting all gems in a level"""
     display_name = "Enable 100% Gem Checks"
 
 class EnableTotalGemChecksOption(Toggle):
-    """Adds checks for every 500 gems you collect total.
+    """Adds locations for every 500 gems you collect total.
     Gems currently paid to Moneybags do not count
     towards your total. Logic assumes you pay Moneybags everywhere
-    you can so you cannot be locked out of checks."""
+    you can so you cannot be locked out of locations."""
     display_name = "Enable Total Gem Count Checks"
 
 class MaxTotalGemCheckOption(Range):
     """The highest number of total gems that can be required
-    for Total Gem Count checks. Has no effect if
+    for Total Gem Count locations. Has no effect if
     Enable Total Gem Count Checks is disabled."""
     display_name = "Max for Total Gem Count Checks"
     range_start = 500
@@ -243,34 +235,50 @@ class MaxTotalGemCheckOption(Range):
     default = 4000
 
 class EnableSkillpointChecksOption(Toggle):
-    """Adds checks for getting skill points"""
+    """Adds locations for getting skill points"""
     display_name = "Enable Skillpoint Checks"
 
 class EnableLifeBottleChecksOption(Toggle):
-    """Adds checks for getting life bottles"""
+    """Adds locations for getting life bottles"""
     display_name = "Enable Life Bottle Checks"
 
 class EnableSpiritParticleChecksOption(Toggle):
-    """Adds checks for getting all spirit particles in a level.
+    """Adds locations for getting all spirit particles in a level.
     Some minigame enemies are counted as spirit particles,
     like Draclets in Crystal Glacier. Some enemies only release
     spirit particles while the camera is on them."""
     display_name = "Enable Spirit Particle Checks"
 
+class GemLocationsOption(Range):
+    """Adds this many individual gems as locations.
+    Gems are chosen at random and are not marked in game.
+    Trackers may help identify which gems are locations.
+    Gemsanity may override your choices to ensure the seed
+    can generate.
+    WARNING: Selecting an option smaller than 25 requires the host to
+         edit allow_full_gemsanity in their yaml file."""
+    display_name = "Gem Locations Added"
+    range_start = 0
+    range_end = 2546
+    default = 0
+
 class EnableGemsanityOption(Choice):
-    """Adds checks for each individual gem.
+    """Adds gem items to the item pool. Touching gems in game will not
+    increase your total, only these items.
+    To ensure enough locations for these items, this may override
+    your settings for Gem Locations Added.
     If Moneybagssanity is off, all Moneybags prices will be set to 0 in game.
     Full requires the host to edit allow_full_gemsanity
         in their yaml file, as it is very disruptive.
     Off: Individual gems are not checks.
-    Partial: Only some number of randomly chosen gems become checks. For every
-        level with loose gems (not speedways), Gem Bundle items giving
-        gems for that level will be added to the pool.
-    Full: All gems are checks."""
+    Bundles: For every level with loose gems (not speedways), Gem Bundle items giving
+        gems for that level will be added to the pool. Adds 10-25% more locations
+        than bundles.
+    Full: (Almost) every gem is an item. All gems are added to the location pool."""
     display_name = "Enable Gemsanity"
     default = GemsanityOptions.OFF
     option_off = GemsanityOptions.OFF
-    option_partial = GemsanityOptions.PARTIAL
+    option_partial = GemsanityOptions.BUNDLES
     option_full = GemsanityOptions.FULL
 
 class GemsanityItemLocations(Choice):
@@ -281,20 +289,6 @@ class GemsanityItemLocations(Choice):
     default = GemsanityLocationOptions.LOCAL
     option_local = GemsanityLocationOptions.LOCAL
     option_global = GemsanityLocationOptions.GLOBAL
-
-class GemsanityRewardType(Choice):
-     """Adds item rewards to the pool to match the applicable gem locations.
-     Gems: If Gemsanity is set to FULL, each gem location in the game will have
-         its individual matching gem added to the item pool. Applies only to
-         full gemsanity. Choosing this slows down generation significantly.
-     Bundles: Adds items that grant a number of gems for an individual level
-         to the item pool.
-         If Gemsanity=FULL, extra gem locations may contain other/filler items.
-         If Gemsanity=PARTIAL, This option is selected automatically"""
-     display_name = "Gemsanity Item Reward Type"
-     default = GemsanityRewardOptions.BUNDLES
-     option_gems = GemsanityRewardOptions.GEMS
-     option_bundles = GemsanityRewardOptions.BUNDLES
  
 class GemsanityGemBundleSize(Choice):
      """Define the amount of gems awarded by each Gem Bundle item.
@@ -634,7 +628,6 @@ class StreamerMusic(Toggle):
 @dataclass
 class Spyro2Option(PerGameCommonOptions):
     goal: GoalOption
-    guaranteed_items: GuaranteedItemsOption
     # TODO: Enable.
     # orb_hunt_requirement: OrbHuntRequirement
     ripto_door_orbs: RiptoDoorOrbs
@@ -656,9 +649,9 @@ class Spyro2Option(PerGameCommonOptions):
     enable_skillpoint_checks: EnableSkillpointChecksOption
     enable_life_bottle_checks: EnableLifeBottleChecksOption
     enable_spirit_particle_checks: EnableSpiritParticleChecksOption
+    gem_locations_added: GemLocationsOption
     enable_gemsanity: EnableGemsanityOption
     gemsanity_item_locations: GemsanityItemLocations
-    gemsanity_reward_type: GemsanityRewardType
     gemsanity_gem_bundle_size: GemsanityGemBundleSize
     moneybags_settings: MoneybagsSettings
     death_link: EnableDeathLink
@@ -709,13 +702,19 @@ spyro_options_groups = [
             EnableGemChecksOption,
             EnableTotalGemChecksOption,
             MaxTotalGemCheckOption,
-            EnableGemsanityOption,
-            GemsanityItemLocations,
-            GemsanityRewardType,
-            GemsanityGemBundleSize,
+            GemLocationsOption,
             EnableSkillpointChecksOption,
             EnableLifeBottleChecksOption,
             EnableSpiritParticleChecksOption
+        ],
+        False
+    ),
+    OptionGroup(
+        "Gemsanity",
+        [
+            EnableGemsanityOption,
+            GemsanityItemLocations,
+            GemsanityGemBundleSize,
         ],
         False
     ),

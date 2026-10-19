@@ -68,7 +68,7 @@ namespace S2AP
             }
             return result;
         }
-        public static List<ILocation> BuildLocationList(bool easyFracture=false, bool includeGemsanity=false, List<int> gemsanityIDs = null)
+        public static List<ILocation> BuildLocationList(List<int> gemsanityIDs, bool easyFracture = false)
         {
             if (gemsanityIDs == null)
             {
@@ -200,7 +200,7 @@ namespace S2AP
                             CheckType = LocationCheckType.Bit,
                             Category = "Gemsanity"
                         };
-                        if (includeGemsanity && (gemsanityIDs.Count == 0 || gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset)))
+                        if (gemsanityIDs.Contains(baseId + levelOffset * level.LevelId + locationOffset))
                         {
                             // Handle locations through UpdateLocationList to avoid crashes when a player connects for the first time with a 100% save file.
                             //locations.Add(gemsLocation);
@@ -361,14 +361,14 @@ namespace S2AP
                     Log.Logger.Verbose($"Adding {remainingGemsanityChecks[level].Values.Count} locations");
                     foreach (Location gemsanityCheck in remainingGemsanityChecks[level].Values)
                     {
-                        await client.AddLocationAsync(gemsanityCheck);
+                        client.LocationManager.AddLocation(gemsanityCheck);
                     }
                 }
                 else
                 {
                     foreach (Location gemsanityCheck in remainingGemsanityChecks[level].Values)
                     {
-                        await client.RemoveLocationAsync(gemsanityCheck);
+                        client.LocationManager.RemoveLocation(gemsanityCheck);
                     }
                 }
             }

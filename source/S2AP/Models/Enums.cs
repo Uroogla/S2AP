@@ -57,9 +57,8 @@
         public enum GemsanityOptions
         {
             Off = 0,
-            Partial = 1,
-            Full = 2,
-            FullGlobal = 3
+            Bundles = 1,
+            Full = 2
         }
 
         public enum ProgressiveSparxHealthOptions

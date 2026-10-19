@@ -130,8 +130,8 @@ def cmd_options(self: "BizHawkClientCommandProcessor"):
     gemsanityOption = ctx.slot_data["options"]["enable_gemsanity"]
     if gemsanityOption == GemsanityOptions.OFF:
         gemsanityOption = "Off"
-    elif gemsanityOption == GemsanityOptions.PARTIAL:
-        gemsanityOption = "Partial"
+    elif gemsanityOption == GemsanityOptions.BUNDLES:
+        gemsanityOption = "Bundles"
     else:
         gemsanityOption = "Full"
     levelLockOption = ctx.slot_data["options"]["level_lock_options"]
@@ -246,7 +246,7 @@ class Spyro2Client(BizHawkClient):
 
     apworld_manifest = orjson.loads(pkgutil.get_data(__name__, "archipelago.json").decode("utf-8"))
     client_version = apworld_manifest["world_version"]
-    supported_versions = ["2.0.1", "2.1.0"]
+    supported_versions = ["2.2.0"]
 
     boolsyncprogress = False
     syncWaitConfirm = False
@@ -258,6 +258,8 @@ class Spyro2Client(BizHawkClient):
     resetClient = False
     gotDatastorage = False
     initDatastorage = False
+    updatedGemsCycles = 0
+    hasUpdatedGems = False
 
     def __init__(self) -> None:
         super().__init__()
@@ -293,6 +295,9 @@ class Spyro2Client(BizHawkClient):
         self.lazySparxEnd = 0
         self.extendedRange = False
         self.gemFinder = False
+        self.isUpdatingGems = False
+        self.updatedGemsCycles = 0
+        self.hasUpdatedGems = False
 
     def initialize_client(self):
         self.messagequeue = []
@@ -331,6 +336,8 @@ class Spyro2Client(BizHawkClient):
         self.lazySparxEnd = 0
         self.extendedRange = False
         self.gemFinder = False
+        self.updatedGemsCycles = 0
+        self.hasUpdatedGems = False
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         s2_identifier_ram_address: int = 0x9244
@@ -662,6 +669,7 @@ class Spyro2Client(BizHawkClient):
                 "currentMusicData": (RAM.CurrentMusicData, 16, "MainRAM"),
                 "aquariaSharkDeathlinkCode": (RAM.AquariaSharkDeathlinkCode, 4, "MainRAM"),
                 "sharkDeathlinkValue": (RAM.AquariaSharkDeathlink, 4, "MainRAM"),
+                "menuExitInGlimmer": (RAM.MenuExitInGlimmerAddress, 4, "MainRAM"),
             }
 
             readTuples = [Value for Value in readsDict.values()]
@@ -758,6 +766,7 @@ class Spyro2Client(BizHawkClient):
             currentMusicData = readValues["currentMusicData"]
             aquariaSharkDeathlinkCode = readValues["aquariaSharkDeathlinkCode"]
             sharkDeathlinkValue = readValues["sharkDeathlinkValue"]
+            menuExitInGlimmer = readValues["menuExitInGlimmer"]
 
             # Write tables
             itemsWrites = []
@@ -907,10 +916,14 @@ class Spyro2Client(BizHawkClient):
                         self.extraHitPoint = 1
                 self.maxHealth = startingHealth + sparxUpgrades + self.extraHitPoint
 
-                if ctx.slot_data["options"]["enable_gemsanity"]:
+                if ctx.slot_data["options"]["enable_gemsanity"] != GemsanityOptions.OFF:
                     itemsWrites += self.calculateCurrentGems(ctx, gemsanityItems, currentGems, totalGems)
+                    self.updatedGemsCycles += 1
+                    if self.updatedGemsCycles > 5:
+                        self.hasUpdatedGems = True
                 else:
                     self.currentGems = totalGems
+                    self.hasUpdatedGems = True
 
                 cosmeticTimestamp = time.time()
                 if len(self.cosmeticQueue) > 0 and cosmeticTimestamp > self.lastCosmeticUpdate + 5:
@@ -950,7 +963,7 @@ class Spyro2Client(BizHawkClient):
                 await bizhawk.write(ctx.bizhawk_ctx, itemsWrites)
 
             # ======== Locations handling =========
-            if not boolIsFirstBoot:
+            if not boolIsFirstBoot and self.hasUpdatedGems:
                 Locations_Reads = [
                     currentLevel,
                     talismanBitArray,
@@ -966,8 +979,14 @@ class Spyro2Client(BizHawkClient):
                 await self.locations_handling(ctx, Locations_Reads)
 
             if not boolIsFirstBoot and gameStatus not in [GameStatus.Paused, GameStatus.LoadingWorld, GameStatus.Cutscene]:
+                # ======== Menu Code Handling ========
+                menuReads = [menuExitInGlimmer]
+                menuWrites = self.handleMenu(menuReads)
+                if len(menuWrites) > 0:
+                    await bizhawk.write(ctx.bizhawk_ctx, menuWrites)
+
                 # ======== Gemsanity Code Handling ========
-                if ctx.slot_data["options"]["enable_gemsanity"]:
+                if ctx.slot_data["options"]["enable_gemsanity"] != GemsanityOptions.OFF:
                     gemsanity_reads = [localGemIncrement, globalGemIncrement, globalGemRespawnFix, localGemRespawnFix, playBeep, gemPopup]
                     gemsanityWrites = self.handleGemsanity(gemsanity_reads)
                     if len(gemsanityWrites) > 0:
@@ -1044,7 +1063,7 @@ class Spyro2Client(BizHawkClient):
                 # Menuing out of Winter Tundra crashes the game on save file load,
                 # since the level ID doesn't change.
                 if gameStatus != GameStatus.GameLoadMaybe:
-                    eloraDoorReads = [currentLevel, riptoDoorOrbRequirement, riptoDoorOrbDisplay]
+                    eloraDoorReads = [currentLevel, riptoDoorOrbRequirement, riptoDoorOrbDisplay, orbCount]
                     eloraDoorWrites = self.handleEloraDoorChanges(ctx, eloraDoorReads)
                     if len(eloraDoorWrites) > 0:
                         await bizhawk.write(ctx.bizhawk_ctx, eloraDoorWrites)
@@ -1225,7 +1244,7 @@ class Spyro2Client(BizHawkClient):
                 if i + 1 not in level.GemSkipIndices:
                     location_id = base_id + level_offset * level.LevelId + location_offset
                     if current_level == level.LevelId:
-                        if ctx.slot_data["options"]["enable_gemsanity"] and (len(gemsanity_ids) == 0 or location_id in gemsanity_ids):
+                        if location_id in gemsanity_ids:
                             gem_bit = pow(2, i % 8)
                             if collectibles_mask[level.GemMaskAddress + math.floor(i / 8)] & gem_bit != 0 and location_id not in self.locations_list:
                                 gemsToSend.add(location_id)
@@ -1377,6 +1396,15 @@ class Spyro2Client(BizHawkClient):
         if newTotalGems != totalGems:
             gemItems += [(RAM.TotalGemAddress, newTotalGems.to_bytes(4, "little"), "MainRAM")]
         return gemItems
+
+    def handleMenu(self, menu_reads):
+        glimmerExit = menu_reads[0]
+        menu_writes = []
+
+        if glimmerExit == 0x14620005:  # bne v1,v0,0x800175f0
+            menu_writes += [(RAM.MenuExitInGlimmerAddress, (0x08005d7c).to_bytes(4, "little"), "MainRAM")]  # j 0x800175f0
+
+        return menu_writes
 
     def handleGemsanity(self, gemsanity_reads):
         localGemIncrement = gemsanity_reads[0]
@@ -1718,6 +1746,7 @@ class Spyro2Client(BizHawkClient):
         currentLevel = eloraDoorReads[0]
         riptoDoorOrbRequirement = eloraDoorReads[1]
         riptoDoorOrbDisplay = eloraDoorReads[2]
+        currentOrbs = eloraDoorReads[3]
 
         eloraDoorWrites = []
 
@@ -1727,6 +1756,8 @@ class Spyro2Client(BizHawkClient):
                 eloraDoorWrites += [(RAM.RiptoDoorOrbRequirementAddress, requiredOrbs.to_bytes(1, "little"), "MainRAM")]
             if riptoDoorOrbDisplay != requiredOrbs:
                 eloraDoorWrites += [(RAM.RiptoDoorOrbDisplayAddress, requiredOrbs.to_bytes(1, "little"), "MainRAM")]
+            if currentOrbs < requiredOrbs:
+                eloraDoorWrites += [(RAM.EloraOpenRipto, (0).to_bytes(1, "little"), "MainRAM")]
         # TODO: Handle text in Summer Forest and Autumn Plains
         # // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
         # // Note that Elora won't open the door if your count is more than 6.
@@ -1831,10 +1862,16 @@ class Spyro2Client(BizHawkClient):
                 levelName = level[0]
                 levelNameAddress = level[1]
                 levelNameLength = level[2]
-                if f"{levelName} Unlock" in self.unlockedLevels:
-                    writtenName = text_to_bytes(levelName, levelNameLength)
+                if levelName == "Dragon Shores":
+                    if "Dragon Shores Unlock" in self.unlockedLevels or self.riptoDefeated:
+                        writtenName = text_to_bytes("Dragon Shores", levelNameLength)
+                    else:
+                        writtenName = text_to_bytes("LOCKED", levelNameLength)
                 else:
-                    writtenName = text_to_bytes("LOCKED", levelNameLength)
+                    if f"{levelName} Unlock" in self.unlockedLevels:
+                        writtenName = text_to_bytes(levelName, levelNameLength)
+                    else:
+                        writtenName = text_to_bytes("LOCKED", levelNameLength)
                 # TODO: Write only when value doesn't match
                 for x in range(levelNameLength):
                     levelLockWrites += [(levelNameAddress + x, writtenName[x].to_bytes(1, "little"), "MainRAM")]
@@ -1885,7 +1922,7 @@ class Spyro2Client(BizHawkClient):
                     "Robotica Farms Unlock" in self.unlockedLevels,
                     "Metropolis Unlock" in self.unlockedLevels,
                     "Canyon Speedway Unlock" in self.unlockedLevels,
-                    "Dragon Shores Unlock" in self.unlockedLevels,
+                    "Dragon Shores Unlock" in self.unlockedLevels or self.riptoDefeated,
                 ]
                 # TODO: Write only when value doesn't match
                 portalAddress = RAM.WinterPortalBlock
@@ -2013,16 +2050,18 @@ class Spyro2Client(BizHawkClient):
             if self.riptoDefeated:
                 # Counteract the in-game effect that doubles these when Ripto is defeated.
                 newHorizontalRange /= 2
+                newHorizontalRange = int(newHorizontalRange)
                 newVerticalRange /= 2
+                newVerticalRange = int(newVerticalRange)
             if horizontalRange != newHorizontalRange:
                 sparxWrites += [(RAM.SparxHorizontalRange, newHorizontalRange.to_bytes(4, "little"), "MainRAM")]
             if verticalRange != 640:
                 sparxWrites += [(RAM.SparxVerticalRange, newVerticalRange.to_bytes(4, "little"), "MainRAM")]
         else:
             if horizontalRange != 2062:
-                sparxWrites += [(RAM.SparxHorizontalRange, (1).to_bytes(4, "little"), "MainRAM")]
+                sparxWrites += [(RAM.SparxHorizontalRange, (2062).to_bytes(4, "little"), "MainRAM")]
             if verticalRange != 640:
-                sparxWrites += [(RAM.SparxVerticalRange, (1).to_bytes(4, "little"), "MainRAM")]
+                sparxWrites += [(RAM.SparxVerticalRange, (640).to_bytes(4, "little"), "MainRAM")]
 
         if ctx.slot_data["options"]["sparx_gem_finder"] != AbilityOptions.VANILLA:
             if currentLevelGemFinderLine != None:

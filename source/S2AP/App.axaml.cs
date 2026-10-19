@@ -2,7 +2,7 @@
 using Archipelago.Core.AvaloniaGUI.Models;
 using Archipelago.Core.AvaloniaGUI.ViewModels;
 using Archipelago.Core.AvaloniaGUI.Views;
-using Archipelago.Core.GameClients;
+using Archipelago.Core.Helpers;
 using Archipelago.Core.Models;
 using Archipelago.Core.Util;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
@@ -20,15 +20,15 @@ using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
 using System.Security.Principal;
-using System.Threading.Tasks;
-using System.Timers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.IO;
+using System.Threading.Tasks;
+using System.Timers;
 using static S2AP.Models.Enums;
 
 namespace S2AP;
@@ -39,8 +39,9 @@ namespace S2AP;
 public partial class App : Application
 {
     // TODO: Remember to set this in S2AP.Desktop as well.
-    public static string Version = "2.1.0";
-    public static List<string> SupportedVersions = ["2.0.1", "2.1.0"];
+    public static string Version = "2.2.0";
+    public static List<string> SupportedVersions = ["2.2.0"];
+    public static List<string> PartiallySupportedVersions = [];
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
@@ -66,21 +67,10 @@ public partial class App : Application
     // Avoid marking the playthrough complete or opening the Ripto door before this value is populated.
     private static int _requiredOrbs = 65;
     private static bool _handleGemsanity = false;
+    private static bool _gemCountsUpdated = false;
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-    }
-
-    /**
-     * The client relies on having admin permissions to modify Duckstation's memory.
-     * This function would raise an exception on Unix.
-     * @return true if the user is an admin, or false otherwise.
-     */
-    private static bool IsRunningAsAdministrator()
-    {
-        var identity = WindowsIdentity.GetCurrent();
-        var principal = new WindowsPrincipal(identity);
-        return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -133,7 +123,7 @@ public partial class App : Application
      */
     public void Start()
     {
-        Context = new MainWindowViewModel("0.6.1 or later");  // Minimum AP Version
+        Context = new MainWindowViewModel("0.6.6 or later");  // Minimum AP Version
         Context.ClientVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
         Context.ConnectClicked += Context_ConnectClicked;
         Context.CommandReceived += (e, a) =>
@@ -175,11 +165,6 @@ public partial class App : Application
             "If you put your vanilla game .bin and .cue files, named spyro2.bin and spyro2.cue,\r\n" +
             "in the same folder as this S2AP.Desktop client executable,\r\n" +
             "you can generate it using the !patch command.\r\n");
-        if (!IsRunningAsAdministrator())
-        {
-            Log.Logger.Warning("You do not appear to be running this client as an administrator.\r\n" +
-                "This may result in errors or crashes when trying to connect to Duckstation.");
-        }
     }
 
     /**
@@ -265,7 +250,7 @@ public partial class App : Application
             }
             return;
         }
-        if (Client == null || Client.ItemState == null || Client.CurrentSession == null) return;
+        if (Client == null || Client.ItemManager == null || Client.CurrentSession == null) return;
         int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
         CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
         Dictionary<string, int> talismans = CalculateCurrentTalismans();
@@ -326,7 +311,7 @@ public partial class App : Application
             case "!reloaditems":
                 Log.Logger.Information($"\r\n{command.Command}\r\n" +
                     "\tClearing the game state.  Please reconnect to the server while in game to refresh received items.\r\n");
-                Client.ForceReloadAllItems();
+                await Client.ItemManager.ResetItems();
                 break;
             case "showtalismancount":
             case "!talismans":
@@ -429,12 +414,13 @@ public partial class App : Application
         // Don't double bind.
         if (Client != null)
         {
-            Client.CancelMonitors();
+            Client.LocationManager?.CancelMonitors();
+            Client.ItemManager?.StopReceiving();
             Client.Connected -= OnConnected;
             Client.Disconnected -= OnDisconnected;
-            Client.ItemReceived -= ItemReceived;
+            Client.ItemManager?.ItemReceived -= ItemReceived;
             Client.MessageReceived -= Client_MessageReceived;
-            Client.LocationCompleted -= Client_LocationCompleted;
+            Client.LocationManager?.LocationCompleted -= Client_LocationCompleted;
             if (Client.CurrentSession != null)
             {
                 Client.CurrentSession.Locations.CheckedLocationsUpdated -= Locations_CheckedLocationsUpdated;
@@ -443,10 +429,10 @@ public partial class App : Application
         }
 
         // Connect to Duckstation.
-        DuckstationClient? client = null;
+        GameClient? client = null;
         try
         {
-            client = new DuckstationClient();
+            client = new GameClient("duckstation");
         }
         catch (ArgumentException ex)
         {
@@ -467,7 +453,7 @@ public partial class App : Application
         Client.Disconnected += OnDisconnected;
 
         // Try to connect to the AP server.
-        await Client.Connect(e.Host.Trim(), "Spyro 2", "save1");
+        await Client.Connect(e.Host.Trim(), "Spyro 2");
         if (!Client.IsConnected)
         {
             Log.Logger.Error("Your host seems to be invalid.  Please confirm that you have entered it correctly.");
@@ -475,11 +461,6 @@ public partial class App : Application
         }
         // Set up handlers and variables for the session.
         _cosmeticEffects = new ConcurrentQueue<string>();
-        Client.LocationCompleted += Client_LocationCompleted;
-        Client.CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
-        Client.MessageReceived += Client_MessageReceived;
-        Client.ItemReceived += ItemReceived;
-        Client.EnableLocationsCondition = () => Helpers.IsInGame();
         // Don't trim password, since leading and trailing whitespace is allowed.
         _playerName = e.Slot.Trim();
         await Client.Login(e.Slot.Trim(), !string.IsNullOrWhiteSpace(e.Password) ? e.Password : null);
@@ -504,6 +485,12 @@ public partial class App : Application
                     Log.Logger.Information($"The host's AP world version is {versionValue.ToString()} and the client version is {Version}.\r\n" +
                         "These versions are known to be compatible.");
                 }
+                else if (versionValue != null && PartiallySupportedVersions.Contains(versionValue.ToString().ToLower()))
+                {
+                    Log.Logger.Warning($"\r\nThe host's AP world version is {versionValue.ToString()} and the client version is {Version}.\r\n" +
+                        "These versions are known to be mostly compatible but may bave some unexpected behavior.\r\n" +
+                        "Please be sure to read the release notes to see what may break.\r\n");
+                }
                 else if (versionValue != null && versionValue.ToString().ToLower() != Version.ToLower())
                 {
                     Log.Logger.Warning($"The host's AP world version is {versionValue.ToString()} but the client version is {Version}.\r\n" +
@@ -524,9 +511,13 @@ public partial class App : Application
             bool easyFracture = int.Parse(Client.Options?.GetValueOrDefault("fracture_easy_earthshapers", 0).ToString()) > 0;
 
             // Set up the list of locations based on player settings.
-            GameLocations = Helpers.BuildLocationList(easyFracture: easyFracture, includeGemsanity: gemsanityOption != GemsanityOptions.Off, gemsanityIDs: gemsanityIDs);
+            GameLocations = Helpers.BuildLocationList(gemsanityIDs: gemsanityIDs ?? new List<int>(), easyFracture: easyFracture);
             GameLocations = GameLocations.Where(x => x != null && !Client.CurrentSession.Locations.AllLocationsChecked.Contains(x.Id)).ToList();
-            Client.MonitorLocations(GameLocations);
+            Client.ItemManager.ItemReceived += ItemReceived;
+            Client.LocationManager.LocationCompleted += Client_LocationCompleted;
+            Client.CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
+            Client.MessageReceived += Client_MessageReceived;
+            Client.LocationManager.EnableLocationsCondition = () => Helpers.IsInGame() && _gemCountsUpdated;
         }
         else
         {
@@ -543,7 +534,7 @@ public partial class App : Application
     {
         try
         {
-            if (Client.ItemState == null || Client.CurrentSession == null) return;
+            if (Client.ItemManager == null || Client.CurrentSession == null) return;
             CalculateCurrentTalismans();
             CalculateCurrentOrbs();
             GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
@@ -569,7 +560,7 @@ public partial class App : Application
     {
         try
         {
-            if (Client.ItemState == null || Client.CurrentSession == null) return;
+            if (Client.ItemManager == null || Client.CurrentSession == null) return;
             Log.Logger.Debug($"Item Received: {JsonConvert.SerializeObject(args.Item)}");
             UpdateItemLog();
             // Give items a moment to update before printing values.
@@ -930,7 +921,7 @@ public partial class App : Application
         // TODO: Clean this up, like S3.
         try
         {
-            if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
+            if (!Helpers.IsInGame() || Client.ItemManager == null || Client.CurrentSession == null)
             {
                 return;
             }
@@ -940,6 +931,9 @@ public partial class App : Application
             if (gemsanityOption != GemsanityOptions.Off)
             {
                 CalculateCurrentGems();
+            } else
+            {
+                _gemCountsUpdated = true;
             }
             HandleMoneybagsUnlocks();
             HandleInnerWTWarpAccess();
@@ -969,6 +963,9 @@ public partial class App : Application
                 Memory.Write(Addresses.DoubleJumpAddress1, 0x24020800);
                 Memory.Write(Addresses.DoubleJumpAddress2, 0xAC22A0A8);
             }
+
+            // Allow menuing out of Glimmer.
+            Memory.Write(Addresses.MenuExitInGlimmerAddress, 0x08005d7c);
 
             if (fireballOption == AbilityOptions.AlwaysOff || fireballOption == AbilityOptions.InPool && hasFireballItem == 0)
             {
@@ -1030,7 +1027,7 @@ public partial class App : Application
                 if (
                     !_justDied &&
                     Helpers.IsInGame() &&
-                    Client.ItemState != null &&
+                    Client.ItemManager != null &&
                     Client.CurrentSession != null &&
                     deathLinkLevels.Contains(currentLevel) &&
                     gameStatus != GameStatus.Cutscene &&
@@ -1272,6 +1269,12 @@ public partial class App : Application
                 {
                     Memory.WriteByte(Addresses.RiptoDoorOrbRequirementAddress, (byte)_requiredOrbs);
                     Memory.WriteByte(Addresses.RiptoDoorOrbDisplayAddress, (byte)_requiredOrbs);
+                    // Prevent losing a frame race or loading into WT from opening the door early.
+                    int currentOrbs = Memory.ReadInt(Addresses.TotalOrbAddress);
+                    if (currentOrbs < _requiredOrbs)
+                    {
+                        Memory.WriteByte(Addresses.EloraOpenRipto, 0);
+                    }
                 }
                 LevelLockOptions levelLockOption = (LevelLockOptions)int.Parse(Client.Options?.GetValueOrDefault("level_lock_options", "0").ToString());
                 if (levelLockOption == LevelLockOptions.Keys)
@@ -1286,11 +1289,11 @@ public partial class App : Application
                         bool isOceanUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Ocean Speedway Unlock")).Count() ?? 0) > 0;
                         bool[] summerUnlocks = [
                             isIdolUnlocked,
-                        isColossusUnlocked,
-                        isHurricosUnlocked,
-                        isAquariaUnlocked,
-                        isSunnyUnlocked,
-                        isOceanUnlocked
+                            isColossusUnlocked,
+                            isHurricosUnlocked,
+                            isAquariaUnlocked,
+                            isSunnyUnlocked,
+                            isOceanUnlocked
                         ];
                         // Glimmer is always unlocked.
                         uint portalAddress = Addresses.SummerPortalBlock + 8;
@@ -1321,15 +1324,15 @@ public partial class App : Application
                         bool isIcyUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Icy Speedway Unlock")).Count() ?? 0) > 0;
                         bool[] autumnUnlocks = [
                             isSkelosUnlocked,
-                        isCrystalUnlocked,
-                        isBreezeUnlocked,
-                        isZephyrUnlocked,
-                        isMetroUnlocked,
-                        isScorchUnlocked,
-                        isShadyUnlocked,
-                        isMagmaUnlocked,
-                        isFractureUnlocked,
-                        isIcyUnlocked
+                            isCrystalUnlocked,
+                            isBreezeUnlocked,
+                            isZephyrUnlocked,
+                            isMetroUnlocked,
+                            isScorchUnlocked,
+                            isShadyUnlocked,
+                            isMagmaUnlocked,
+                            isFractureUnlocked,
+                            isIcyUnlocked
                         ];
                         uint portalAddress = Addresses.AutumnPortalBlock;
                         foreach (bool isUnlocked in autumnUnlocks)
@@ -1352,15 +1355,17 @@ public partial class App : Application
                         bool isCanyonUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Canyon Speedway Unlock")).Count() ?? 0) > 0;
                         bool isRoboticaUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Robotica Farms Unlock")).Count() ?? 0) > 0;
                         bool isMetropolisUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Metropolis Unlock")).Count() ?? 0) > 0;
-                        bool isDragonShoresUnlocked = (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Dragon Shores Unlock")).Count() ?? 0) > 0;
+                        bool isDragonShoresUnlocked =
+                            (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Dragon Shores Unlock")).Count() ?? 0) > 0 ||
+                            (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == ("Ripto Defeated")).Count() ?? 0) > 0;
                         // This order does not match the index order, for whatever reason.
                         bool[] winterUnlocks = [
                             isMysticUnlocked,
-                        isCloudUnlocked,
-                        isRoboticaUnlocked,
-                        isMetropolisUnlocked,
-                        isCanyonUnlocked,
-                        isDragonShoresUnlocked
+                            isCloudUnlocked,
+                            isRoboticaUnlocked,
+                            isMetropolisUnlocked,
+                            isCanyonUnlocked,
+                            isDragonShoresUnlocked
                         ];
                         uint portalAddress = Addresses.WinterPortalBlock;
                         foreach (bool isUnlocked in winterUnlocks)
@@ -1397,7 +1402,7 @@ public partial class App : Application
     private static async void HandleCosmeticQueue(object source, ElapsedEventArgs e)
     {
         // TODO: Reorganize this function.
-        if (Client.ItemState == null || Client.CurrentSession == null) return;
+        if (Client.ItemManager == null || Client.CurrentSession == null) return;
         CheckGoalCondition();
         // Avoid overwhelming the game when many cosmetic effects are received at once by processing only 1
         // every 5 seconds.  This also lets the user see effects when logging in asynchronously.
@@ -1444,13 +1449,30 @@ public partial class App : Application
             foreach (string levelName in levelNames.Keys)
             {
                 uint[] nameAddresses = levelNames[levelName];
-                if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0)
+                if (levelName == "Dragon Shores")
                 {
-                    WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                    if (
+                        (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0 &&
+                        (Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == "Ripto Defeated").Count() ?? 0) == 0
+                    )
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                    }
+                    else
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                    }
                 }
                 else
                 {
-                    WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                    if ((Client.CurrentSession?.Items?.AllItemsReceived?.Where(x => x.ItemName == $"{levelName} Unlock").Count() ?? 0) == 0)
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], "LOCKED", padWithSpaces: false);
+                    }
+                    else
+                    {
+                        WriteStringToMemory(nameAddresses[0], nameAddresses[1], levelName, padWithSpaces: false);
+                    }
                 }
             }
         }
@@ -1536,7 +1558,7 @@ public partial class App : Application
         if (
             _cosmeticEffects.Count > 0 &&
             Memory.ReadShort(Addresses.GameStatus) == (short)GameStatus.InGame &&
-            Client.ItemState != null &&
+            Client.ItemManager != null &&
             Client.CurrentSession != null &&
             _cosmeticEffects.TryDequeue(out string effect)
         )
@@ -1580,7 +1602,7 @@ public partial class App : Application
      */
     private static async void StartSpyroGame(object source, ElapsedEventArgs e)
     {
-        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
+        if (!Helpers.IsInGame() || Client.ItemManager == null || Client.CurrentSession == null)
         {
             Log.Logger.Information("Player is not yet in control of Spyro.");
             return;
@@ -1594,12 +1616,15 @@ public partial class App : Application
         }
         CheckGoalCondition();
         LevelInGameIDs currentLevel = (LevelInGameIDs)Memory.ReadByte(Addresses.CurrentLevelAddress);
-        Helpers.UpdateLocationList(currentLevel, Client);
         _handleGemsanity = true;
         if (_loadGameTimer != null)
         {
             _loadGameTimer.Enabled = false;
         }
+        // Infinite loop in another thread, so intentionally do not await. This would block things we must do after.
+        Client.MonitorLocationsAsync(GameLocations);
+        Helpers.UpdateLocationList(currentLevel, Client);
+        await Client.ReceiveReady();
     }
 
     /**
@@ -1720,7 +1745,7 @@ public partial class App : Application
             Client.CurrentSession == null ||
             Client.CurrentSession.Locations == null ||
             Client.CurrentSession.Locations.AllLocationsChecked == null ||
-            Client.ItemState == null ||
+            Client.ItemManager == null ||
             GameLocations == null
         )
         {
@@ -1810,7 +1835,7 @@ public partial class App : Application
      */
     private static void HandleSparxAbilities()
     {
-        if (!Helpers.IsInGame() || Client.ItemState == null || Client.CurrentSession == null)
+        if (!Helpers.IsInGame() || Client.ItemManager == null || Client.CurrentSession == null)
         {
             return;
         }
@@ -2080,7 +2105,7 @@ public partial class App : Application
                 }
             }
         }
-        if (Client.ItemState == null || Client.CurrentSession == null) return;
+        if (Client.ItemManager == null || Client.CurrentSession == null) return;
         if (!Helpers.IsInGame())
         {
             Log.Logger.Error("Check sent while not in game. Please report this in the Discord thread!");
@@ -2170,6 +2195,7 @@ public partial class App : Application
         GemsanityOptions gemsanityOption = (GemsanityOptions)int.Parse(Client.Options?.GetValueOrDefault("enable_gemsanity", "0").ToString());
         if (gemsanityOption == GemsanityOptions.Off)
         {
+            _gemCountsUpdated = true;
             return Memory.ReadShort(Addresses.TotalGemAddress);
         }
         uint levelGemCountAddress = Addresses.LevelGemsAddress;
@@ -2197,6 +2223,7 @@ public partial class App : Application
             levelGemCountAddress += 4;
         }
         Memory.Write(Addresses.TotalGemAddress, totalGems);
+        _gemCountsUpdated = true;
         return totalGems;
     }
     
@@ -2276,6 +2303,7 @@ public partial class App : Application
         _hasSubmittedGoal = false;
         _useQuietHints = true;
         _handleGemsanity = false;
+        _gemCountsUpdated = false;
         _unlockedLevels = 0;
         _requiredOrbs = 65;
         _lazySparxEnd = 0;

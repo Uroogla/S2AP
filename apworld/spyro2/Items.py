@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import NamedTuple
 from BaseClasses import Item
-from .Options import GemsanityRewardOptions, MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
+from .Options import MoneybagsOptions, SparxUpgradeOptions, AbilityOptions, GemsanityOptions, GoalOptions, LevelLockOptions
 from Options import OptionError
 
 
@@ -252,15 +252,9 @@ item_dictionary = {item_data.name: item_data for item_data in _all_items}
 
 def BuildItemPool(world, count, options, locked_levels):
     item_pool = []
-    included_itemcount = 0
     multiworld = world.multiworld
 
-    if options.guaranteed_items.value:
-        for item_name in options.guaranteed_items.value:
-            item = item_dictionary[item_name]
-            item_pool.append(item)
-            included_itemcount = included_itemcount + 1
-    remaining_count = count - included_itemcount
+    remaining_count = count
     if options.level_lock_options.value == LevelLockOptions.KEYS:
         possible_locked_levels = [
             "Colossus", "Idol Springs", "Hurricos", "Aquaria Towers", "Sunny Beach", "Ocean Speedway",
@@ -321,258 +315,71 @@ def BuildItemPool(world, count, options, locked_levels):
         item_pool.append(item_dictionary["Permanent Fireball Ability"])
         remaining_count = remaining_count - 1
 
-    if options.enable_gemsanity.value == GemsanityOptions.PARTIAL or \
-            options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardOptions.BUNDLES:
+    gemsanity_levels = {
+        "Summer Forest": (60, 40, 27, 10, 1),
+        "Glimmer": (32, 59, 34, 8, 0),
+        "Idol Springs": (60, 45, 38, 6, 0),
+        "Colossus": (39, 53, 39, 6, 0),
+        "Hurricos": (37, 29, 35, 13, 0),
+        "Aquaria Towers": (41, 57, 32, 6, 1),
+        "Sunny Beach": (22, 49, 38, 9, 0),
+        "Autumn Plains": (41, 22, 32, 8, 3),
+        "Skelos Badlands": (22, 24, 38, 9, 2),
+        "Crystal Glacier": (28, 26, 41, 9, 1),
+        "Breeze Harbor": (19, 28, 35, 15, 0),
+        "Zephyr": (49, 53, 23, 8, 2),
+        "Scorch": (47, 29, 39, 10, 0),
+        "Shady Oasis": (35, 35, 39, 10, 0),
+        "Magma Cone": (33, 36, 41, 9, 0),
+        "Fracture Hills": (36, 32, 37, 9, 1),
+        "Winter Tundra": (32, 29, 18, 22, 0),
+        "Mystic Marsh": (54, 38, 40, 7, 0),
+        "Cloud Temples": (36, 27, 37, 10, 1),
+        "Robotica Farms": (29, 53, 37, 8, 0),
+        "Metropolis": (39, 38, 41, 8, 0)
+    }
+
+    if options.enable_gemsanity.value == GemsanityOptions.BUNDLES:
         bundle_count = int(400 / options.gemsanity_gem_bundle_size)
-        for i in range(bundle_count):
-            item_pool.append(item_dictionary["Summer Forest Gem Bundle"])
-            item_pool.append(item_dictionary["Glimmer Gem Bundle"])
-            item_pool.append(item_dictionary["Idol Springs Gem Bundle"])
-            item_pool.append(item_dictionary["Colossus Gem Bundle"])
-            item_pool.append(item_dictionary["Hurricos Gem Bundle"])
-            item_pool.append(item_dictionary["Aquaria Towers Gem Bundle"])
-            item_pool.append(item_dictionary["Sunny Beach Gem Bundle"])
-            item_pool.append(item_dictionary["Autumn Plains Gem Bundle"])
-            item_pool.append(item_dictionary["Skelos Badlands Gem Bundle"])
-            item_pool.append(item_dictionary["Crystal Glacier Gem Bundle"])
-            item_pool.append(item_dictionary["Breeze Harbor Gem Bundle"])
-            item_pool.append(item_dictionary["Zephyr Gem Bundle"])
-            item_pool.append(item_dictionary["Scorch Gem Bundle"])
-            item_pool.append(item_dictionary["Shady Oasis Gem Bundle"])
-            item_pool.append(item_dictionary["Magma Cone Gem Bundle"])
-            item_pool.append(item_dictionary["Fracture Hills Gem Bundle"])
-            item_pool.append(item_dictionary["Winter Tundra Gem Bundle"])
-            item_pool.append(item_dictionary["Mystic Marsh Gem Bundle"])
-            item_pool.append(item_dictionary["Cloud Temples Gem Bundle"])
-            item_pool.append(item_dictionary["Robotica Farms Gem Bundle"])
-            item_pool.append(item_dictionary["Metropolis Gem Bundle"])
-        remaining_count -= bundle_count * 21
-    elif options.enable_gemsanity.value == GemsanityOptions.FULL and options.gemsanity_reward_type.value == GemsanityRewardOptions.GEMS:
-        for i in range(60):
-            item_pool.append(item_dictionary["Summer Forest Red Gem"])
-        for i in range(40):
-            item_pool.append(item_dictionary["Summer Forest Green Gem"])
-        for i in range(27):
-            item_pool.append(item_dictionary["Summer Forest Blue Gem"])
-        for i in range(10):
-            item_pool.append(item_dictionary["Summer Forest Gold Gem"])
-        for i in range(1):
-            item_pool.append(item_dictionary["Summer Forest Pink Gem"])
-        remaining_count -= 138
+        for level in gemsanity_levels:
+            for i in range(bundle_count):
+                item_pool.append(item_dictionary[f"{level} Gem Bundle"])
+        remaining_count -= bundle_count * len(gemsanity_levels)
+    elif options.enable_gemsanity.value == GemsanityOptions.FULL:
+        for level in gemsanity_levels:
+            red_count = gemsanity_levels[level][0]
+            green_count = gemsanity_levels[level][1]
+            blue_count = gemsanity_levels[level][2]
+            gold_count = gemsanity_levels[level][3]
+            pink_count = gemsanity_levels[level][4]
 
-        for i in range(32):
-            item_pool.append(item_dictionary["Glimmer Red Gem"])
-        for i in range(59):
-            item_pool.append(item_dictionary["Glimmer Green Gem"])
-        for i in range(34):
-            item_pool.append(item_dictionary["Glimmer Blue Gem"])
-        for i in range(8):
-            item_pool.append(item_dictionary["Glimmer Gold Gem"])
-        remaining_count -= 133
-
-        for i in range(60):
-            item_pool.append(item_dictionary["Idol Springs Red Gem"])
-        for i in range(45):
-            item_pool.append(item_dictionary["Idol Springs Green Gem"])
-        for i in range(38):
-            item_pool.append(item_dictionary["Idol Springs Blue Gem"])
-        for i in range(6):
-            item_pool.append(item_dictionary["Idol Springs Gold Gem"])
-        remaining_count -= 149
-
-        for i in range(39):
-            item_pool.append(item_dictionary["Colossus Red Gem"])
-        for i in range(53):
-            item_pool.append(item_dictionary["Colossus Green Gem"])
-        for i in range(39):
-            item_pool.append(item_dictionary["Colossus Blue Gem"])
-        for i in range(6):
-            item_pool.append(item_dictionary["Colossus Gold Gem"])
-        remaining_count -= 137
-
-        for i in range(37):
-            item_pool.append(item_dictionary["Hurricos Red Gem"])
-        for i in range(29):
-            item_pool.append(item_dictionary["Hurricos Green Gem"])
-        for i in range(35):
-            item_pool.append(item_dictionary["Hurricos Blue Gem"])
-        for i in range(13):
-            item_pool.append(item_dictionary["Hurricos Gold Gem"])
-        remaining_count -= 114
-
-        for i in range(41):
-            item_pool.append(item_dictionary["Aquaria Towers Red Gem"])
-        for i in range(57):
-            item_pool.append(item_dictionary["Aquaria Towers Green Gem"])
-        for i in range(32):
-            item_pool.append(item_dictionary["Aquaria Towers Blue Gem"])
-        for i in range(6):
-            item_pool.append(item_dictionary["Aquaria Towers Gold Gem"])
-        for i in range(1):
-            item_pool.append(item_dictionary["Aquaria Towers Pink Gem"])
-        remaining_count -= 137
-
-        for i in range(22):
-            item_pool.append(item_dictionary["Sunny Beach Red Gem"])
-        for i in range(49):
-            item_pool.append(item_dictionary["Sunny Beach Green Gem"])
-        for i in range(38):
-            item_pool.append(item_dictionary["Sunny Beach Blue Gem"])
-        for i in range(9):
-            item_pool.append(item_dictionary["Sunny Beach Gold Gem"])
-        remaining_count -= 118
-
-        for i in range(41):
-            item_pool.append(item_dictionary["Autumn Plains Red Gem"])
-        for i in range(22):
-            item_pool.append(item_dictionary["Autumn Plains Green Gem"])
-        for i in range(32):
-            item_pool.append(item_dictionary["Autumn Plains Blue Gem"])
-        for i in range(8):
-            item_pool.append(item_dictionary["Autumn Plains Gold Gem"])
-        for i in range(3):
-            item_pool.append(item_dictionary["Autumn Plains Pink Gem"])
-        remaining_count -= 106
-
-        for i in range(22):
-            item_pool.append(item_dictionary["Skelos Badlands Red Gem"])
-        for i in range(24):
-            item_pool.append(item_dictionary["Skelos Badlands Green Gem"])
-        for i in range(38):
-            item_pool.append(item_dictionary["Skelos Badlands Blue Gem"])
-        for i in range(9):
-            item_pool.append(item_dictionary["Skelos Badlands Gold Gem"])
-        for i in range(2):
-            item_pool.append(item_dictionary["Skelos Badlands Pink Gem"])
-        remaining_count -= 95
-
-        for i in range(28):
-            item_pool.append(item_dictionary["Crystal Glacier Red Gem"])
-        for i in range(26):
-            item_pool.append(item_dictionary["Crystal Glacier Green Gem"])
-        for i in range(41):
-            item_pool.append(item_dictionary["Crystal Glacier Blue Gem"])
-        for i in range(9):
-            item_pool.append(item_dictionary["Crystal Glacier Gold Gem"])
-        for i in range(1):
-            item_pool.append(item_dictionary["Crystal Glacier Pink Gem"])
-        remaining_count -= 105
-
-        for i in range(19):
-            item_pool.append(item_dictionary["Breeze Harbor Red Gem"])
-        for i in range(28):
-            item_pool.append(item_dictionary["Breeze Harbor Green Gem"])
-        for i in range(35):
-            item_pool.append(item_dictionary["Breeze Harbor Blue Gem"])
-        for i in range(15):
-            item_pool.append(item_dictionary["Breeze Harbor Gold Gem"])
-        remaining_count -= 97
-
-        for i in range(49):
-            item_pool.append(item_dictionary["Zephyr Red Gem"])
-        for i in range(53):
-            item_pool.append(item_dictionary["Zephyr Green Gem"])
-        for i in range(23):
-            item_pool.append(item_dictionary["Zephyr Blue Gem"])
-        for i in range(8):
-            item_pool.append(item_dictionary["Zephyr Gold Gem"])
-        for i in range(2):
-            item_pool.append(item_dictionary["Zephyr Pink Gem"])
-        remaining_count -= 135
-
-        for i in range(47):
-            item_pool.append(item_dictionary["Scorch Red Gem"])
-        for i in range(29):
-            item_pool.append(item_dictionary["Scorch Green Gem"])
-        for i in range(39):
-            item_pool.append(item_dictionary["Scorch Blue Gem"])
-        for i in range(10):
-            item_pool.append(item_dictionary["Scorch Gold Gem"])
-        remaining_count -= 125
-
-        for i in range(35):
-            item_pool.append(item_dictionary["Shady Oasis Red Gem"])
-        for i in range(35):
-            item_pool.append(item_dictionary["Shady Oasis Green Gem"])
-        for i in range(39):
-            item_pool.append(item_dictionary["Shady Oasis Blue Gem"])
-        for i in range(10):
-            item_pool.append(item_dictionary["Shady Oasis Gold Gem"])
-        remaining_count -= 119
-
-        for i in range(33):
-            item_pool.append(item_dictionary["Magma Cone Red Gem"])
-        for i in range(36):
-            item_pool.append(item_dictionary["Magma Cone Green Gem"])
-        for i in range(41):
-            item_pool.append(item_dictionary["Magma Cone Blue Gem"])
-        for i in range(9):
-            item_pool.append(item_dictionary["Magma Cone Gold Gem"])
-        remaining_count -= 119
-
-        for i in range(36):
-            item_pool.append(item_dictionary["Fracture Hills Red Gem"])
-        for i in range(32):
-            item_pool.append(item_dictionary["Fracture Hills Green Gem"])
-        for i in range(37):
-            item_pool.append(item_dictionary["Fracture Hills Blue Gem"])
-        for i in range(9):
-            item_pool.append(item_dictionary["Fracture Hills Gold Gem"])
-        for i in range(1):
-            item_pool.append(item_dictionary["Fracture Hills Pink Gem"])
-        remaining_count -= 115
-
-        for i in range(32):
-            item_pool.append(item_dictionary["Winter Tundra Red Gem"])
-        for i in range(29):
-            item_pool.append(item_dictionary["Winter Tundra Green Gem"])
-        for i in range(18):
-            item_pool.append(item_dictionary["Winter Tundra Blue Gem"])
-        for i in range(22):
-            item_pool.append(item_dictionary["Winter Tundra Gold Gem"])
-        remaining_count -= 101
-
-        for i in range(54):
-            item_pool.append(item_dictionary["Mystic Marsh Red Gem"])
-        for i in range(38):
-            item_pool.append(item_dictionary["Mystic Marsh Green Gem"])
-        for i in range(40):
-            item_pool.append(item_dictionary["Mystic Marsh Blue Gem"])
-        for i in range(7):
-            item_pool.append(item_dictionary["Mystic Marsh Gold Gem"])
-        remaining_count -= 139
-
-        for i in range(36):
-            item_pool.append(item_dictionary["Cloud Temples Red Gem"])
-        for i in range(27):
-            item_pool.append(item_dictionary["Cloud Temples Green Gem"])
-        for i in range(37):
-            item_pool.append(item_dictionary["Cloud Temples Blue Gem"])
-        for i in range(10):
-            item_pool.append(item_dictionary["Cloud Temples Gold Gem"])
-        for i in range(1):
-            item_pool.append(item_dictionary["Cloud Temples Pink Gem"])
-        remaining_count -= 111
-
-        for i in range(29):
-            item_pool.append(item_dictionary["Robotica Farms Red Gem"])
-        for i in range(53):
-            item_pool.append(item_dictionary["Robotica Farms Green Gem"])
-        for i in range(37):
-            item_pool.append(item_dictionary["Robotica Farms Blue Gem"])
-        for i in range(8):
-            item_pool.append(item_dictionary["Robotica Farms Gold Gem"])
-        remaining_count -= 127
-
-        for i in range(39):
-            item_pool.append(item_dictionary["Metropolis Red Gem"])
-        for i in range(38):
-            item_pool.append(item_dictionary["Metropolis Green Gem"])
-        for i in range(41):
-            item_pool.append(item_dictionary["Metropolis Blue Gem"])
-        for i in range(8):
-            item_pool.append(item_dictionary["Metropolis Gold Gem"])
-        remaining_count -= 126
+            # Full gemsanity is difficult for generation.
+            # When we can, red gems are made filler items. They still count in the client, but are not considered
+            # for logic. When options require these for logic, convert most to green gems instead.
+            if options.enable_gem_checks or \
+                    options.enable_total_gem_checks and options.max_total_gem_checks >= 9500 or \
+                    options.goal == GoalOptions.HUNDRED_PERCENT:
+                green_count += int(red_count / 2)
+                red_count = red_count % 2
+                if red_count == 1:
+                    green_count -= 2
+                    blue_count += 1
+                    red_count = 0
+            for i in range(red_count):
+                item_pool.append(item_dictionary[f"{level} Red Gem"])
+            remaining_count -= red_count
+            for i in range(green_count):
+                item_pool.append(item_dictionary[f"{level} Green Gem"])
+            remaining_count -= green_count
+            for i in range(blue_count):
+                item_pool.append(item_dictionary[f"{level} Blue Gem"])
+            remaining_count -= blue_count
+            for i in range(gold_count):
+                item_pool.append(item_dictionary[f"{level} Gold Gem"])
+            remaining_count -= gold_count
+            for i in range(pink_count):
+                item_pool.append(item_dictionary[f"{level} Pink Gem"])
+            remaining_count -= pink_count
     
     if options.enable_progressive_sparx_health in [SparxUpgradeOptions.BLUE, SparxUpgradeOptions.GREEN, SparxUpgradeOptions.SPARXLESS]:
         item_pool.append(item_dictionary["Progressive Sparx Health Upgrade"])

@@ -1,7 +1,7 @@
 {
   "game": "Spyro 2",
-  "world_version": "2.1.0",
-  "minimum_ap_version": "0.6.1",
+  "world_version": "2.2.0",
+  "minimum_ap_version": "0.6.6",
   "authors": ["Uroogla", "Garmo", "PhoenixAki", "Sonofkrom"],
   "poptracker": "github.com/routhken/Spyro_2_tracker/releases/latest",
   "result_file_ending": ".apspyro2"
