@@ -649,6 +649,8 @@ class Spyro2Client(BizHawkClient):
                 "portalTextBlue": (RAM.PortalTextBlue, 1, "MainRAM"),
                 "riptoDoorOrbRequirement": (RAM.RiptoDoorOrbRequirementAddress, 1, "MainRAM"),
                 "riptoDoorOrbDisplay": (RAM.RiptoDoorOrbDisplayAddress, 1, "MainRAM"),
+                "summerEloraDoorText": (RAM.SummerEloraStartText + 22, 1, "MainRAM"), # update this if summer door/warp text changes
+                "autumnEloraDoorText": (RAM.AutumnEloraStartText + 22, 2, "MainRAM"), # update this if autumn door/warp text changes
                 "crushGuidebookUnlock": (RAM.CrushGuidebookUnlock, 1, "MainRAM"),
                 "gulpGuidebookUnlock": (RAM.GulpGuidebookUnlock, 1, "MainRAM"),
                 "autumnGuidebookUnlock": (RAM.AutumnGuidebookUnlock, 1, "MainRAM"),
@@ -746,6 +748,14 @@ class Spyro2Client(BizHawkClient):
             portalTextBlue = readValues["portalTextBlue"]
             riptoDoorOrbRequirement = readValues["riptoDoorOrbRequirement"]
             riptoDoorOrbDisplay = readValues["riptoDoorOrbDisplay"]
+            try:
+                summerEloraDoorText = readValues["summerEloraDoorText"].to_bytes(1, byteorder = "little").decode("ascii")
+            except Exception:
+                summerEloraDoorText = ""
+            try:
+                autumnEloraDoorText = readValues["autumnEloraDoorText"].to_bytes(2, byteorder = "little").decode("ascii")
+            except Exception:
+                autumnEloraDoorText = ""
             crushGuidebookUnlock = readValues["crushGuidebookUnlock"]
             gulpGuidebookUnlock = readValues["gulpGuidebookUnlock"]
             autumnGuidebookUnlock = readValues["autumnGuidebookUnlock"]
@@ -1063,7 +1073,14 @@ class Spyro2Client(BizHawkClient):
                 # Menuing out of Winter Tundra crashes the game on save file load,
                 # since the level ID doesn't change.
                 if gameStatus != GameStatus.GameLoadMaybe:
-                    eloraDoorReads = [currentLevel, riptoDoorOrbRequirement, riptoDoorOrbDisplay, orbCount]
+                    eloraDoorReads = [
+                        currentLevel,
+                        riptoDoorOrbRequirement,
+                        riptoDoorOrbDisplay,
+                        orbCount,
+                        summerEloraDoorText,
+                        autumnEloraDoorText
+                    ]
                     eloraDoorWrites = self.handleEloraDoorChanges(ctx, eloraDoorReads)
                     if len(eloraDoorWrites) > 0:
                         await bizhawk.write(ctx.bizhawk_ctx, eloraDoorWrites)
@@ -1758,21 +1775,28 @@ class Spyro2Client(BizHawkClient):
                 eloraDoorWrites += [(RAM.RiptoDoorOrbDisplayAddress, requiredOrbs.to_bytes(1, "little"), "MainRAM")]
             if currentOrbs < requiredOrbs:
                 eloraDoorWrites += [(RAM.EloraOpenRipto, (0).to_bytes(1, "little"), "MainRAM")]
-        # TODO: Handle text in Summer Forest and Autumn Plains
+
         # // Handle Elora in Summer Forest and the door to Crush by special casing talisman count in this level only.
         # // Note that Elora won't open the door if your count is more than 6.
-        # if (currentLevel == (byte)LevelInGameIDs.SummerForest)
-        # {
-        #     Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)summerCount);
-        #     WriteStringToMemory(Addresses.SummerEloraStartText, Addresses.SummerEloraEndText, $"Hi, Spyro! You have @4{summerCount}@0 Summer Forest Talismans.");
-        #     WriteStringToMemory(Addresses.SummerEloraWarpStartText, Addresses.SummerEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount}@0 Summer Forest Talismans.");
-        # }
-        # else if (currentLevel == (byte)LevelInGameIDs.AutumnPlains)
-        # {
-        #     Memory.WriteByte(Addresses.TotalTalismanAddress, (byte)(summerCount + autumnCount));
-        #     WriteStringToMemory(Addresses.AutumnEloraStartText, Addresses.AutumnEloraEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount }@0 Talismans.");
-        #     WriteStringToMemory(Addresses.AutumnEloraWarpStartText, Addresses.AutumnEloraWarpEndText, $"Hi, Spyro! You have @4{summerCount + autumnCount}@0 Talismans.");
-        # }
+        elif currentLevel == LevelInGameIDs.SummerForest:
+            summerTalismanText = eloraDoorReads[4] # always 1 character
+            if summerTalismanText != str(self.currentSFTalismans):
+                doorTextLength = RAM.SummerEloraEndText - RAM.SummerEloraStartText
+                warpTextLength = RAM.SummerEloraWarpEndText - RAM.SummerEloraWarpStartText
+                # update summerEloraDoorText read if this text changes!!
+                talismanCountText = f"Hi, Spyro! You have @4{self.currentSFTalismans}@0 Summer Forest Talismans."
+                eloraDoorWrites += [(RAM.SummerEloraStartText, text_to_bytes(talismanCountText.ljust(doorTextLength, " "), doorTextLength), "MainRAM")]
+                eloraDoorWrites += [(RAM.SummerEloraWarpStartText, text_to_bytes(talismanCountText.ljust(warpTextLength, " "), warpTextLength), "MainRAM")]
+        elif currentLevel == LevelInGameIDs.AutumnPlains:
+            autumnTalismanText = eloraDoorReads[5].replace("@", "") # up to 2 characters, remove @ if exists
+            if autumnTalismanText != str(self.currentSFTalismans + self.currentAPTalismans):
+                doorTextLength = RAM.AutumnEloraEndText - RAM.AutumnEloraStartText
+                warpTextLength = RAM.AutumnEloraWarpEndText - RAM.AutumnEloraWarpStartText
+                # update autumnEloraDoorText read if this text changes!!
+                talismanCountText = f"Hi, Spyro! You have @4{self.currentSFTalismans + self.currentAPTalismans}@0 Talismans."
+                eloraDoorWrites += [(RAM.AutumnEloraStartText, text_to_bytes(talismanCountText.ljust(doorTextLength, " "), doorTextLength), "MainRAM")]
+                eloraDoorWrites += [(RAM.AutumnEloraWarpStartText, text_to_bytes(talismanCountText.ljust(warpTextLength, " "), warpTextLength), "MainRAM")]
+                    
         return eloraDoorWrites
 
     def handleAquariaSharkDeathlink(self, aquariaSharkWrites):
