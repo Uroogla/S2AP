@@ -237,7 +237,7 @@ class Spyro2World(World):
             # Universal Tracker does not know which gems were picked.  Have it assume all gems were picked when it
             # creates its seed.  The location list on the AP server will then remove all non-selected gems.
             if is_ut:
-                self.chosen_gem_locations = []
+                self.chosen_gem_locations = all_gem_locations
             elif gem_location_count == 2546:
                 self.chosen_gem_locations = all_gem_locations
             else:
