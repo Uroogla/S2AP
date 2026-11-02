@@ -85,6 +85,12 @@ The world maintainer will try to follow this format as well but reserves the rig
 
 ## LLM Policy
 
-This is a personal project that welcomes devs in training and experience devs alike. Given that this project is being used for training, that correctness is far more important than
-velocity, and general community sentiment, pull requests that obviously consist mostly or entirely of LLM-produced code will be rejected. These take away learning opportunities and enjoyment
-from contributors, and they are more difficult to maintain.
+This is a personal project that welcomes devs in training and experience devs alike. Keeping in line with the existing AI Disclosure of the project, all contributors must explicitly state that their contributions meet the following standards:
+- No portion of the APWorld or Client is vibe-coded or contains generative AI generated assets.
+- Spyro 2 AP contains contributions from many developers, directly and indirectly.
+  - All developers directly contributing code to the project have confirmed the above disclosure.
+  - In a modern programming environment, it is difficult to completely avoid all AI influence (e.g., Google AI responses to searches, IDE autocomplete and auto format). In addition, some of the developers make limited use of assistive tools for learning purposes only.
+  - Spyro 2 AP relies on framework from other projects, as well as multiple community libraries, over which the development team has little or no influence. To the best of our knowledge, generative AI use in these is minimal, and any such use is out of our control.
+- Uroogla manually reviews all code contributions from other developers and encourages other developers to review his own code.
+- We have previously rejected Generative AI code others (not on the development team) have produced for this project.
+- We have no plans to use generative AI generated code in the future.
