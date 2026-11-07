@@ -5,6 +5,7 @@ using Archipelago.Core.AvaloniaGUI.Views;
 using Archipelago.Core.Helpers;
 using Archipelago.Core.Models;
 using Archipelago.Core.Util;
+using Archipelago.Core.Util.PlatformMemory;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.Models;
@@ -14,12 +15,15 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Newtonsoft.Json;
 using ReactiveUI;
+using System.Runtime.InteropServices;
 using S2AP.Models;
 using S2AP.Patching;
 using Serilog;
+using Silk.NET.Core.Native;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reactive.Concurrency;
@@ -45,6 +49,7 @@ public partial class App : Application
 
     public static MainWindowViewModel Context;
     public static ArchipelagoClient Client { get; set; }
+    private static bool _memorySet { get; set; }
     private static string _playerName { get; set; }
     public static List<ILocation> GameLocations { get; set; }
     private static readonly object _lockObject = new object();
@@ -68,6 +73,10 @@ public partial class App : Application
     private static int _requiredOrbs = 65;
     private static bool _handleGemsanity = false;
     private static bool _gemCountsUpdated = false;
+
+    [DllImport("libc")]
+    private static extern uint geteuid();
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -250,6 +259,31 @@ public partial class App : Application
             }
             return;
         }
+        if (commandText.ToLower().StartsWith("!ramaddress"))
+        {
+            if (!OperatingSystem.IsMacOS())
+            {
+                Log.Logger.Information("This client locates the address of Duckstation automatically.");
+                return;
+            }
+            string input = commandText.ToLower().Split("!ramaddress")[1].Trim();
+            if (input.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                input = input.Substring(2);
+            }
+
+            if (ulong.TryParse(input, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong offset) && offset != 0)
+            {
+                PlatformMemory.GlobalOffset = offset;
+                _memorySet = true;
+            }
+            else
+            {
+                Log.Logger.Error("✖  That doesn't look like a valid address.");
+                Log.Logger.Error("It should look like 0x000000011c400000");
+            }
+            return;
+        }
         if (Client == null || Client.ItemManager == null || Client.CurrentSession == null) return;
         int openWorldOption = int.Parse(Client.Options?.GetValueOrDefault("enable_open_world", "0").ToString());
         CompletionGoal goal = (CompletionGoal)(int.Parse(Client.Options?.GetValueOrDefault("goal", 0).ToString()));
@@ -404,7 +438,17 @@ public partial class App : Application
                 break;
         }
     }
-    
+
+    private static void PromptForDuckstationOffset()
+    {
+        Log.Logger.Warning("⚠  macOS needs the DuckStation memory address entered manually");
+        Log.Logger.Warning("1. In DuckStation, open Tools > Memory Scanner");
+        Log.Logger.Warning("2. Find this line in the bottom right:");
+        Log.Logger.Warning("    Address of RAM for HxD Usage: 0x...");
+        Log.Logger.Warning("3. Send !ramaddress followed by the 0x... address (or the whole line) as a message");
+        Log.Logger.Warning("    For example, !ramaddress 0x000000011c400000");
+    }
+
     /**
      * Fires when the user clicks the client's connect button.
      * Tries to connect to Duckstation and Archipelago, then set up the session.
@@ -426,13 +470,24 @@ public partial class App : Application
                 Client.CurrentSession.Locations.CheckedLocationsUpdated -= Locations_CheckedLocationsUpdated;
             }
             _unlockedLevels = 0;
+            _memorySet = false;
+        }
+
+        // macOS only lets root read another process's memory, so requires sudo.
+        if (OperatingSystem.IsMacOS() && geteuid() != 0)
+        {
+            Log.Logger.Error("⚠  Administrator access needed");
+            Log.Logger.Error("macOS only lets admin apps read DuckStation's memory.");
+            Log.Logger.Error("You must run this as an admin (e.g., using sudo).");
+            Log.Logger.Error("Generally, this requires your password.");
+            Log.Logger.Error("Please be aware that doing so grants this app elevated permissions.");
         }
 
         // Connect to Duckstation.
         GameClient? client = null;
         try
         {
-            client = new GameClient("duckstation");
+            client = new GameClient(OperatingSystem.IsMacOS() ? "DuckStation" : "duckstation");
         }
         catch (ArgumentException ex)
         {
@@ -447,8 +502,20 @@ public partial class App : Application
         }
         Client = new ArchipelagoClient(client);
 
-        Memory.GlobalOffset = Memory.GetDuckstationOffset();
-
+        if (OperatingSystem.IsMacOS())
+        {
+            // macOS memory restrictions stop Core from finding the offset, so the user has to provide it
+            PromptForDuckstationOffset();
+        }
+        else
+        {
+            Memory.GlobalOffset = Memory.GetDuckstationOffset();
+            _memorySet = true;
+        }
+        while (!_memorySet)
+        {
+            // Wait for the user to enter the value before proceeding.
+        }
         Client.Connected += OnConnected;
         Client.Disconnected += OnDisconnected;
 
@@ -2307,6 +2374,7 @@ public partial class App : Application
         _unlockedLevels = 0;
         _requiredOrbs = 65;
         _lazySparxEnd = 0;
+        _memorySet = false;
 
         if (_deathLinkService != null)
         {
