@@ -254,9 +254,7 @@ class GemLocationsOption(Range):
     Gems are chosen at random and are not marked in game.
     Trackers may help identify which gems are locations.
     Gemsanity may override your choices to ensure the seed
-    can generate.
-    WARNING: Selecting an option smaller than 25 requires the host to
-         edit allow_full_gemsanity in their yaml file."""
+    can generate."""
     display_name = "Gem Locations Added"
     range_start = 0
     range_end = 2546
